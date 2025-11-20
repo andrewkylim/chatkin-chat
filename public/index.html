@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatkin - AI-Mediated Conversations</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="join-screen" class="screen active">
+            <div class="join-container">
+                <h1>Chatkin</h1>
+                <p class="subtitle" id="joinSubtitle">Conversations elevated by AI</p>
+                <div class="form-group">
+                    <input type="text" id="userName" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="form-group">
+                    <label for="personaSelect" class="persona-label">Choose AI Persona</label>
+                    <select id="personaSelect" class="persona-select">
+                        <option value="peacekeeper">The Peacekeeper - Helps resolve conflicts</option>
+                        <option value="champion">The Champion - Motivates and encourages</option>
+                        <option value="challenger">The Challenger - Questions assumptions</option>
+                        <option value="listener">The Listener - Provides empathetic support</option>
+                        <option value="gossip">The Gossip - Stirs the pot and surfaces tensions</option>
+                    </select>
+                </div>
+                <button id="joinBtn" class="primary-btn">Create Chat</button>
+                <div class="help-text">
+                    You'll get a shareable link to invite others
+                </div>
+            </div>
+        </div>
+
+        <div id="chat-screen" class="screen">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="header-info">
+                        <h2 id="roomTitle">Room: <span id="currentRoom"></span></h2>
+                        <div class="header-actions">
+                            <button id="copyLinkBtn" class="copy-link-btn">Copy Link</button>
+                            <div id="userCount" class="user-count">0 users</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="messagesContainer" class="messages-container">
+                    <div class="welcome-message">
+                        <div class="ai-intro" id="aiIntro">
+                            <h3>Welcome to Chatkin!</h3>
+                            <p id="aiIntroText">Your AI participant will introduce themselves shortly.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="messageInput"
+                        placeholder="Type your message..."
+                        maxlength="500"
+                    >
+                    <button id="sendBtn" class="send-btn">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
