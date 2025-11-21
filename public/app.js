@@ -58,9 +58,9 @@ function joinChat() {
 
 function connectWebSocket(roomId, userName, personaId) {
     // Determine API endpoint
-    // In production: wss://chatkin-api.YOUR_SUBDOMAIN.workers.dev
+    // In production: wss://chatkin.andrewkylim.workers.dev
     // In development: ws://localhost:8787 (Worker) or ws://localhost:5555 (Node)
-    const WORKER_API = window.CHATKIN_API_URL || 'https://chatkin-api.YOUR_SUBDOMAIN.workers.dev';
+    const WORKER_API = window.CHATKIN_API_URL || 'https://chatkin.andrewkylim.workers.dev';
     const protocol = WORKER_API.startsWith('https') ? 'wss:' : 'ws:';
     const apiHost = WORKER_API.replace(/^https?:\/\//, '');
     const wsUrl = `${protocol}//${apiHost}/api/ws?room=${roomId}`;
