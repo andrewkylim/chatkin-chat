@@ -159,8 +159,8 @@ function sendMessage() {
 
     if (window.chatWebSocket && window.chatWebSocket.readyState === WebSocket.OPEN) {
         window.chatWebSocket.send(JSON.stringify({
-            type: 'send_message',
-            content: message
+            type: 'message',
+            message: message
         }));
     }
 
