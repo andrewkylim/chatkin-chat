@@ -10,10 +10,23 @@ export class ChatRoom {
     this.conversationSummary = null;
     this.persona = null;
     this.aiName = null;
+    this.roomId = null;
   }
 
   async fetch(request) {
     const url = new URL(request.url);
+
+    // Extract and store room ID from URL
+    if (!this.roomId) {
+      const roomIdFromUrl = url.searchParams.get('room');
+      if (roomIdFromUrl) {
+        await this.loadState();
+        if (!this.roomId) {
+          this.roomId = roomIdFromUrl;
+          await this.state.storage.put('roomId', roomIdFromUrl);
+        }
+      }
+    }
 
     // Handle WebSocket upgrade
     if (request.headers.get('Upgrade') === 'websocket') {
@@ -93,7 +106,7 @@ export class ChatRoom {
     // Send room info to the new user
     session.webSocket.send(JSON.stringify({
       type: 'room_joined',
-      roomId: this.state.id.toString(),
+      roomId: this.roomId,
       userName,
       userCount: this.users.size,
       messageHistory: this.messageHistory,
@@ -173,9 +186,10 @@ export class ChatRoom {
   }
 
   async loadState() {
-    const stored = await this.state.storage.get(['messageHistory', 'conversationSummary', 'personaId']);
+    const stored = await this.state.storage.get(['messageHistory', 'conversationSummary', 'personaId', 'roomId']);
     this.messageHistory = stored.get('messageHistory') || [];
     this.conversationSummary = stored.get('conversationSummary') || null;
+    this.roomId = stored.get('roomId') || null;
     const personaId = stored.get('personaId');
 
     if (personaId) {
