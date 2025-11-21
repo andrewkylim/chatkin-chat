@@ -38,7 +38,9 @@
                     <div class="header-info">
                         <h2 id="roomTitle">Room: <span id="currentRoom"></span></h2>
                         <div class="header-actions">
+                            <button id="leaveChatBtn" class="leave-chat-btn">Leave Chat</button>
                             <button id="copyLinkBtn" class="copy-link-btn">Copy Link</button>
+                            <button id="endChatBtn" class="end-chat-btn">End Chat</button>
                             <div id="userCount" class="user-count">0 users</div>
                         </div>
                     </div>
@@ -62,6 +64,18 @@
                     >
                     <button id="sendBtn" class="send-btn">Send</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End Chat Confirmation Modal -->
+    <div id="endChatModal" class="modal">
+        <div class="modal-content">
+            <h3>End this chat?</h3>
+            <p>This will permanently delete all messages for everyone in the room. This cannot be undone.</p>
+            <div class="modal-actions">
+                <button id="cancelEndBtn" class="cancel-btn">Cancel</button>
+                <button id="confirmEndBtn" class="confirm-end-btn">End Chat</button>
             </div>
         </div>
     </div>

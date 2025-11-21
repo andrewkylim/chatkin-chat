@@ -65,6 +65,9 @@ export class ChatRoom {
       case 'message':
         await this.handleChatMessage(session, data);
         break;
+      case 'end_chat':
+        await this.handleEndChat(session);
+        break;
     }
   }
 
@@ -90,6 +93,7 @@ export class ChatRoom {
     // Send room info to the new user
     session.webSocket.send(JSON.stringify({
       type: 'room_joined',
+      roomId: this.state.id.toString(),
       userName,
       userCount: this.users.size,
       messageHistory: this.messageHistory,
@@ -335,6 +339,32 @@ export class ChatRoom {
       console.error('Anthropic API error:', error);
       return "Sorry, I'm having trouble connecting right now.";
     }
+  }
+
+  async handleEndChat(session) {
+    // Broadcast chat_ended to all users
+    this.broadcast({
+      type: 'chat_ended',
+      message: `${session.userName} ended the chat`
+    });
+
+    // Delete all storage
+    await this.state.storage.deleteAll();
+
+    // Close all WebSocket connections
+    this.sessions.forEach(s => {
+      try {
+        s.webSocket.close(1000, 'Chat ended');
+      } catch (err) {
+        // Ignore errors
+      }
+    });
+
+    // Clear local state
+    this.users.clear();
+    this.sessions = [];
+    this.messageHistory = [];
+    this.conversationSummary = null;
   }
 
   broadcast(message) {

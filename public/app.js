@@ -19,6 +19,11 @@ const userCountDiv = document.getElementById('userCount');
 const aiIntroText = document.getElementById('aiIntroText');
 const copyLinkBtn = document.getElementById('copyLinkBtn');
 const joinSubtitle = document.getElementById('joinSubtitle');
+const leaveChatBtn = document.getElementById('leaveChatBtn');
+const endChatBtn = document.getElementById('endChatBtn');
+const endChatModal = document.getElementById('endChatModal');
+const cancelEndBtn = document.getElementById('cancelEndBtn');
+const confirmEndBtn = document.getElementById('confirmEndBtn');
 
 // Update UI if joining via shared link
 if (sharedRoomId) {
@@ -111,6 +116,9 @@ function handleWebSocketMessage(data) {
         case 'receive_message':
             displayMessage(data.sender, data.content, data.isAI);
             break;
+        case 'chat_ended':
+            handleChatEnded(data.message);
+            break;
         case 'error':
             console.error('Server error:', data.message);
             break;
@@ -194,4 +202,43 @@ function displaySystemMessage(message) {
 
     messagesContainer.appendChild(systemDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Leave Chat button
+leaveChatBtn.addEventListener('click', () => {
+    if (window.chatWebSocket) {
+        window.chatWebSocket.close();
+    }
+    window.location.href = '/';
+});
+
+// End Chat button - show modal
+endChatBtn.addEventListener('click', () => {
+    endChatModal.classList.add('active');
+});
+
+// Cancel end chat
+cancelEndBtn.addEventListener('click', () => {
+    endChatModal.classList.remove('active');
+});
+
+// Confirm end chat
+confirmEndBtn.addEventListener('click', () => {
+    if (window.chatWebSocket && window.chatWebSocket.readyState === WebSocket.OPEN) {
+        window.chatWebSocket.send(JSON.stringify({
+            type: 'end_chat'
+        }));
+    }
+    endChatModal.classList.remove('active');
+});
+
+// Handle chat ended
+function handleChatEnded(message) {
+    displaySystemMessage(message);
+    setTimeout(() => {
+        if (window.chatWebSocket) {
+            window.chatWebSocket.close();
+        }
+        window.location.href = '/';
+    }, 2000);
 }
