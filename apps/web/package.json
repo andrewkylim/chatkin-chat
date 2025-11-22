@@ -14,7 +14,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@supabase/supabase-js": "^2.39.0"
+		"@supabase/supabase-js": "^2.84.0"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-cloudflare": "^4.7.2",

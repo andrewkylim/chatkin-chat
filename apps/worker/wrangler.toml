@@ -1,7 +1,7 @@
 name = "chatkin-os-worker"
 main = "src/index.ts"
 compatibility_date = "2024-11-22"
-node_compat = true
+compatibility_flags = ["nodejs_compat"]
 
 [env.production]
 name = "chatkin-os-worker"
