@@ -99,62 +99,6 @@
 				messages = messages; // Trigger reactivity
 				scrollToBottom();
 			}
-
-			// After streaming completes, try to parse as JSON array for actions
-			try {
-				// Try to parse as JSON array (Duo MVP pattern)
-				const actions: AIAction[] = JSON.parse(accumulatedContent.trim());
-
-				// If it's a valid array with actions, create tasks/notes
-				if (Array.isArray(actions) && actions.length > 0) {
-					const createdActions = [];
-					let taskCount = 0;
-					let noteCount = 0;
-
-					for (const action of actions) {
-						try {
-							if (action.type === 'task') {
-								await createTask({
-									title: action.title,
-									description: action.description,
-									priority: action.priority || 'medium',
-									completed: false
-								});
-								createdActions.push(action);
-								taskCount++;
-								console.log('Created task:', action.title);
-							} else if (action.type === 'note') {
-								await createNote({
-									title: action.title,
-									content: action.content || ''
-								});
-								createdActions.push(action);
-								noteCount++;
-								console.log('Created note:', action.title);
-							}
-						} catch (createError) {
-							console.error(`Error creating ${action.type}:`, createError);
-						}
-					}
-
-					// Show custom confirmation message
-					let confirmMessage = 'Created ';
-					const parts = [];
-					if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
-					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
-					confirmMessage += parts.join(' and ') + ' for you.';
-
-					messages[aiMessageIndex] = {
-						role: 'ai',
-						content: confirmMessage,
-						actions: createdActions
-					};
-					messages = messages;
-				}
-			} catch (parseError) {
-				// Not JSON - that's fine, it's a conversational response
-				// Message already set with accumulated content
-			}
 		} catch (error) {
 			console.error('Error sending message:', error);
 			messages[aiMessageIndex] = {

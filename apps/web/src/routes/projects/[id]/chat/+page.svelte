@@ -127,24 +127,18 @@
 				scrollToBottom();
 			}
 
-			// After streaming completes, try to parse as JSON for actions
+			// After streaming completes, try to parse as JSON array for actions
 			try {
-				// Try to extract JSON from the response (in case there's extra text)
-				let jsonContent = accumulatedContent.trim();
+				// Try to parse as JSON array (Duo MVP pattern)
+				const actions: AIAction[] = JSON.parse(accumulatedContent.trim());
 
-				// Look for JSON object pattern in the response
-				const jsonMatch = accumulatedContent.match(/\{[\s\S]*?"message"[\s\S]*?"actions"[\s\S]*?\}/);
-				if (jsonMatch) {
-					jsonContent = jsonMatch[0];
-				}
-
-				const aiResponse: AIResponse = JSON.parse(jsonContent);
-
-				// If it's a valid AIResponse with actions, create tasks/notes
-				if (aiResponse.message && aiResponse.actions && Array.isArray(aiResponse.actions)) {
+				// If it's a valid array with actions, create tasks/notes
+				if (Array.isArray(actions) && actions.length > 0) {
 					const createdActions = [];
+					let taskCount = 0;
+					let noteCount = 0;
 
-					for (const action of aiResponse.actions) {
+					for (const action of actions) {
 						try {
 							if (action.type === 'task') {
 								await createTask({
@@ -155,6 +149,7 @@
 									project_id: projectId
 								});
 								createdActions.push(action);
+								taskCount++;
 								console.log('Created task:', action.title);
 							} else if (action.type === 'note') {
 								await createNote({
@@ -163,6 +158,7 @@
 									project_id: projectId
 								});
 								createdActions.push(action);
+								noteCount++;
 								console.log('Created note:', action.title);
 							}
 						} catch (createError) {
@@ -170,10 +166,16 @@
 						}
 					}
 
-					// Update message to show the AI's message text and actions
+					// Show custom confirmation message
+					let confirmMessage = 'Created ';
+					const parts = [];
+					if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+					confirmMessage += parts.join(' and ') + ' for you.';
+
 					messages[aiMessageIndex] = {
 						role: 'ai',
-						content: aiResponse.message,
+						content: confirmMessage,
 						actions: createdActions
 					};
 					messages = messages;
