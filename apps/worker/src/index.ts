@@ -18,6 +18,7 @@ interface ChatRequest {
   context?: {
     projectId?: string;
     taskIds?: string[];
+    scope?: 'tasks' | 'notes';
   };
 }
 
@@ -74,14 +75,18 @@ export default {
 
 When the user wants to create tasks or notes, respond with ONLY a JSON array in this exact format (no extra text):
 [
-  {"type": "task", "title": "Task title", "description": "Optional description", "priority": "medium"},
-  {"type": "note", "title": "Note title", "content": "Note content"}
+  {"type": "task", "title": "Task title", "description": "Description of the task", "priority": "low|medium|high"},
+  {"type": "note", "title": "Note title", "content": "Note content here"}
 ]
 
 Return JSON array when:
 - User says "help me plan", "create tasks for", "I need to", "remind me to"
 - User wants to organize, plan, or track something
 - User asks for a todo list or action items
+- User wants to capture information, research, or ideas
+
+Use tasks for actionable items (things to do).
+Use notes for information, research, ideas, or reference material.
 
 Return plain conversational text when:
 - User asks questions about existing tasks/notes
@@ -90,14 +95,37 @@ Return plain conversational text when:
 
 IMPORTANT: When creating tasks/notes, respond with ONLY the JSON array. Do not add ANY text before or after it. Just the array.
 
+Priority levels for tasks: "low", "medium", or "high"
+Always include helpful descriptions for tasks.
+
+For notes, create DETAILED and COMPREHENSIVE content with this structure:
+1. Start with "KEY POINTS:" section with 3-5 bullet points summarizing the main ideas
+2. Follow with detailed information organized in clear sections
+3. Include relevant examples, explanations, or context
+4. Make notes substantial (200-500 words minimum)
+5. Use \\n for line breaks (this is JSON, so escape newlines properly)
+
+IMPORTANT: Use \\n for newlines in JSON content, NOT literal line breaks.
+
+Example note content format:
+"KEY POINTS:\\n• First key takeaway\\n• Second key takeaway\\n• Third key takeaway\\n\\n**Section Title**\\nDetailed explanation of the topic with relevant information...\\n\\n**Another Section**\\nMore detailed content with examples and context..."
+
 If unsure, prefer JSON - users love seeing tasks/notes created automatically!`;
 
         if (context?.projectId) {
           systemPrompt += '\n\nYou are currently assisting with a specific project. All tasks/notes you create should be relevant to this project context.';
         }
 
-        // Create streaming response
-        const stream = await anthropic.messages.stream({
+        if (context?.scope === 'tasks') {
+          systemPrompt += '\n\nIMPORTANT: You are in the TASKS context. ONLY create tasks (type: "task"), never create notes. Users come here for actionable to-do items.';
+        }
+
+        if (context?.scope === 'notes') {
+          systemPrompt += '\n\nIMPORTANT: You are in the NOTES context. ONLY create notes (type: "note"), never create tasks. Users come here to capture information, research, and ideas in detailed notes.';
+        }
+
+        // Create non-streaming response
+        const response = await anthropic.messages.create({
           model: 'claude-3-5-haiku-20241022',
           max_tokens: 4096,
           system: systemPrompt,
@@ -109,33 +137,31 @@ If unsure, prefer JSON - users love seeing tasks/notes created automatically!`;
           ],
         });
 
-        // Convert Anthropic stream to ReadableStream
-        const { readable, writable } = new TransformStream();
-        const writer = writable.getWriter();
-        const encoder = new TextEncoder();
+        const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';
 
-        // Process the stream in the background
-        (async () => {
-          try {
-            for await (const chunk of stream) {
-              if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-                await writer.write(encoder.encode(chunk.delta.text));
-              }
-            }
-          } catch (error) {
-            console.error('Streaming error:', error);
-          } finally {
-            await writer.close();
+        // Try to parse as JSON array for actions
+        try {
+          const actions = JSON.parse(aiMessage.trim());
+
+          if (Array.isArray(actions) && actions.length > 0) {
+            // Valid actions array - return structured response
+            return new Response(JSON.stringify({
+              type: 'actions',
+              actions: actions
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
           }
-        })();
+        } catch (e) {
+          // Not JSON - treat as conversational message
+        }
 
-        return new Response(readable, {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-          },
+        // Return conversational message
+        return new Response(JSON.stringify({
+          type: 'message',
+          message: aiMessage
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (error) {
         console.error('Chat error:', error);

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { getTasks, createTask, toggleTaskComplete } from '$lib/db/tasks';
+	import { createNote } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -144,6 +145,14 @@
 		chatMessages = [...chatMessages, { role: 'ai', content: '' }];
 		isChatStreaming = true;
 
+		// Show loading message
+		chatMessages[aiMessageIndex] = {
+			role: 'ai',
+			content: 'Thinking...'
+		};
+		chatMessages = chatMessages;
+		scrollChatToBottom();
+
 		try {
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -152,6 +161,9 @@
 				},
 				body: JSON.stringify({
 					message: userMessage,
+					context: {
+						scope: 'tasks'
+					}
 				}),
 			});
 
@@ -159,30 +171,58 @@
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
-			const reader = response.body?.getReader();
-			const decoder = new TextDecoder();
+			const data = await response.json();
 
-			if (!reader) {
-				throw new Error('No response body');
-			}
-
-			let accumulatedContent = '';
-
-			while (true) {
-				const { done, value } = await reader.read();
-
-				if (done) break;
-
-				const chunk = decoder.decode(value, { stream: true });
-				accumulatedContent += chunk;
-
-				// Update the AI message with accumulated content
+			// Handle structured response from worker
+			if (data.type === 'actions' && Array.isArray(data.actions)) {
+				// Update loading message
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: accumulatedContent
+					content: 'Creating tasks...'
 				};
-				chatMessages = chatMessages; // Trigger reactivity
+				chatMessages = chatMessages;
 				scrollChatToBottom();
+
+				// Create only tasks (filter out any notes)
+				let taskCount = 0;
+
+				for (const action of data.actions) {
+					try {
+						if (action.type === 'task') {
+							await createTask({
+								title: action.title,
+								description: action.description,
+								priority: action.priority || 'medium',
+								status: 'todo',
+								project_id: null,
+								due_date: null
+							});
+							taskCount++;
+							console.log('Created task:', action.title);
+						}
+					} catch (createError) {
+						console.error(`Error creating task:`, createError);
+					}
+				}
+
+				// Reload tasks
+				await loadData();
+
+				// Show custom confirmation message
+				const confirmMessage = `Created ${taskCount} task${taskCount > 1 ? 's' : ''} for you.`;
+
+				chatMessages[aiMessageIndex] = {
+					role: 'ai',
+					content: confirmMessage
+				};
+				chatMessages = chatMessages;
+			} else if (data.type === 'message') {
+				// Conversational response
+				chatMessages[aiMessageIndex] = {
+					role: 'ai',
+					content: data.message
+				};
+				chatMessages = chatMessages;
 			}
 		} catch (error) {
 			console.error('Error sending message:', error);
@@ -193,6 +233,7 @@
 			chatMessages = chatMessages;
 		} finally {
 			isChatStreaming = false;
+			scrollChatToBottom();
 		}
 	}
 </script>

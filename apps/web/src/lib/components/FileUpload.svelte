@@ -62,11 +62,12 @@
 			if (result.success && result.file) {
 				// Save file metadata to Supabase
 				await createFile({
-					name: result.file.originalName,
-					storage_path: result.file.name,
+					filename: result.file.originalName,
+					r2_key: result.file.name,
+					r2_url: result.file.url,
 					mime_type: result.file.type,
-					size: result.file.size,
-					conversation_id: conversationId,
+					size_bytes: result.file.size,
+					note_id: null,
 				});
 
 				// Notify parent component

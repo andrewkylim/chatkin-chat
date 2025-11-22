@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { getNotes, createNote } from '$lib/db/notes';
+	import { createTask } from '$lib/db/tasks';
 	import { getProjects } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -60,7 +61,7 @@
 		try {
 			await createNote({
 				title: newNoteTitle,
-				content: newNoteContent || null,
+				content: newNoteContent || undefined,
 				project_id: newNoteProjectId
 			});
 
@@ -96,14 +97,30 @@
 		}
 	}
 
-	function getContentPreview(content: string | null): string {
-		if (!content) return 'No content yet...';
-		return content.length > 200 ? content.substring(0, 200) + '...' : content;
+	function getContentPreview(note: any): string {
+		if (!note.note_blocks || note.note_blocks.length === 0) return 'No content yet...';
+
+		// Get first text block
+		const firstTextBlock = note.note_blocks.find((block: any) => block.type === 'text');
+		if (!firstTextBlock || !firstTextBlock.content?.text) return 'No content yet...';
+
+		const text = firstTextBlock.content.text;
+		return text.length > 200 ? text.substring(0, 200) + '...' : text;
 	}
 
-	function getWordCount(content: string | null): number {
-		if (!content) return 0;
-		return content.trim().split(/\s+/).length;
+	function getWordCount(note: any): number {
+		if (!note.note_blocks || note.note_blocks.length === 0) return 0;
+
+		// Combine all text blocks
+		let allText = '';
+		for (const block of note.note_blocks) {
+			if (block.type === 'text' && block.content?.text) {
+				allText += block.content.text + ' ';
+			}
+		}
+
+		if (!allText.trim()) return 0;
+		return allText.trim().split(/\s+/).length;
 	}
 
 	function scrollChatToBottom() {
@@ -129,6 +146,14 @@
 		chatMessages = [...chatMessages, { role: 'ai', content: '' }];
 		isChatStreaming = true;
 
+		// Show loading message
+		chatMessages[aiMessageIndex] = {
+			role: 'ai',
+			content: 'Thinking...'
+		};
+		chatMessages = chatMessages;
+		scrollChatToBottom();
+
 		try {
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -137,6 +162,9 @@
 				},
 				body: JSON.stringify({
 					message: userMessage,
+					context: {
+						scope: 'notes'
+					}
 				}),
 			});
 
@@ -144,30 +172,55 @@
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
-			const reader = response.body?.getReader();
-			const decoder = new TextDecoder();
+			const data = await response.json();
 
-			if (!reader) {
-				throw new Error('No response body');
-			}
-
-			let accumulatedContent = '';
-
-			while (true) {
-				const { done, value } = await reader.read();
-
-				if (done) break;
-
-				const chunk = decoder.decode(value, { stream: true });
-				accumulatedContent += chunk;
-
-				// Update the AI message with accumulated content
+			// Handle structured response from worker
+			if (data.type === 'actions' && Array.isArray(data.actions)) {
+				// Update loading message
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: accumulatedContent
+					content: 'Creating notes...'
 				};
-				chatMessages = chatMessages; // Trigger reactivity
+				chatMessages = chatMessages;
 				scrollChatToBottom();
+
+				// Create only notes (filter out any tasks)
+				let noteCount = 0;
+
+				for (const action of data.actions) {
+					try {
+						if (action.type === 'note') {
+							await createNote({
+								title: action.title,
+								content: action.content,
+								project_id: null
+							});
+							noteCount++;
+							console.log('Created note:', action.title);
+						}
+					} catch (createError) {
+						console.error(`Error creating note:`, createError);
+					}
+				}
+
+				// Reload notes
+				await loadData();
+
+				// Show custom confirmation message
+				const confirmMessage = `Created ${noteCount} note${noteCount > 1 ? 's' : ''} for you.`;
+
+				chatMessages[aiMessageIndex] = {
+					role: 'ai',
+					content: confirmMessage
+				};
+				chatMessages = chatMessages;
+			} else if (data.type === 'message') {
+				// Conversational response
+				chatMessages[aiMessageIndex] = {
+					role: 'ai',
+					content: data.message
+				};
+				chatMessages = chatMessages;
 			}
 		} catch (error) {
 			console.error('Error sending message:', error);
@@ -178,6 +231,7 @@
 			chatMessages = chatMessages;
 		} finally {
 			isChatStreaming = false;
+			scrollChatToBottom();
 		}
 	}
 </script>
@@ -229,10 +283,10 @@
 									<span class="note-badge">Standalone</span>
 								{/if}
 							</div>
-							<p class="note-preview">{getContentPreview(note.content)}</p>
+							<p class="note-preview">{getContentPreview(note)}</p>
 							<div class="note-footer">
 								<span class="note-date">{formatDate(note.updated_at)}</span>
-								<span class="note-meta">{getWordCount(note.content)} words</span>
+								<span class="note-meta">{getWordCount(note)} words</span>
 							</div>
 						</a>
 					{/each}

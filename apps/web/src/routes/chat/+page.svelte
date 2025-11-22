@@ -59,6 +59,14 @@
 		messages = [...messages, { role: 'ai', content: '' }];
 		isStreaming = true;
 
+		// Show loading message
+		messages[aiMessageIndex] = {
+			role: 'ai',
+			content: 'Thinking...'
+		};
+		messages = messages;
+		scrollToBottom();
+
 		try {
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -74,85 +82,72 @@
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
-			const reader = response.body?.getReader();
-			const decoder = new TextDecoder();
+			const data = await response.json();
 
-			if (!reader) {
-				throw new Error('No response body');
-			}
-
-			let accumulatedContent = '';
-
-			while (true) {
-				const { done, value } = await reader.read();
-
-				if (done) break;
-
-				const chunk = decoder.decode(value, { stream: true });
-				accumulatedContent += chunk;
-
-				// Update the AI message with accumulated content
+			// Handle structured response from worker
+			if (data.type === 'actions' && Array.isArray(data.actions)) {
+				// Update loading message
 				messages[aiMessageIndex] = {
 					role: 'ai',
-					content: accumulatedContent
+					content: 'Creating tasks and notes...'
 				};
-				messages = messages; // Trigger reactivity
+				messages = messages;
 				scrollToBottom();
-			}
 
-			// After streaming completes, try to parse as JSON array for actions
-			try {
-				// Try to parse as JSON array (Duo MVP pattern)
-				const actions: AIAction[] = JSON.parse(accumulatedContent.trim());
+				// Create tasks and notes
+				const createdActions = [];
+				let taskCount = 0;
+				let noteCount = 0;
 
-				// If it's a valid array with actions, create tasks/notes
-				if (Array.isArray(actions) && actions.length > 0) {
-					const createdActions = [];
-					let taskCount = 0;
-					let noteCount = 0;
-
-					for (const action of actions) {
-						try {
-							if (action.type === 'task') {
-								await createTask({
-									title: action.title,
-									description: action.description,
-									priority: action.priority || 'medium',
-									status: 'todo'
-								});
-								createdActions.push(action);
-								taskCount++;
-								console.log('Created task:', action.title);
-							} else if (action.type === 'note') {
-								await createNote({
-									title: action.title
-								});
-								createdActions.push(action);
-								noteCount++;
-								console.log('Created note:', action.title);
-							}
-						} catch (createError) {
-							console.error(`Error creating ${action.type}:`, createError);
+				for (const action of data.actions) {
+					try {
+						if (action.type === 'task') {
+							await createTask({
+								title: action.title,
+								description: action.description,
+								priority: action.priority || 'medium',
+								status: 'todo',
+								project_id: null,
+								due_date: null
+							});
+							createdActions.push(action);
+							taskCount++;
+							console.log('Created task:', action.title);
+						} else if (action.type === 'note') {
+							await createNote({
+								title: action.title,
+								content: action.content,
+								project_id: null
+							});
+							createdActions.push(action);
+							noteCount++;
+							console.log('Created note:', action.title);
 						}
+					} catch (createError) {
+						console.error(`Error creating ${action.type}:`, createError);
 					}
-
-					// Show custom confirmation message
-					let confirmMessage = 'Created ';
-					const parts = [];
-					if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
-					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
-					confirmMessage += parts.join(' and ') + ' for you.';
-
-					messages[aiMessageIndex] = {
-						role: 'ai',
-						content: confirmMessage,
-						actions: createdActions
-					};
-					messages = messages;
 				}
-			} catch (parseError) {
-				// Not JSON - that's fine, it's a conversational response
-				// Message already set with accumulated content
+
+				// Show custom confirmation message
+				let confirmMessage = 'Created ';
+				const parts = [];
+				if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+				if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+				confirmMessage += parts.join(' and ') + ' for you.';
+
+				messages[aiMessageIndex] = {
+					role: 'ai',
+					content: confirmMessage,
+					actions: createdActions
+				};
+				messages = messages;
+			} else if (data.type === 'message') {
+				// Conversational response
+				messages[aiMessageIndex] = {
+					role: 'ai',
+					content: data.message
+				};
+				messages = messages;
 			}
 		} catch (error) {
 			console.error('Error sending message:', error);
@@ -163,6 +158,7 @@
 			messages = messages;
 		} finally {
 			isStreaming = false;
+			scrollToBottom();
 		}
 	}
 

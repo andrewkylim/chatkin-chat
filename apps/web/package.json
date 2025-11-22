@@ -15,7 +15,8 @@
 	},
 	"dependencies": {
 		"@chatkin/types": "workspace:*",
-		"@supabase/supabase-js": "^2.84.0"
+		"@supabase/supabase-js": "^2.84.0",
+		"marked": "^17.0.1"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-cloudflare": "^4.7.2",
