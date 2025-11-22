@@ -1,5 +1,93 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import { getNotes, createNote } from '$lib/db/notes';
+	import { getProjects } from '$lib/db/projects';
+	import { onMount } from 'svelte';
+
+	let notes: any[] = [];
+	let projects: any[] = [];
+	let projectsMap: Record<string, any> = {};
+	let loading = true;
+	let showNewNoteModal = false;
+	let newNoteTitle = '';
+	let newNoteContent = '';
+	let newNoteProjectId: string | null = null;
+
+	onMount(async () => {
+		await loadData();
+	});
+
+	async function loadData() {
+		loading = true;
+		try {
+			[notes, projects] = await Promise.all([
+				getNotes(),
+				getProjects()
+			]);
+
+			// Create a map of project IDs to project objects for easy lookup
+			projectsMap = projects.reduce((acc, p) => {
+				acc[p.id] = p;
+				return acc;
+			}, {} as Record<string, any>);
+		} catch (error) {
+			console.error('Error loading data:', error);
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function handleCreateNote() {
+		if (!newNoteTitle.trim()) return;
+
+		try {
+			await createNote({
+				title: newNoteTitle,
+				content: newNoteContent || null,
+				project_id: newNoteProjectId
+			});
+
+			newNoteTitle = '';
+			newNoteContent = '';
+			newNoteProjectId = null;
+			showNewNoteModal = false;
+			await loadData();
+		} catch (error) {
+			console.error('Error creating note:', error);
+		}
+	}
+
+	function formatDate(dateString: string) {
+		const date = new Date(dateString);
+		const now = new Date();
+		const diffInMs = now.getTime() - date.getTime();
+		const diffInHours = diffInMs / (1000 * 60 * 60);
+
+		if (diffInHours < 1) {
+			const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+			return `Updated ${diffInMinutes}m ago`;
+		} else if (diffInHours < 24) {
+			return `Updated ${Math.floor(diffInHours)}h ago`;
+		} else if (diffInHours < 48) {
+			return 'Updated yesterday';
+		} else if (diffInHours < 168) {
+			return `Updated ${Math.floor(diffInHours / 24)} days ago`;
+		} else if (diffInHours < 336) {
+			return 'Updated last week';
+		} else {
+			return `Updated ${Math.floor(diffInHours / 168)} weeks ago`;
+		}
+	}
+
+	function getContentPreview(content: string | null): string {
+		if (!content) return 'No content yet...';
+		return content.length > 200 ? content.substring(0, 200) + '...' : content;
+	}
+
+	function getWordCount(content: string | null): number {
+		if (!content) return 0;
+		return content.trim().split(/\s+/).length;
+	}
 </script>
 
 <AppLayout>
@@ -16,7 +104,7 @@
 							<path d="M14 14l5 5"/>
 						</svg>
 					</button>
-					<button class="primary-btn">
+					<button class="primary-btn" on:click={() => showNewNoteModal = true}>
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 							<path d="M8 2v12M2 8h12"/>
 						</svg>
@@ -25,73 +113,39 @@
 				</div>
 			</header>
 
-			<div class="notes-list">
-				<a href="/notes/1" class="note-card">
-					<div class="note-header">
-						<h3>Wedding Venue Research</h3>
-						<span class="note-project">Wedding Planning</span>
-					</div>
-					<p class="note-preview">Comparing 5 different venues in the area. The Grand Ballroom has great reviews and can accommodate 150 guests...</p>
-					<div class="note-footer">
-						<span class="note-date">Updated 2h ago</span>
-						<span class="note-meta">842 words</span>
-					</div>
-				</a>
-
-				<a href="/notes/2" class="note-card">
-					<div class="note-header">
-						<h3>Contractor Quotes Comparison</h3>
-						<span class="note-project">House Renovation</span>
-					</div>
-					<p class="note-preview">Kitchen Renovation Quotes:
-1. ABC Contractors - $45,000
-2. XYZ Builders - $38,500
-3. Quality Home - $42,000...</p>
-					<div class="note-footer">
-						<span class="note-date">Updated yesterday</span>
-						<span class="note-meta">1,250 words</span>
-					</div>
-				</a>
-
-				<a href="/notes/3" class="note-card">
-					<div class="note-header">
-						<h3>Marketing Campaign Ideas</h3>
-						<span class="note-project">Product Launch</span>
-					</div>
-					<p class="note-preview">Brainstorming session notes for Q2 launch campaign. Key themes: innovation, sustainability, user-first design...</p>
-					<div class="note-footer">
-						<span class="note-date">Created 3 days ago</span>
-						<span class="note-meta">624 words</span>
-					</div>
-				</a>
-
-				<a href="/notes/4" class="note-card">
-					<div class="note-header">
-						<h3>Gift Registry Ideas</h3>
-						<span class="note-project">Wedding Planning</span>
-					</div>
-					<p class="note-preview">Items we want for the new house:
-• Kitchen appliances (KitchenAid mixer, espresso machine)
-• Bedding and linens...</p>
-					<div class="note-footer">
-						<span class="note-date">Updated last week</span>
-						<span class="note-meta">423 words</span>
-					</div>
-				</a>
-
-				<a href="/notes/5" class="note-card standalone">
-					<div class="note-header">
-						<h3>Book Recommendations</h3>
-						<span class="note-badge">Standalone</span>
-					</div>
-					<p class="note-preview">Fiction: The Night Circus, Project Hail Mary
-Non-fiction: Atomic Habits, The Power of Now...</p>
-					<div class="note-footer">
-						<span class="note-date">Updated 2 weeks ago</span>
-						<span class="note-meta">187 words</span>
-					</div>
-				</a>
-			</div>
+			{#if loading}
+				<div class="loading-state">
+					<div class="spinner"></div>
+					<p>Loading notes...</p>
+				</div>
+			{:else if notes.length === 0}
+				<div class="empty-state">
+					<div class="empty-icon">📝</div>
+					<h3>No notes yet</h3>
+					<p>Create your first note to get started</p>
+					<button class="primary-btn" on:click={() => showNewNoteModal = true}>Create Note</button>
+				</div>
+			{:else}
+				<div class="notes-list">
+					{#each notes as note (note.id)}
+						<a href="/notes/{note.id}" class="note-card" class:standalone={!note.project_id}>
+							<div class="note-header">
+								<h3>{note.title}</h3>
+								{#if note.project_id && projectsMap[note.project_id]}
+									<span class="note-project">{projectsMap[note.project_id].name}</span>
+								{:else}
+									<span class="note-badge">Standalone</span>
+								{/if}
+							</div>
+							<p class="note-preview">{getContentPreview(note.content)}</p>
+							<div class="note-footer">
+								<span class="note-date">{formatDate(note.updated_at)}</span>
+								<span class="note-meta">{getWordCount(note.content)} words</span>
+							</div>
+						</a>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
 		<!-- Notes AI Chat Section -->
@@ -130,6 +184,53 @@ Non-fiction: Atomic Habits, The Power of Now...</p>
 			</form>
 		</div>
 	</div>
+
+	<!-- New Note Modal -->
+	{#if showNewNoteModal}
+		<div class="modal-overlay" on:click={() => showNewNoteModal = false} role="button" tabindex="0">
+			<div class="modal" on:click|stopPropagation role="dialog" tabindex="0">
+				<h2>Create New Note</h2>
+				<form on:submit|preventDefault={handleCreateNote}>
+					<div class="form-group">
+						<label for="note-title">Title</label>
+						<input
+							type="text"
+							id="note-title"
+							bind:value={newNoteTitle}
+							placeholder="e.g., Meeting Notes"
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label for="note-content">Content (optional)</label>
+						<textarea
+							id="note-content"
+							bind:value={newNoteContent}
+							placeholder="Start writing your note..."
+							rows="6"
+						></textarea>
+					</div>
+					<div class="form-group">
+						<label for="note-project">Project (optional)</label>
+						<select id="note-project" bind:value={newNoteProjectId}>
+							<option value={null}>Standalone note</option>
+							{#each projects as project}
+								<option value={project.id}>{project.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="modal-actions">
+						<button type="button" class="secondary-btn" on:click={() => showNewNoteModal = false}>
+							Cancel
+						</button>
+						<button type="submit" class="primary-btn">
+							Create Note
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
 </div>
 </AppLayout>
 
@@ -424,6 +525,127 @@ Non-fiction: Atomic Habits, The Power of Now...</p>
 
 	.send-btn:active {
 		transform: translateY(0);
+	}
+
+	/* Loading and Empty States */
+	.loading-state,
+	.empty-state {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 40px 20px;
+		gap: 16px;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.loading-state p,
+	.empty-state p {
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.empty-icon {
+		font-size: 3rem;
+		opacity: 0.5;
+	}
+
+	.empty-state h3 {
+		font-size: 1.25rem;
+		font-weight: 600;
+		margin: 0;
+	}
+
+	/* Modal */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 20px;
+	}
+
+	.modal {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-lg);
+		padding: 24px;
+		max-width: 500px;
+		width: 100%;
+		max-height: 90vh;
+		overflow-y: auto;
+	}
+
+	.modal h2 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin: 0 0 20px 0;
+		letter-spacing: -0.02em;
+	}
+
+	.form-group {
+		margin-bottom: 16px;
+	}
+
+	.form-group label {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 500;
+		margin-bottom: 6px;
+		color: var(--text-primary);
+	}
+
+	.form-group input,
+	.form-group textarea,
+	.form-group select {
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		font-family: 'Inter', sans-serif;
+		transition: all 0.2s ease;
+	}
+
+	.form-group input:focus,
+	.form-group textarea:focus,
+	.form-group select:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	.form-group textarea {
+		resize: vertical;
+		min-height: 80px;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 12px;
+		justify-content: flex-end;
+		margin-top: 24px;
 	}
 
 	/* Mobile Responsive */

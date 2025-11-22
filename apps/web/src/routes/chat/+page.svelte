@@ -1,5 +1,101 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import { onMount } from 'svelte';
+	import { PUBLIC_WORKER_URL } from '$env/static/public';
+
+	interface Message {
+		role: 'user' | 'ai';
+		content: string;
+	}
+
+	let messages: Message[] = [
+		{
+			role: 'ai',
+			content: '👋 Hi! What would you like to work on today?'
+		}
+	];
+	let inputMessage = '';
+	let isStreaming = false;
+	let messagesContainer: HTMLDivElement;
+
+	function scrollToBottom() {
+		setTimeout(() => {
+			if (messagesContainer) {
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}
+		}, 50);
+	}
+
+	async function sendMessage() {
+		if (!inputMessage.trim() || isStreaming) return;
+
+		const userMessage = inputMessage.trim();
+		inputMessage = '';
+
+		// Add user message
+		messages = [...messages, { role: 'user', content: userMessage }];
+		scrollToBottom();
+
+		// Add placeholder for AI response
+		const aiMessageIndex = messages.length;
+		messages = [...messages, { role: 'ai', content: '' }];
+		isStreaming = true;
+
+		try {
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					message: userMessage,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const reader = response.body?.getReader();
+			const decoder = new TextDecoder();
+
+			if (!reader) {
+				throw new Error('No response body');
+			}
+
+			let accumulatedContent = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+
+				if (done) break;
+
+				const chunk = decoder.decode(value, { stream: true });
+				accumulatedContent += chunk;
+
+				// Update the AI message with accumulated content
+				messages[aiMessageIndex] = {
+					role: 'ai',
+					content: accumulatedContent
+				};
+				messages = messages; // Trigger reactivity
+				scrollToBottom();
+			}
+		} catch (error) {
+			console.error('Error sending message:', error);
+			messages[aiMessageIndex] = {
+				role: 'ai',
+				content: 'Sorry, I encountered an error processing your request. Please try again.'
+			};
+			messages = messages;
+		} finally {
+			isStreaming = false;
+		}
+	}
+
+	onMount(() => {
+		scrollToBottom();
+	});
 </script>
 
 <AppLayout>
@@ -17,33 +113,25 @@
 		</div>
 	</header>
 
-	<div class="messages">
-		<div class="message ai">
-			<div class="message-bubble">
-				<p>👋 Hi! What would you like to work on today?</p>
+	<div class="messages" bind:this={messagesContainer}>
+		{#each messages as message (message)}
+			<div class="message {message.role}">
+				<div class="message-bubble">
+					<p>{message.content}</p>
+				</div>
 			</div>
-		</div>
-
-		<div class="message user">
-			<div class="message-bubble">
-				<p>I'm planning my wedding in June 2026</p>
-			</div>
-		</div>
-
-		<div class="message ai">
-			<div class="message-bubble">
-				<p>I've created a wedding planning project with 12 tasks, research notes, and a timeline. Let's make this special! 🎉</p>
-			</div>
-		</div>
+		{/each}
 	</div>
 
-	<form class="input-container">
+	<form class="input-container" on:submit|preventDefault={sendMessage}>
 		<input
 			type="text"
+			bind:value={inputMessage}
 			placeholder="Ask me anything..."
 			class="message-input"
+			disabled={isStreaming}
 		/>
-		<button type="submit" class="send-btn">
+		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
 			<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 				<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
 			</svg>
@@ -212,5 +300,15 @@
 
 	.send-btn:active {
 		transform: translateY(0);
+	}
+
+	.send-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.message-input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 </style>

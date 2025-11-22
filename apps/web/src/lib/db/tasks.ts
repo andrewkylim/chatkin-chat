@@ -1,9 +1,8 @@
 import { supabase } from '$lib/supabase';
-import type { Database } from '@chatkin/types';
+import type { Task } from '@chatkin/types';
 
-type Task = Database['public']['Tables']['tasks']['Row'];
-type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
-type TaskUpdate = Database['public']['Tables']['tasks']['Update'];
+type TaskInsert = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed_at'>;
+type TaskUpdate = Partial<Omit<Task, 'id' | 'user_id' | 'created_at'>>;
 
 export async function getTasks(projectId?: string) {
 	let query = supabase
@@ -69,7 +68,7 @@ export async function deleteTask(id: string) {
 
 export async function toggleTaskComplete(id: string, completed: boolean) {
 	return updateTask(id, {
-		status: completed ? 'completed' : 'todo',
+		status: completed ? 'done' : 'todo',
 		completed_at: completed ? new Date().toISOString() : null
 	});
 }

@@ -1,9 +1,8 @@
 import { supabase } from '$lib/supabase';
-import type { Database } from '@chatkin/types';
+import type { Note } from '@chatkin/types';
 
-type Note = Database['public']['Tables']['notes']['Row'];
-type NoteInsert = Database['public']['Tables']['notes']['Insert'];
-type NoteUpdate = Database['public']['Tables']['notes']['Update'];
+type NoteInsert = Omit<Note, 'id' | 'created_at' | 'updated_at'>;
+type NoteUpdate = Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>;
 
 export async function getNotes(projectId?: string) {
 	let query = supabase

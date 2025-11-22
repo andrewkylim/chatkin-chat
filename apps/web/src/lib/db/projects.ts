@@ -1,9 +1,8 @@
 import { supabase } from '$lib/supabase';
-import type { Database } from '@chatkin/types';
+import type { Project } from '@chatkin/types';
 
-type Project = Database['public']['Tables']['projects']['Row'];
-type ProjectInsert = Database['public']['Tables']['projects']['Insert'];
-type ProjectUpdate = Database['public']['Tables']['projects']['Update'];
+type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
+type ProjectUpdate = Partial<Omit<Project, 'id' | 'user_id' | 'created_at'>>;
 
 export async function getProjects() {
 	const { data, error } = await supabase

@@ -1,17 +1,124 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import { PUBLIC_WORKER_URL } from '$env/static/public';
+	import { getProject } from '$lib/db/projects';
+
+	interface Message {
+		role: 'user' | 'ai';
+		content: string;
+	}
 
 	$: projectId = $page.params.id;
 
-	// Mock project data - will be replaced with real data later
-	const projectData: Record<string, { name: string; emoji: string; description: string }> = {
-		'1': { name: 'Wedding Planning', emoji: '🎉', description: 'Planning our June 2026 wedding' },
-		'2': { name: 'House Renovation', emoji: '🏠', description: 'Kitchen and bathroom remodeling' },
-		'3': { name: 'Product Launch', emoji: '💼', description: 'Q2 2026 product launch planning' }
-	};
+	let project: any = null;
+	let loading = true;
+	let messages: Message[] = [];
+	let inputMessage = '';
+	let isStreaming = false;
+	let messagesContainer: HTMLDivElement;
 
-	$: project = projectData[projectId] || { name: 'Project', emoji: '📁', description: 'Loading...' };
+	onMount(async () => {
+		try {
+			project = await getProject(projectId);
+			messages = [
+				{
+					role: 'ai',
+					content: `Hi! I'm here to help you with ${project.name}. What would you like to work on?`
+				}
+			];
+		} catch (error) {
+			console.error('Error loading project:', error);
+			messages = [
+				{
+					role: 'ai',
+					content: 'Hi! What would you like to work on?'
+				}
+			];
+		} finally {
+			loading = false;
+		}
+		scrollToBottom();
+	});
+
+	function scrollToBottom() {
+		setTimeout(() => {
+			if (messagesContainer) {
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}
+		}, 50);
+	}
+
+	async function sendMessage() {
+		if (!inputMessage.trim() || isStreaming) return;
+
+		const userMessage = inputMessage.trim();
+		inputMessage = '';
+
+		// Add user message
+		messages = [...messages, { role: 'user', content: userMessage }];
+		scrollToBottom();
+
+		// Add placeholder for AI response
+		const aiMessageIndex = messages.length;
+		messages = [...messages, { role: 'ai', content: '' }];
+		isStreaming = true;
+
+		try {
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					message: userMessage,
+					context: {
+						projectId: projectId
+					}
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const reader = response.body?.getReader();
+			const decoder = new TextDecoder();
+
+			if (!reader) {
+				throw new Error('No response body');
+			}
+
+			let accumulatedContent = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+
+				if (done) break;
+
+				const chunk = decoder.decode(value, { stream: true });
+				accumulatedContent += chunk;
+
+				// Update the AI message with accumulated content
+				messages[aiMessageIndex] = {
+					role: 'ai',
+					content: accumulatedContent
+				};
+				messages = messages; // Trigger reactivity
+				scrollToBottom();
+			}
+		} catch (error) {
+			console.error('Error sending message:', error);
+			messages[aiMessageIndex] = {
+				role: 'ai',
+				content: 'Sorry, I encountered an error processing your request. Please try again.'
+			};
+			messages = messages;
+		} finally {
+			isStreaming = false;
+		}
+	}
 </script>
 
 <AppLayout>
@@ -23,13 +130,24 @@
 					<path d="M12 4l-8 8 8 8"/>
 				</svg>
 			</a>
-			<div class="project-info">
-				<div class="project-icon">{project.emoji}</div>
-				<div>
-					<h1>{project.name}</h1>
-					<p class="project-subtitle">{project.description}</p>
+			{#if loading}
+				<div class="project-info">
+					<div class="project-icon">📁</div>
+					<div>
+						<h1>Loading...</h1>
+					</div>
 				</div>
-			</div>
+			{:else if project}
+				<div class="project-info">
+					<div class="project-icon">{project.name.charAt(0).toUpperCase()}</div>
+					<div>
+						<h1>{project.name}</h1>
+						{#if project.description}
+							<p class="project-subtitle">{project.description}</p>
+						{/if}
+					</div>
+				</div>
+			{/if}
 			<div class="header-actions">
 				<button class="icon-btn" title="Project details">
 					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
@@ -42,21 +160,25 @@
 		</div>
 	</header>
 
-	<div class="messages">
-		<div class="message ai">
-			<div class="message-bubble">
-				<p>Hi! I'm here to help you with {project.name}. What would you like to work on?</p>
+	<div class="messages" bind:this={messagesContainer}>
+		{#each messages as message (message)}
+			<div class="message {message.role}">
+				<div class="message-bubble">
+					<p>{message.content}</p>
+				</div>
 			</div>
-		</div>
+		{/each}
 	</div>
 
-	<form class="input-container">
+	<form class="input-container" on:submit|preventDefault={sendMessage}>
 		<input
 			type="text"
+			bind:value={inputMessage}
 			placeholder="Ask about this project..."
 			class="message-input"
+			disabled={isStreaming}
 		/>
-		<button type="submit" class="send-btn">
+		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
 			<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 				<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
 			</svg>
@@ -278,6 +400,16 @@
 
 	.send-btn:active {
 		transform: translateY(0);
+	}
+
+	.send-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.message-input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 
 	/* Mobile adjustments */
