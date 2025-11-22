@@ -32,13 +32,12 @@ export async function getTask(id: string) {
 }
 
 export async function createTask(task: Omit<TaskInsert, 'user_id'>) {
-	// TODO: Implement proper authentication
-	// For MVP, use a default user_id
-	const defaultUserId = '00000000-0000-0000-0000-000000000000';
+	const { data: { user } } = await supabase.auth.getUser();
+	if (!user) throw new Error('Not authenticated');
 
 	const { data, error } = await supabase
 		.from('tasks')
-		.insert({ ...task, user_id: defaultUserId })
+		.insert({ ...task, user_id: user.id })
 		.select()
 		.single();
 
