@@ -3,6 +3,12 @@
 	import { getTasks, createTask, toggleTaskComplete } from '$lib/db/tasks';
 	import { getProjects } from '$lib/db/projects';
 	import { onMount } from 'svelte';
+	import { PUBLIC_WORKER_URL } from '$env/static/public';
+
+	interface ChatMessage {
+		role: 'user' | 'ai';
+		content: string;
+	}
 
 	let tasks: any[] = [];
 	let projects: any[] = [];
@@ -13,6 +19,17 @@
 	let newTaskPriority = 'medium';
 	let newTaskDueDate = '';
 	let newTaskProjectId: string | null = null;
+
+	// Chat state
+	let chatMessages: ChatMessage[] = [
+		{
+			role: 'ai',
+			content: "Hi! I'm your Tasks AI. I can help you create, organize, and prioritize your tasks. What would you like to work on?"
+		}
+	];
+	let chatInput = '';
+	let isChatStreaming = false;
+	let chatMessagesContainer: HTMLDivElement;
 
 	onMount(async () => {
 		await loadData();
@@ -103,6 +120,81 @@
 	$: thisWeekTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && isThisWeek(t.due_date));
 	$: laterTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && !isThisWeek(t.due_date));
 	$: completedTasks = tasks.filter(t => t.status === 'completed');
+
+	function scrollChatToBottom() {
+		setTimeout(() => {
+			if (chatMessagesContainer) {
+				chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+			}
+		}, 50);
+	}
+
+	async function sendChatMessage() {
+		if (!chatInput.trim() || isChatStreaming) return;
+
+		const userMessage = chatInput.trim();
+		chatInput = '';
+
+		// Add user message
+		chatMessages = [...chatMessages, { role: 'user', content: userMessage }];
+		scrollChatToBottom();
+
+		// Add placeholder for AI response
+		const aiMessageIndex = chatMessages.length;
+		chatMessages = [...chatMessages, { role: 'ai', content: '' }];
+		isChatStreaming = true;
+
+		try {
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					message: userMessage,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const reader = response.body?.getReader();
+			const decoder = new TextDecoder();
+
+			if (!reader) {
+				throw new Error('No response body');
+			}
+
+			let accumulatedContent = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+
+				if (done) break;
+
+				const chunk = decoder.decode(value, { stream: true });
+				accumulatedContent += chunk;
+
+				// Update the AI message with accumulated content
+				chatMessages[aiMessageIndex] = {
+					role: 'ai',
+					content: accumulatedContent
+				};
+				chatMessages = chatMessages; // Trigger reactivity
+				scrollChatToBottom();
+			}
+		} catch (error) {
+			console.error('Error sending message:', error);
+			chatMessages[aiMessageIndex] = {
+				role: 'ai',
+				content: 'Sorry, I encountered an error processing your request. Please try again.'
+			};
+			chatMessages = chatMessages;
+		} finally {
+			isChatStreaming = false;
+		}
+	}
 </script>
 
 <AppLayout>
@@ -272,21 +364,25 @@
 				</div>
 			</div>
 
-			<div class="messages">
-				<div class="message ai">
-					<div class="message-bubble">
-						<p>Hi! I'm your Tasks AI. I can help you create, organize, and prioritize your tasks. What would you like to work on?</p>
+			<div class="messages" bind:this={chatMessagesContainer}>
+				{#each chatMessages as message (message)}
+					<div class="message {message.role}">
+						<div class="message-bubble">
+							<p>{message.content}</p>
+						</div>
 					</div>
-				</div>
+				{/each}
 			</div>
 
-			<form class="input-container">
+			<form class="input-container" on:submit|preventDefault={sendChatMessage}>
 				<input
 					type="text"
+					bind:value={chatInput}
 					placeholder="Ask about tasks..."
 					class="message-input"
+					disabled={isChatStreaming}
 				/>
-				<button type="submit" class="send-btn">
+				<button type="submit" class="send-btn" disabled={isChatStreaming || !chatInput.trim()}>
 					<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 						<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
 					</svg>
@@ -813,6 +909,16 @@
 
 	.secondary-btn:hover {
 		background: var(--bg-tertiary);
+	}
+
+	.send-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.message-input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 
 	/* Mobile Responsive */
