@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -8,6 +9,7 @@
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
+		files?: Array<{ name: string; url: string; type: string }>;
 	}
 
 	$: projectId = $page.params.id;
@@ -171,6 +173,13 @@
 	</div>
 
 	<form class="input-container" on:submit|preventDefault={sendMessage}>
+		<FileUpload
+			accept="image/*,application/pdf,.doc,.docx,.txt"
+			maxSizeMB={10}
+			onUploadComplete={(file) => {
+				console.log('File uploaded:', file);
+			}}
+		/>
 		<input
 			type="text"
 			bind:value={inputMessage}

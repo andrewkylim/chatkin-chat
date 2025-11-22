@@ -129,12 +129,95 @@ export default {
       }
     }
 
-    if (url.pathname.startsWith('/api/upload')) {
-      // Upload endpoints will be added here
-      return new Response(JSON.stringify({ message: 'Upload endpoints coming soon' }), {
-        status: 501,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // File upload endpoint
+    if (url.pathname === '/api/upload') {
+      if (request.method !== 'POST') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+          status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      try {
+        const formData = await request.formData();
+        const file = formData.get('file') as File;
+
+        if (!file) {
+          return new Response(JSON.stringify({ error: 'No file provided' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 15);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${timestamp}-${randomStr}.${fileExt}`;
+
+        // Upload to R2
+        await env.CHATKIN_BUCKET.put(fileName, file.stream(), {
+          httpMetadata: {
+            contentType: file.type,
+          },
+        });
+
+        // Return file metadata
+        return new Response(JSON.stringify({
+          success: true,
+          file: {
+            name: fileName,
+            originalName: file.name,
+            size: file.size,
+            type: file.type,
+            url: `/api/files/${fileName}`,
+          },
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Upload error:', error);
+        return new Response(JSON.stringify({
+          error: 'Failed to upload file',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // File retrieval endpoint
+    if (url.pathname.startsWith('/api/files/')) {
+      const fileName = url.pathname.replace('/api/files/', '');
+
+      try {
+        const object = await env.CHATKIN_BUCKET.get(fileName);
+
+        if (!object) {
+          return new Response(JSON.stringify({ error: 'File not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        return new Response(object.body, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+            'Cache-Control': 'public, max-age=31536000',
+          },
+        });
+      } catch (error) {
+        console.error('File retrieval error:', error);
+        return new Response(JSON.stringify({
+          error: 'Failed to retrieve file',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // 404 for unknown routes
