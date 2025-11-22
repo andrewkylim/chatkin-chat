@@ -3,11 +3,27 @@
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
+	import { createTask } from '$lib/db/tasks';
+	import { createNote } from '$lib/db/notes';
 
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
+		actions?: Array<{ type: string; title: string; [key: string]: any }>;
+	}
+
+	interface AIAction {
+		type: 'task' | 'note';
+		title: string;
+		description?: string;
+		content?: string;
+		priority?: 'low' | 'medium' | 'high';
+	}
+
+	interface AIResponse {
+		message: string;
+		actions?: AIAction[];
 	}
 
 	let messages: Message[] = [
@@ -82,6 +98,60 @@
 				};
 				messages = messages; // Trigger reactivity
 				scrollToBottom();
+			}
+
+			// After streaming completes, try to parse as JSON for actions
+			try {
+				// Try to extract JSON from the response (in case there's extra text)
+				let jsonContent = accumulatedContent.trim();
+
+				// Look for JSON object pattern in the response
+				const jsonMatch = accumulatedContent.match(/\{[\s\S]*?"message"[\s\S]*?"actions"[\s\S]*?\}/);
+				if (jsonMatch) {
+					jsonContent = jsonMatch[0];
+				}
+
+				const aiResponse: AIResponse = JSON.parse(jsonContent);
+
+				// If it's a valid AIResponse with actions, create tasks/notes
+				if (aiResponse.message && aiResponse.actions && Array.isArray(aiResponse.actions)) {
+					const createdActions = [];
+
+					for (const action of aiResponse.actions) {
+						try {
+							if (action.type === 'task') {
+								await createTask({
+									title: action.title,
+									description: action.description,
+									priority: action.priority || 'medium',
+									completed: false
+								});
+								createdActions.push(action);
+								console.log('Created task:', action.title);
+							} else if (action.type === 'note') {
+								await createNote({
+									title: action.title,
+									content: action.content || ''
+								});
+								createdActions.push(action);
+								console.log('Created note:', action.title);
+							}
+						} catch (createError) {
+							console.error(`Error creating ${action.type}:`, createError);
+						}
+					}
+
+					// Update message to show the AI's message text and actions
+					messages[aiMessageIndex] = {
+						role: 'ai',
+						content: aiResponse.message,
+						actions: createdActions
+					};
+					messages = messages;
+				}
+			} catch (parseError) {
+				// Not JSON - that's fine, it's a conversational response
+				// Message already set with accumulated content
 			}
 		} catch (error) {
 			console.error('Error sending message:', error);
