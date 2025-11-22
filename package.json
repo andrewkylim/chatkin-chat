@@ -1,0 +1,33 @@
+{
+  "name": "chatkin-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered productivity suite - Personal task management, notes, and intelligent chat assistance",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:worker": "pnpm --filter worker dev",
+    "build:web": "pnpm --filter web build",
+    "build:worker": "pnpm --filter worker build",
+    "deploy:web": "pnpm --filter web deploy",
+    "deploy:worker": "pnpm --filter worker deploy",
+    "lint": "pnpm --filter \"./apps/**\" --filter \"./packages/**\" lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,svelte}\"",
+    "typecheck": "pnpm --filter \"./apps/**\" --filter \"./packages/**\" typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "prettier-plugin-svelte": "^3.1.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.14.1"
+}

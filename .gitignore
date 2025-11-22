@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.svelte-kit/
+.vercel/
+.cloudflare/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Development
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.vscode/
+.idea/
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.swp
+*.swo
+*~
+.cache/

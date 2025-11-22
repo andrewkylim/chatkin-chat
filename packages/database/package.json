@@ -1,0 +1,11 @@
+{
+  "name": "@chatkin/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Supabase database migrations and schema for Chatkin OS",
+  "type": "module",
+  "scripts": {
+    "migrate": "supabase migration up",
+    "reset": "supabase db reset"
+  }
+}
