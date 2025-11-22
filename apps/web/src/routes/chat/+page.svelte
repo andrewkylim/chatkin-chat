@@ -118,15 +118,14 @@
 									title: action.title,
 									description: action.description,
 									priority: action.priority || 'medium',
-									completed: false
+									status: 'todo'
 								});
 								createdActions.push(action);
 								taskCount++;
 								console.log('Created task:', action.title);
 							} else if (action.type === 'note') {
 								await createNote({
-									title: action.title,
-									content: action.content || ''
+									title: action.title
 								});
 								createdActions.push(action);
 								noteCount++;

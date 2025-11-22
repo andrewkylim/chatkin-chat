@@ -40,12 +40,13 @@ export async function getNote(id: string) {
 }
 
 export async function createNote(note: Omit<NoteInsert, 'user_id'>) {
-	const { data: { user } } = await supabase.auth.getUser();
-	if (!user) throw new Error('Not authenticated');
+	// TODO: Implement proper authentication
+	// For MVP, use a default user_id
+	const defaultUserId = '00000000-0000-0000-0000-000000000000';
 
-	const { data, error } = await supabase
+	const { data, error} = await supabase
 		.from('notes')
-		.insert({ ...note, user_id: user.id })
+		.insert({ ...note, user_id: defaultUserId })
 		.select()
 		.single();
 

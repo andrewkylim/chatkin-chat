@@ -145,7 +145,7 @@
 									title: action.title,
 									description: action.description,
 									priority: action.priority || 'medium',
-									completed: false,
+									status: 'todo',
 									project_id: projectId
 								});
 								createdActions.push(action);
@@ -154,7 +154,6 @@
 							} else if (action.type === 'note') {
 								await createNote({
 									title: action.title,
-									content: action.content || '',
 									project_id: projectId
 								});
 								createdActions.push(action);
