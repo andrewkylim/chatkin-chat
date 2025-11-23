@@ -392,8 +392,8 @@
 				</div>
 			{:else if notes.length === 0}
 				<div class="empty-state">
-					<div class="empty-icon">📝</div>
-					<h3>No notes yet</h3>
+					<img src="/notes.png" alt="Notes" class="empty-icon" />
+					<h2>No notes yet</h2>
 					<p>Create your first note to get started</p>
 					<button class="primary-btn" on:click={() => showNewNoteModal = true}>Create Note</button>
 				</div>
@@ -489,6 +489,74 @@
 					</svg>
 				</button>
 			</form>
+		</div>
+	</div>
+
+	<!-- Mobile Layout (matches Chat structure) -->
+	<div class="mobile-content">
+		<header class="mobile-header">
+			<h1>Notes</h1>
+			<button class="mobile-new-btn" on:click={() => showNewNoteModal = true}>
+				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M8 2v12M2 8h12"/>
+				</svg>
+			</button>
+		</header>
+
+		<div class="mobile-notes">
+			{#if loading}
+				<div class="loading-state">
+					<div class="spinner"></div>
+					<p>Loading notes...</p>
+				</div>
+			{:else if notes.length === 0}
+				<div class="empty-state">
+					<img src="/notes.png" alt="Notes" class="empty-icon" />
+					<h2>No notes yet</h2>
+					<p>Create your first note to get started</p>
+					<button class="primary-btn" on:click={() => showNewNoteModal = true}>Create Note</button>
+				</div>
+			{:else}
+				{#each notes as note (note.id)}
+					<div class="note-card" class:standalone={!note.project_id}>
+						<a href="/notes/{note.id}" class="note-link">
+							<div class="note-header">
+								<h3>{truncateTitle(note.title)}</h3>
+								{#if note.project_id && projectsMap[note.project_id]}
+									<span class="note-project">{projectsMap[note.project_id].name}</span>
+								{:else}
+									<span class="note-badge">Standalone</span>
+								{/if}
+							</div>
+							<p class="note-preview">{getContentPreview(note)}</p>
+							<div class="note-footer">
+								<span class="note-date">{formatDate(note.updated_at)}</span>
+								<span class="note-meta">{getWordCount(note)} words</span>
+							</div>
+						</a>
+						<div class="card-actions">
+							<button
+								class="icon-action-btn"
+								on:click|stopPropagation={() => startEditNote(note)}
+								title="Edit note"
+							>
+								<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M10.5 2l1.5 1.5L5 10.5H3.5V9L10.5 2z"/>
+								</svg>
+							</button>
+							<button
+								class="icon-action-btn delete-action-btn"
+								on:click|stopPropagation={() => deleteNoteId = note.id}
+								title="Delete note"
+							>
+								<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M11 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3"/>
+								</svg>
+							</button>
+						</div>
+					</div>
+				{/each}
+			{/if}
 		</div>
 	</div>
 
@@ -619,6 +687,11 @@
 		display: flex;
 		height: 100vh;
 		overflow: hidden;
+	}
+
+	/* Mobile Layout (hidden on desktop) */
+	.mobile-content {
+		display: none;
 	}
 
 	/* Notes List Section */
@@ -1003,13 +1076,12 @@
 	/* Loading and Empty States */
 	.loading-state,
 	.empty-state {
-		flex: 1;
+		padding: 60px 20px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 40px 20px;
-		gap: 16px;
+		min-height: 400px;
 	}
 
 	.spinner {
@@ -1025,21 +1097,25 @@
 		to { transform: rotate(360deg); }
 	}
 
-	.loading-state p,
-	.empty-state p {
+	.loading-state p {
 		color: var(--text-secondary);
 		margin: 0;
 	}
 
 	.empty-icon {
-		font-size: 3rem;
-		opacity: 0.5;
+		width: 100px;
+		height: 100px;
+		margin-bottom: 24px;
 	}
 
-	.empty-state h3 {
-		font-size: 1.25rem;
-		font-weight: 600;
-		margin: 0;
+	.empty-state h2 {
+		font-size: 1.5rem;
+		margin-bottom: 8px;
+	}
+
+	.empty-state p {
+		color: var(--text-secondary);
+		margin-bottom: 24px;
 	}
 
 	/* Modal */
@@ -1227,20 +1303,72 @@
 
 	/* Mobile Responsive */
 	@media (max-width: 1023px) {
-		.chat-section {
+		/* Hide desktop layout */
+		.notes-container {
 			display: none;
 		}
 
-		.notes-section {
-			border-right: none;
+		/* Show mobile layout */
+		.mobile-content {
+			display: flex;
+			flex-direction: column;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 50px; /* Above bottom nav */
+			background: var(--bg-secondary);
 		}
 
-		.notes-page {
-			padding-bottom: 110px; /* Space for bottom nav (50px) + chat input (60px) */
+		.mobile-header {
+			flex-shrink: 0;
+			padding: 16px 20px;
+			background: var(--bg-secondary);
+			border-bottom: 1px solid var(--border-color);
+			height: 64px;
+			box-sizing: border-box;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
 		}
 
-		.notes-grid {
-			padding-bottom: 20px;
+		.mobile-header h1 {
+			font-size: 1.5rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			margin: 0;
+		}
+
+		.mobile-new-btn {
+			width: 44px;
+			height: 44px;
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--accent-primary);
+			color: white;
+			border: none;
+			border-radius: var(--radius-md);
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.mobile-new-btn:hover {
+			background: var(--accent-hover);
+			transform: translateY(-1px);
+		}
+
+		.mobile-new-btn:active {
+			transform: translateY(0);
+		}
+
+		.mobile-notes {
+			flex: 1;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+			padding: 20px;
+			background: var(--bg-secondary);
 		}
 	}
 </style>

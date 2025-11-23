@@ -168,7 +168,7 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	if (context.projects.length > 0) {
 		formatted += '### Projects\n';
 		for (const project of context.projects) {
-			formatted += `- **${project.name}**`;
+			formatted += `- **${project.name}** [id: ${project.id}]`;
 			if (project.description) {
 				formatted += `: ${project.description}`;
 			}
@@ -191,7 +191,7 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 		if (todoTasks.length > 0) {
 			formatted += '**To Do:**\n';
 			for (const task of todoTasks.slice(0, 10)) {
-				formatted += `- ${task.title}`;
+				formatted += `- ${task.title} [id: ${task.id}]`;
 				if (task.priority === 'high') formatted += ' [HIGH]';
 				if (task.due_date) formatted += ` (due: ${task.due_date})`;
 				if (task.project_name) formatted += ` [${task.project_name}]`;
@@ -202,7 +202,7 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 		if (inProgressTasks.length > 0) {
 			formatted += '**In Progress:**\n';
 			for (const task of inProgressTasks.slice(0, 5)) {
-				formatted += `- ${task.title}`;
+				formatted += `- ${task.title} [id: ${task.id}]`;
 				if (task.project_name) formatted += ` [${task.project_name}]`;
 				formatted += '\n';
 			}
@@ -221,7 +221,7 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	if (context.notes.length > 0) {
 		formatted += '### Recent Notes\n';
 		for (const note of context.notes.slice(0, 15)) {
-			formatted += `- ${note.title || 'Untitled'}`;
+			formatted += `- ${note.title || 'Untitled'} [id: ${note.id}]`;
 			if (note.project_name) formatted += ` [${note.project_name}]`;
 			formatted += '\n';
 		}

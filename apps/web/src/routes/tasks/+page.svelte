@@ -1,7 +1,7 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
-	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask } from '$lib/db/tasks';
+	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask, deleteOldCompletedTasks } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
@@ -24,6 +24,7 @@
 	let newTaskPriority = 'medium';
 	let newTaskDueDate = '';
 	let newTaskProjectId: string | null = null;
+	let showCompletedTasks = false;
 
 	// Task detail modal state
 	let showTaskDetailModal = false;
@@ -48,6 +49,19 @@
 	let isLoadingConversation = true;
 
 	onMount(async () => {
+		// Load show completed preference from localStorage
+		const savedShowCompleted = localStorage.getItem('showCompletedTasks');
+		if (savedShowCompleted !== null) {
+			showCompletedTasks = savedShowCompleted === 'true';
+		}
+
+		// Delete completed tasks older than 30 days
+		try {
+			await deleteOldCompletedTasks();
+		} catch (error) {
+			console.error('Error deleting old completed tasks:', error);
+		}
+
 		await loadData();
 
 		// Load conversation and context
@@ -244,6 +258,17 @@
 	$: thisWeekTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && isThisWeek(t.due_date));
 	$: laterTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && !isThisWeek(t.due_date));
 	$: completedTasks = tasks.filter(t => t.status === 'completed');
+	$: completedTodayCount = completedTasks.filter(t => {
+		if (!t.updated_at) return false;
+		const completedDate = new Date(t.updated_at);
+		const today = new Date();
+		return completedDate.toDateString() === today.toDateString();
+	}).length;
+
+	function toggleShowCompleted() {
+		showCompletedTasks = !showCompletedTasks;
+		localStorage.setItem('showCompletedTasks', String(showCompletedTasks));
+	}
 
 	function scrollChatToBottom() {
 		setTimeout(() => {
@@ -417,9 +442,9 @@
 					<div class="spinner"></div>
 					<p>Loading tasks...</p>
 				</div>
-			{:else if tasks.length === 0}
+			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
 				<div class="empty-state">
-					<div class="empty-icon">✓</div>
+					<img src="/tasks.png" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
 					<button class="primary-btn" on:click={() => showNewTaskModal = true}>Create Task</button>
@@ -489,7 +514,14 @@
 					<!-- Later / Inbox -->
 					{#if laterTasks.length > 0}
 						<div class="task-group">
-							<h2 class="group-title">Later</h2>
+							<div class="group-header">
+								<h2 class="group-title">Later</h2>
+								{#if completedTasks.length > 0}
+									<button class="toggle-link" on:click={toggleShowCompleted}>
+										{showCompletedTasks ? 'Hide' : 'Show'} Completed
+									</button>
+								{/if}
+							</div>
 							{#each laterTasks as task (task.id)}
 								<div class="task-item">
 									<input
@@ -514,10 +546,20 @@
 								</div>
 							{/each}
 						</div>
+					{:else if completedTasks.length > 0}
+						<!-- Show toggle even if no later tasks -->
+						<div class="task-group">
+							<div class="group-header">
+								<div></div>
+								<button class="toggle-link" on:click={toggleShowCompleted}>
+									{showCompletedTasks ? 'Hide' : 'Show'} Completed
+								</button>
+							</div>
+						</div>
 					{/if}
 
 					<!-- Completed -->
-					{#if completedTasks.length > 0}
+					{#if showCompletedTasks && completedTasks.length > 0}
 						<div class="task-group">
 							<h2 class="group-title">Completed</h2>
 							{#each completedTasks as task (task.id)}
@@ -595,6 +637,170 @@
 					</svg>
 				</button>
 			</form>
+		</div>
+	</div>
+
+	<!-- Mobile Layout (matches Chat structure) -->
+	<div class="mobile-content">
+		<header class="mobile-header">
+			<h1>Tasks</h1>
+			<button class="mobile-new-btn" on:click={() => showNewTaskModal = true}>
+				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M8 2v12M2 8h12"/>
+				</svg>
+			</button>
+		</header>
+
+		<div class="mobile-tasks">
+			{#if loading}
+				<div class="loading-state">
+					<div class="spinner"></div>
+					<p>Loading tasks...</p>
+				</div>
+			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
+				<div class="empty-state">
+					<img src="/tasks.png" alt="Tasks" class="empty-icon" />
+					<h2>No tasks yet</h2>
+					<p>Create your first task to get started</p>
+					<button class="primary-btn" on:click={() => showNewTaskModal = true}>Create Task</button>
+				</div>
+			{:else}
+				<!-- Today Section -->
+				{#if todayTasks.length > 0}
+					<div class="task-group">
+						<h2 class="group-title">Today</h2>
+						{#each todayTasks as task (task.id)}
+							<div class="task-item">
+								<input
+									type="checkbox"
+									class="task-checkbox"
+									id={task.id}
+									checked={task.status === 'completed'}
+									on:change={() => handleToggleTask(task.id, task.status)}
+								/>
+								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
+									<div class="task-main">
+										<span class="task-title">{truncateTitle(task.title)}</span>
+										{#if getProjectName(task.project_id)}
+											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{/if}
+									</div>
+									<div class="task-meta">
+										<span class="priority {task.priority}">{task.priority}</span>
+										<span class="task-time">{formatDueDate(task.due_date)}</span>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- This Week Section -->
+				{#if thisWeekTasks.length > 0}
+					<div class="task-group">
+						<h2 class="group-title">This Week</h2>
+						{#each thisWeekTasks as task (task.id)}
+							<div class="task-item">
+								<input
+									type="checkbox"
+									class="task-checkbox"
+									id={task.id}
+									checked={task.status === 'completed'}
+									on:change={() => handleToggleTask(task.id, task.status)}
+								/>
+								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
+									<div class="task-main">
+										<span class="task-title">{truncateTitle(task.title)}</span>
+										{#if getProjectName(task.project_id)}
+											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{/if}
+									</div>
+									<div class="task-meta">
+										<span class="priority {task.priority}">{task.priority}</span>
+										<span class="task-time">{formatDueDate(task.due_date)}</span>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- Later / Inbox -->
+				{#if laterTasks.length > 0}
+					<div class="task-group">
+						<div class="group-header">
+							<h2 class="group-title">Later</h2>
+							{#if completedTasks.length > 0}
+								<button class="toggle-link" on:click={toggleShowCompleted}>
+									{showCompletedTasks ? 'Hide' : 'Show'} Completed
+								</button>
+							{/if}
+						</div>
+						{#each laterTasks as task (task.id)}
+							<div class="task-item">
+								<input
+									type="checkbox"
+									class="task-checkbox"
+									id={task.id}
+									checked={task.status === 'completed'}
+									on:change={() => handleToggleTask(task.id, task.status)}
+								/>
+								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
+									<div class="task-main">
+										<span class="task-title">{truncateTitle(task.title)}</span>
+										{#if getProjectName(task.project_id)}
+											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{/if}
+									</div>
+									<div class="task-meta">
+										<span class="priority {task.priority}">{task.priority}</span>
+										<span class="task-time">{formatDueDate(task.due_date)}</span>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else if completedTasks.length > 0}
+					<!-- Show toggle even if no later tasks -->
+					<div class="task-group">
+						<div class="group-header">
+							<div></div>
+							<button class="toggle-link" on:click={toggleShowCompleted}>
+								{showCompletedTasks ? 'Hide' : 'Show'} Completed
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Completed -->
+				{#if showCompletedTasks && completedTasks.length > 0}
+					<div class="task-group">
+						<h2 class="group-title">Completed</h2>
+						{#each completedTasks as task (task.id)}
+							<div class="task-item">
+								<input
+									type="checkbox"
+									class="task-checkbox"
+									id={task.id}
+									checked={true}
+									on:change={() => handleToggleTask(task.id, task.status)}
+								/>
+								<div class="task-content completed" on:click={() => openTaskDetail(task)}>
+									<div class="task-main">
+										<span class="task-title">{truncateTitle(task.title)}</span>
+										{#if getProjectName(task.project_id)}
+											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{/if}
+									</div>
+									<div class="task-meta">
+										<span class="task-time">Completed</span>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{/if}
 		</div>
 	</div>
 
@@ -827,6 +1033,11 @@
 		overflow: hidden;
 	}
 
+	/* Mobile Layout (hidden on desktop) */
+	.mobile-content {
+		display: none;
+	}
+
 	/* Tasks List Section */
 	.tasks-section {
 		flex: 2;
@@ -897,6 +1108,13 @@
 		margin-bottom: 32px;
 	}
 
+	.group-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+
 	.group-title {
 		font-size: 0.875rem;
 		font-weight: 600;
@@ -904,6 +1122,10 @@
 		letter-spacing: 0.05em;
 		color: var(--text-secondary);
 		margin-bottom: 12px;
+	}
+
+	.group-header .group-title {
+		margin-bottom: 0;
 	}
 
 	.task-item {
@@ -1186,12 +1408,12 @@
 
 	/* Loading & Empty States */
 	.loading-state, .empty-state {
+		padding: 60px 20px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 60px 20px;
-		gap: 16px;
+		min-height: 400px;
 	}
 
 	.spinner {
@@ -1213,9 +1435,9 @@
 	}
 
 	.empty-icon {
-		font-size: 64px;
-		margin-bottom: 16px;
-		opacity: 0.5;
+		width: 100px;
+		height: 100px;
+		margin-bottom: 24px;
 	}
 
 	.empty-state h2 {
@@ -1381,6 +1603,23 @@
 		background: var(--bg-tertiary);
 	}
 
+	.toggle-link {
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: 0.875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: color 0.2s ease;
+	}
+
+	.toggle-link:hover {
+		color: var(--accent-primary);
+	}
+
 	.delete-btn {
 		padding: 10px 20px;
 		background: transparent;
@@ -1412,20 +1651,72 @@
 
 	/* Mobile Responsive */
 	@media (max-width: 1023px) {
-		.chat-section {
+		/* Hide desktop layout */
+		.tasks-container {
 			display: none;
 		}
 
-		.tasks-section {
-			border-right: none;
+		/* Show mobile layout */
+		.mobile-content {
+			display: flex;
+			flex-direction: column;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 50px; /* Above bottom nav */
+			background: var(--bg-secondary);
 		}
 
-		.tasks-page {
-			padding-bottom: 110px; /* Space for bottom nav (50px) + chat input (60px) */
+		.mobile-header {
+			flex-shrink: 0;
+			padding: 16px 20px;
+			background: var(--bg-secondary);
+			border-bottom: 1px solid var(--border-color);
+			height: 64px;
+			box-sizing: border-box;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
 		}
 
-		.tasks-list {
-			padding-bottom: 20px;
+		.mobile-header h1 {
+			font-size: 1.5rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			margin: 0;
+		}
+
+		.mobile-new-btn {
+			width: 44px;
+			height: 44px;
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--accent-primary);
+			color: white;
+			border: none;
+			border-radius: var(--radius-md);
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.mobile-new-btn:hover {
+			background: var(--accent-hover);
+			transform: translateY(-1px);
+		}
+
+		.mobile-new-btn:active {
+			transform: translateY(0);
+		}
+
+		.mobile-tasks {
+			flex: 1;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+			padding: 20px;
+			background: var(--bg-secondary);
 		}
 
 		.form-row {

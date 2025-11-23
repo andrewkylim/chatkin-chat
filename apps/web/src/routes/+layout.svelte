@@ -13,8 +13,8 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Chatkin OS - Your Productivity, Powered by AI</title>
-	<meta name="description" content="Chat with AI to create projects, manage tasks, and organize your work. Just say what you need — Chatkin OS does the rest." />
+	<title>Chatkin - Sort Your Life Out</title>
+	<meta name="description" content="Chatkin captures your ideas, sorts your tasks, structures your projects, and keeps everything moving - all through conversation with AI." />
 </svelte:head>
 
 {@render children()}

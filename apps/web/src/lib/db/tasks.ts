@@ -72,3 +72,21 @@ export async function toggleTaskComplete(id: string, completed: boolean) {
 		completed_at: completed ? new Date().toISOString() : null
 	});
 }
+
+export async function deleteOldCompletedTasks() {
+	const { data: { user } } = await supabase.auth.getUser();
+	if (!user) throw new Error('Not authenticated');
+
+	// Calculate date 30 days ago
+	const thirtyDaysAgo = new Date();
+	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+	const { error } = await supabase
+		.from('tasks')
+		.delete()
+		.eq('user_id', user.id)
+		.eq('status', 'completed')
+		.lt('completed_at', thirtyDaysAgo.toISOString());
+
+	if (error) throw error;
+}

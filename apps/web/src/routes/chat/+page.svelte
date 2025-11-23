@@ -1,12 +1,13 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
+	import OperationPreview from '$lib/components/OperationPreview.svelte';
+	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
-	import { createTask } from '$lib/db/tasks';
-	import { createNote } from '$lib/db/notes';
-	import { createProject } from '$lib/db/projects';
+	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
+	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
+	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation, Message as DBMessage } from '@chatkin/types';
@@ -31,6 +32,20 @@
 		color?: string;
 	}
 
+	interface Operation {
+		operation: 'create' | 'update' | 'delete';
+		type: 'task' | 'note' | 'project';
+		id?: string;
+		data?: any;
+		changes?: any;
+		reason?: string;
+	}
+
+	interface AIQuestion {
+		question: string;
+		options: string[];
+	}
+
 	interface AIResponse {
 		message: string;
 		actions?: AIAction[];
@@ -44,6 +59,10 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let isLoadingConversation = true;
+	let showOperationPreview = false;
+	let pendingOperations: Operation[] = [];
+	let showQuestionDialog = false;
+	let pendingQuestions: AIQuestion[] = [];
 
 	function scrollToBottom() {
 		setTimeout(() => {
@@ -86,11 +105,13 @@
 
 		try {
 			// Build conversation history for context (filter out empty messages)
-			// Only send last 50 messages
+			// Only send last 50 messages, BUT exclude the current message since we're sending it separately
 			const allMessages = messages.filter(m => m.content && m.content.trim() && !m.isTyping);
 			const recentMessages = allMessages.slice(-50);
+			// Remove the last message (current user message) to avoid duplicates
+			const historyWithoutCurrent = recentMessages.slice(0, -1);
 
-			const conversationHistory = recentMessages.map(m => ({
+			const conversationHistory = historyWithoutCurrent.map(m => ({
 				role: m.role,
 				content: m.content
 			}));
@@ -119,35 +140,83 @@
 
 			// Handle structured response from worker
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
-				// Count proposed items
-				const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
-				const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
-				const noteCount = data.actions.filter((a: AIAction) => a.type === 'note').length;
+				// Check if this is the new operations format
+				const isOperationsFormat = data.actions.some((a: any) => a.operation !== undefined);
 
-				// Build preview message
-				const parts = [];
-				if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
-				if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
-				if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+				if (isOperationsFormat) {
+					// New operations format with create/update/delete
+					const operations = data.actions as Operation[];
 
-				const previewMessage = `I'll create ${parts.join(', ')} for you:`;
+					// Count operations by type
+					const createCount = operations.filter(op => op.operation === 'create').length;
+					const updateCount = operations.filter(op => op.operation === 'update').length;
+					const deleteCount = operations.filter(op => op.operation === 'delete').length;
 
-				// Save AI response with proposed actions
-				try {
-					await addMessage(conversation!.id, 'assistant', previewMessage, { proposedActions: data.actions });
-				} catch (error) {
-					console.error('Error saving AI message:', error);
+					// Build preview message
+					const parts = [];
+					if (createCount > 0) parts.push(`create ${createCount} item${createCount > 1 ? 's' : ''}`);
+					if (updateCount > 0) parts.push(`update ${updateCount} item${updateCount > 1 ? 's' : ''}`);
+					if (deleteCount > 0) parts.push(`delete ${deleteCount} item${deleteCount > 1 ? 's' : ''}`);
+
+					const previewMessage = `I'll ${parts.join(', ')} for you. Please review:`;
+
+					// Save AI response
+					try {
+						await addMessage(conversation!.id, 'assistant', previewMessage, { operations });
+					} catch (error) {
+						console.error('Error saving AI message:', error);
+					}
+
+					// Show conversational message
+					messages[aiMessageIndex] = {
+						role: 'ai',
+						content: previewMessage
+					};
+					messages = messages;
+
+					// Show operation preview modal
+					pendingOperations = operations;
+					showOperationPreview = true;
+				} else {
+					// Old actions format (backward compatibility)
+					// Count proposed items
+					const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
+					const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
+					const noteCount = data.actions.filter((a: AIAction) => a.type === 'note').length;
+
+					// Build preview message
+					const parts = [];
+					if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
+					if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+
+					const previewMessage = `I'll create ${parts.join(', ')} for you:`;
+
+					// Save AI response with proposed actions
+					try {
+						await addMessage(conversation!.id, 'assistant', previewMessage, { proposedActions: data.actions });
+					} catch (error) {
+						console.error('Error saving AI message:', error);
+					}
+
+					// Show proposed actions with confirmation buttons
+					messages[aiMessageIndex] = {
+						role: 'ai',
+						content: previewMessage,
+						proposedActions: data.actions,
+						awaitingConfirmation: true
+					};
+					messages = messages;
+					scrollToBottom();
 				}
+			} else if (data.type === 'questions' && Array.isArray(data.questions)) {
+				// AI is asking structured questions
+				// Remove the typing indicator
+				messages = messages.slice(0, -1);
 
-				// Show proposed actions with confirmation buttons
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: previewMessage,
-					proposedActions: data.actions,
-					awaitingConfirmation: true
-				};
-				messages = messages;
-				scrollToBottom();
+				// Show question dialog
+				pendingQuestions = data.questions;
+				showQuestionDialog = true;
 			} else if (data.type === 'message') {
 				// Save conversational AI response
 				try {
@@ -250,6 +319,136 @@
 			proposedActions: undefined
 		};
 		messages = messages;
+	}
+
+	async function executeOperations(operations: Operation[]) {
+		showOperationPreview = false;
+
+		// Add status message
+		messages = [...messages, {
+			role: 'ai',
+			content: 'Executing operations...',
+			isTyping: true
+		}];
+		const statusIndex = messages.length - 1;
+
+		let successCount = 0;
+		let errorCount = 0;
+		const results: string[] = [];
+
+		for (const op of operations) {
+			try {
+				if (op.operation === 'create') {
+					if (op.type === 'task') {
+						await createTask({
+							...op.data,
+							project_id: op.data.project_id || null
+						});
+						results.push(`✓ Created task: ${op.data.title}`);
+					} else if (op.type === 'note') {
+						await createNote({
+							...op.data,
+							project_id: op.data.project_id || null
+						});
+						results.push(`✓ Created note: ${op.data.title}`);
+					} else if (op.type === 'project') {
+						await createProject(op.data);
+						results.push(`✓ Created project: ${op.data.name}`);
+					}
+					successCount++;
+				} else if (op.operation === 'update') {
+					if (!op.id) throw new Error('Missing ID for update operation');
+
+					if (op.type === 'task') {
+						await updateTask(op.id, op.changes);
+						results.push(`✓ Updated task`);
+					} else if (op.type === 'note') {
+						await updateNote(op.id, op.changes);
+						results.push(`✓ Updated note`);
+					} else if (op.type === 'project') {
+						await updateProject(op.id, op.changes);
+						results.push(`✓ Updated project`);
+					}
+					successCount++;
+				} else if (op.operation === 'delete') {
+					if (!op.id) throw new Error('Missing ID for delete operation');
+
+					if (op.type === 'task') {
+						await deleteTask(op.id);
+						results.push(`✓ Deleted task`);
+					} else if (op.type === 'note') {
+						await deleteNote(op.id);
+						results.push(`✓ Deleted note`);
+					} else if (op.type === 'project') {
+						await deleteProject(op.id);
+						results.push(`✓ Deleted project`);
+					}
+					successCount++;
+				}
+			} catch (error) {
+				console.error(`Error executing ${op.operation} ${op.type}:`, error);
+				results.push(`✗ Failed to ${op.operation} ${op.type}`);
+				errorCount++;
+			}
+		}
+
+		// Reload workspace context
+		try {
+			const context = await loadWorkspaceContext();
+			workspaceContextString = formatWorkspaceContextForAI(context);
+		} catch (error) {
+			console.error('Error reloading workspace context:', error);
+		}
+
+		// Update status message with results
+		const successMsg = successCount > 0 ? `${successCount} operation${successCount > 1 ? 's' : ''} completed` : '';
+		const errorMsg = errorCount > 0 ? `${errorCount} failed` : '';
+		const parts = [successMsg, errorMsg].filter(Boolean);
+
+		messages[statusIndex] = {
+			role: 'ai',
+			content: `${parts.join(', ')}!\n\n${results.join('\n')}`
+		};
+		messages = messages;
+		scrollToBottom();
+	}
+
+	function handleOperationConfirm(operations: Operation[]) {
+		executeOperations(operations);
+	}
+
+	function handleOperationCancel() {
+		showOperationPreview = false;
+
+		// Add cancellation message
+		messages = [...messages, {
+			role: 'ai',
+			content: 'Okay, I won\'t make those changes.'
+		}];
+		scrollToBottom();
+	}
+
+	function handleQuestionSubmit(answers: Record<string, string>) {
+		showQuestionDialog = false;
+
+		// Format answers as a message
+		const answersText = Object.entries(answers)
+			.map(([question, answer]) => `${question}\n→ ${answer}`)
+			.join('\n\n');
+
+		// Send answers back to AI
+		sendMessage(answersText);
+	}
+
+	function handleQuestionCancel() {
+		showQuestionDialog = false;
+
+		// Add cancellation message
+		messages = [...messages, {
+			role: 'ai',
+			content: 'No problem! Let me know if you need anything else.'
+		}];
+		scrollToBottom();
 	}
 
 	onMount(async () => {
@@ -450,45 +649,70 @@
 		</form>
 	</div>
 
-	<!-- Mobile: Welcome content + expandable chat -->
+	<!-- Mobile: Header + full-screen chat -->
 	<div class="mobile-content">
-		<div class="welcome-section">
-			<div class="welcome-card">
-				<h2>Welcome to Chatkin</h2>
-				<p>Your AI-powered productivity assistant</p>
+		<header class="mobile-header">
+			<div class="header-content">
+				<h1>Chat</h1>
 			</div>
+		</header>
 
-			<div class="quick-actions">
-				<h3>Quick Actions</h3>
-				<div class="action-grid">
-					<a href="/projects" class="action-card">
-						<img src="/projects.png" alt="Projects" class="action-icon" />
-						<span>Projects</span>
-					</a>
-					<a href="/tasks" class="action-card">
-						<img src="/tasks.png" alt="Tasks" class="action-icon" />
-						<span>Tasks</span>
-					</a>
-					<a href="/notes" class="action-card">
-						<img src="/notes.png" alt="Notes" class="action-icon" />
-						<span>Notes</span>
-					</a>
+		<!-- Full-screen messages area for mobile -->
+		<div class="mobile-messages" bind:this={messagesContainer}>
+			{#each messages as message, index (message)}
+				<div class="message {message.role}">
+					<div class="message-bubble">
+						{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
+							<p>{message.content}</p>
+						{/if}
+					</div>
 				</div>
-			</div>
+			{/each}
 		</div>
-	</div>
 
-	<!-- Expandable Chat Panel (Mobile Only) -->
-	<ExpandableChatPanel
-		messages={messages}
-		onSendMessage={sendMessage}
-		placeholder="Ask me anything..."
-		isStreaming={isStreaming}
-		context="global"
-		showFileUpload={true}
-	/>
+		<!-- Mobile input bar -->
+		<form class="mobile-input-container" on:submit|preventDefault={() => sendMessage()}>
+			<input
+				type="text"
+				bind:value={inputMessage}
+				placeholder="Ask me anything..."
+				class="message-input"
+				disabled={isStreaming}
+			/>
+			<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M5 15L15 5"/>
+					<path d="M9 5h6v6"/>
+				</svg>
+			</button>
+		</form>
+	</div>
 </div>
 </AppLayout>
+
+<!-- Operation Preview Modal -->
+{#if showOperationPreview}
+	<OperationPreview
+		operations={pendingOperations}
+		onConfirm={handleOperationConfirm}
+		onCancel={handleOperationCancel}
+	/>
+{/if}
+
+<!-- Question Dialog -->
+{#if showQuestionDialog}
+	<AIQuestionDialog
+		questions={pendingQuestions}
+		onSubmit={handleQuestionSubmit}
+		onCancel={handleQuestionCancel}
+	/>
+{/if}
 
 <style>
 	.chat-page {
@@ -509,7 +733,7 @@
 		background: var(--bg-primary);
 	}
 
-	/* Mobile: Welcome content + expandable panel */
+	/* Mobile: Full-screen chat */
 	.mobile-content {
 		display: none;
 	}
@@ -520,14 +744,63 @@
 		}
 
 		.mobile-content {
-			display: block;
-			padding: 20px;
-			padding-bottom: 130px; /* Space for chat input + bottom nav */
+			display: flex;
+			flex-direction: column;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 50px; /* Above bottom nav */
+			background: var(--bg-primary);
 		}
 
 		.chat-page {
-			padding-bottom: 110px; /* Space for bottom nav (50px) + chat input (60px) */
+			padding-bottom: 0;
 		}
+	}
+
+	/* Mobile Header */
+	.mobile-header {
+		flex-shrink: 0;
+		padding: 16px 20px;
+		background: var(--bg-secondary);
+		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
+	}
+
+	.mobile-header h1 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		margin: 0;
+	}
+
+	/* Mobile Messages */
+	.mobile-messages {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		padding: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	/* Mobile Input Container */
+	.mobile-input-container {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		padding-bottom: max(12px, env(safe-area-inset-bottom));
+		background: var(--bg-secondary);
+		border-top: 1px solid var(--border-color);
+		height: 60px;
+		box-sizing: border-box;
 	}
 
 	/* Header */
@@ -894,75 +1167,4 @@
 		cursor: not-allowed;
 	}
 
-	/* Mobile Welcome Section */
-	.welcome-section {
-		display: flex;
-		flex-direction: column;
-		gap: 24px;
-	}
-
-	.welcome-card {
-		background: var(--bg-secondary);
-		border-radius: var(--radius-lg);
-		padding: 32px 24px;
-		text-align: center;
-		border: 1px solid var(--border-color);
-	}
-
-	.welcome-card h2 {
-		font-size: 1.5rem;
-		font-weight: 700;
-		margin-bottom: 8px;
-	}
-
-	.welcome-card p {
-		font-size: 0.9375rem;
-		color: var(--text-secondary);
-		margin: 0;
-	}
-
-	.quick-actions h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		margin-bottom: 16px;
-		color: var(--text-primary);
-	}
-
-	.action-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 12px;
-	}
-
-	.action-card {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		padding: 20px 16px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		text-decoration: none;
-		color: var(--text-primary);
-		transition: all 0.2s ease;
-	}
-
-	.action-card:hover {
-		transform: translateY(-2px);
-		border-color: var(--accent-primary);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	}
-
-	.action-icon {
-		width: 32px;
-		height: 32px;
-		object-fit: contain;
-	}
-
-	.action-card span {
-		font-size: 0.875rem;
-		font-weight: 500;
-	}
 </style>

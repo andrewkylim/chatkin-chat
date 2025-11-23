@@ -7,7 +7,10 @@
 			</a>
 			<div class="nav-actions">
 				<a href="/login" class="secondary-btn">Sign In</a>
-				<a href="/signup" class="primary-btn">Get Started</a>
+				<a href="/signup" class="primary-btn">
+					<span class="btn-text-desktop">Get Started</span>
+					<span class="btn-text-mobile">Sign Up</span>
+				</a>
 			</div>
 		</div>
 	</nav>
@@ -15,12 +18,10 @@
 	<main class="hero">
 		<div class="hero-container">
 			<h1 class="hero-title">
-				Your productivity,<br />
-				powered by AI
+				Sort your life out.
 			</h1>
 			<p class="hero-subtitle">
-				Chat with AI to create projects, manage tasks, and organize your work.<br />
-				Just say what you need — Chatkin OS does the rest.
+				Chatkin captures your ideas, sorts your tasks, structures your projects, and keeps everything moving - all through conversation
 			</p>
 			<div class="hero-cta">
 				<a href="/signup" class="primary-btn">Start For Free</a>
@@ -36,12 +37,12 @@
 					</div>
 					<div class="message user">
 						<div class="message-bubble">
-							<p>I'm planning my wedding in June 2026</p>
+							<p>I want to get fit and build a consistent workout routine</p>
 						</div>
 					</div>
 					<div class="message ai">
 						<div class="message-bubble">
-							<p>I've created a wedding planning project with 12 tasks, research notes, and a timeline. Let's make this special! 🎉</p>
+							<p>I've created a fitness project with 8 workout tasks, nutrition notes, and a weekly plan. Let's get started! 💪</p>
 						</div>
 					</div>
 				</div>
@@ -89,7 +90,7 @@
 							AI-enhanced note-taking with intelligent organization and search
 						</p>
 					</div>
-					<div class="app-badge badge-soon">SOON</div>
+					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
 				<div class="feature-card">
@@ -111,14 +112,14 @@
 	<section class="cta-section">
 		<div class="cta-container">
 			<h2>Ready to get started?</h2>
-			<p class="text-secondary">Join thousands of people managing their work with AI</p>
+			<p class="text-secondary">Join thousands of people managing their life with AI</p>
 			<a href="/signup" class="primary-btn">Create Free Account</a>
 		</div>
 	</section>
 
 	<footer class="footer">
 		<div class="footer-container">
-			<p class="text-muted">&copy; 2025 Chatkin OS. Built with care.</p>
+			<p class="text-muted">&copy; 2025 Chatkin. Built with care.</p>
 		</div>
 	</footer>
 </div>
@@ -157,6 +158,7 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.logo-icon {
@@ -175,6 +177,14 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
+	}
+
+	.btn-text-mobile {
+		display: none;
+	}
+
+	.btn-text-desktop {
+		display: inline;
 	}
 
 	/* Hero */
@@ -295,6 +305,7 @@
 		gap: 16px;
 		transition: all 0.2s ease;
 		min-height: 100px;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.feature-card:active {
@@ -368,18 +379,18 @@
 	/* CTA Section */
 	.cta-section {
 		padding: 80px 20px;
-		background: var(--text-primary);
-		color: white;
+		background: #f4e4d4;
+		color: black;
 		text-align: center;
 	}
 
 	.cta-container h2 {
-		color: white;
+		color: black;
 		margin-bottom: 16px;
 	}
 
 	.cta-container p {
-		color: rgba(255, 255, 255, 0.8);
+		color: rgba(0, 0, 0, 0.7);
 		margin-bottom: 32px;
 	}
 
@@ -405,6 +416,16 @@
 	}
 
 	/* Responsive */
+	@media (max-width: 639px) {
+		.btn-text-desktop {
+			display: none;
+		}
+
+		.btn-text-mobile {
+			display: inline;
+		}
+	}
+
 	@media (min-width: 640px) {
 		.hero-title {
 			font-size: 3rem;

@@ -103,12 +103,11 @@ export async function addMessage(
 
 	if (error) throw error;
 
-	// Update conversation updated_at and message_count
+	// Update conversation updated_at (message_count is auto-incremented by trigger)
 	await supabase
 		.from('conversations')
 		.update({
-			updated_at: new Date().toISOString(),
-			message_count: supabase.rpc('increment', { row_id: conversationId, column_name: 'message_count' }) as any
+			updated_at: new Date().toISOString()
 		})
 		.eq('id', conversationId);
 
