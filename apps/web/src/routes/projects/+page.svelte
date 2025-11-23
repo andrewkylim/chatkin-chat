@@ -9,6 +9,15 @@
 	let showNewProjectModal = false;
 	let newProjectName = '';
 	let newProjectDescription = '';
+	let selectedEmoji = '📁';
+
+	const availableEmojis = [
+		'📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨', '🌟',
+		'💡', '🎉', '🔥', '⚡', '🎵', '🎮', '✈️', '🏋️',
+		'🍕', '☕', '🌈', '🎭', '🎬', '📸', '🎪', '🎨',
+		'🌸', '🌺', '🌻', '🌼', '🌷', '🌱', '🌿', '🍀',
+		'🐶', '🐱', '🐼', '🦊', '🦁', '🐯', '🐸', '🦄'
+	];
 
 	onMount(async () => {
 		await loadProjects();
@@ -37,12 +46,13 @@
 			await createProject({
 				name: newProjectName,
 				description: newProjectDescription || null,
-				color: null
+				color: selectedEmoji
 			});
 
 			// Reset form
 			newProjectName = '';
 			newProjectDescription = '';
+			selectedEmoji = '📁';
 			showNewProjectModal = false;
 
 			// Reload projects
@@ -66,9 +76,8 @@
 		return past.toLocaleDateString();
 	}
 
-	function getProjectEmoji(index: number) {
-		const emojis = ['🎉', '🏠', '💼', '🎯', '🚀', '📚', '🎨', '🌟'];
-		return emojis[index % emojis.length];
+	function getProjectEmoji(project: any) {
+		return project.color || '📁';
 	}
 </script>
 
@@ -101,12 +110,12 @@
 			</div>
 		{:else}
 			<div class="projects-grid">
-				{#each projects as project, index (project.id)}
+				{#each projects as project (project.id)}
 					{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0 }}
 					<a href="/projects/{project.id}/chat" class="project-card">
 						<div class="project-header">
 							<div class="project-icon" style="background: rgba(199, 124, 92, 0.1);">
-								{getProjectEmoji(index)}
+								{getProjectEmoji(project)}
 							</div>
 							<div class="project-info">
 								<h3>{project.name}</h3>
@@ -118,7 +127,9 @@
 						{/if}
 						<div class="project-footer">
 							<span class="task-status">
-								<span class="status-dot {stats.completedTasks === stats.totalTasks && stats.totalTasks > 0 ? 'completed' : stats.totalTasks > 0 ? 'in-progress' : 'new'}"></span>
+								{#if stats.totalTasks > 0}
+									<span class="status-dot {stats.completedTasks === stats.totalTasks ? 'completed' : 'in-progress'}"></span>
+								{/if}
 								{stats.completedTasks} of {stats.totalTasks} completed
 							</span>
 							<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
@@ -135,6 +146,21 @@
 			<div class="modal" on:click|stopPropagation>
 				<h2>Create New Project</h2>
 				<form on:submit|preventDefault={handleCreateProject}>
+					<div class="form-group">
+						<label>Project Icon</label>
+						<div class="emoji-grid">
+							{#each availableEmojis as emoji}
+								<button
+									type="button"
+									class="emoji-btn"
+									class:selected={selectedEmoji === emoji}
+									on:click={() => selectedEmoji = emoji}
+								>
+									{emoji}
+								</button>
+							{/each}
+						</div>
+					</div>
 					<div class="form-group">
 						<label for="project-name">Project Name</label>
 						<input
@@ -319,10 +345,6 @@
 		background: var(--accent-primary);
 	}
 
-	.status-dot.new {
-		background: var(--text-muted);
-	}
-
 	.project-date {
 		color: var(--text-muted);
 	}
@@ -465,6 +487,42 @@
 
 	.secondary-btn:hover {
 		background: var(--bg-tertiary);
+	}
+
+	/* Emoji Grid */
+	.emoji-grid {
+		display: grid;
+		grid-template-columns: repeat(8, 1fr);
+		gap: 8px;
+		padding: 12px;
+		background: var(--bg-tertiary);
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-color);
+	}
+
+	.emoji-btn {
+		width: 100%;
+		aspect-ratio: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-secondary);
+		border: 2px solid transparent;
+		border-radius: var(--radius-sm);
+		font-size: 1.5rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.emoji-btn:hover {
+		background: var(--bg-primary);
+		transform: scale(1.1);
+	}
+
+	.emoji-btn.selected {
+		background: var(--bg-primary);
+		border-color: var(--accent-primary);
+		transform: scale(1.1);
 	}
 
 	/* Responsive */
