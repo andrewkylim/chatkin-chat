@@ -166,20 +166,25 @@
 										{emoji}
 									</button>
 								{/each}
-								{#if !showAllEmojis}
-									<button
-										type="button"
-										class="emoji-more-btn"
-										on:click={() => showAllEmojis = true}
-										title="More emojis"
-									>
+								<button
+									type="button"
+									class="emoji-more-btn"
+									class:active={showAllEmojis}
+									on:click={() => showAllEmojis = !showAllEmojis}
+									title={showAllEmojis ? "Show less" : "More emojis"}
+								>
+									{#if showAllEmojis}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M5 15l5-5 5 5"/>
+										</svg>
+									{:else}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 											<circle cx="4" cy="10" r="1.5"/>
 											<circle cx="10" cy="10" r="1.5"/>
 											<circle cx="16" cy="10" r="1.5"/>
 										</svg>
-									</button>
-								{/if}
+									{/if}
+								</button>
 							</div>
 						</div>
 					</div>
@@ -446,6 +451,8 @@
 		padding: 24px;
 		max-width: 500px;
 		width: 100%;
+		max-height: 90vh;
+		overflow-y: auto;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 	}
 
@@ -517,12 +524,14 @@
 		background: var(--bg-tertiary);
 		border-radius: var(--radius-md);
 		border: 1px solid var(--border-color);
+		max-height: 300px;
+		overflow-y: auto;
 	}
 
 	.emoji-row {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 8px;
-		overflow-x: auto;
 	}
 
 	.emoji-btn {
@@ -558,7 +567,7 @@
 		align-items: center;
 		justify-content: center;
 		background: var(--bg-secondary);
-		border: 2px solid transparent;
+		border: 2px solid var(--border-color);
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 		transition: all 0.2s ease;
@@ -568,8 +577,13 @@
 
 	.emoji-more-btn:hover {
 		background: var(--bg-primary);
-		border-color: var(--border-color);
 		color: var(--text-secondary);
+	}
+
+	.emoji-more-btn.active {
+		background: var(--bg-primary);
+		border-color: var(--accent-primary);
+		color: var(--accent-primary);
 	}
 
 	/* Responsive */
