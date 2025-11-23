@@ -3,18 +3,20 @@
 	import BottomNav from './BottomNav.svelte';
 	import AuthGuard from './AuthGuard.svelte';
 
-	let { children } = $props();
+	let { children, hideBottomNav = false } = $props();
 </script>
 
 <AuthGuard>
 	<div class="app-layout">
 		<Sidebar />
 
-		<main class="app-content">
+		<main class="app-content" class:no-bottom-nav={hideBottomNav}>
 			{@render children()}
 		</main>
 
-		<BottomNav />
+		{#if !hideBottomNav}
+			<BottomNav />
+		{/if}
 	</div>
 </AuthGuard>
 
@@ -36,6 +38,10 @@
 		.app-content {
 			margin-left: 0;
 			margin-bottom: 60px; /* Space for bottom nav */
+		}
+
+		.app-content.no-bottom-nav {
+			margin-bottom: 0; /* No space needed when bottom nav is hidden */
 		}
 	}
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 
@@ -12,6 +13,8 @@
 	let selectedEmoji = '📁';
 	let showAllEmojis = false;
 	let deleteConfirmProject: any = null;
+	let editProject: any = null;
+	let showEditModal = false;
 
 	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨'];
 
@@ -88,9 +91,14 @@
 		return project.color || '📁';
 	}
 
-	function truncateProjectName(name: string, maxLength: number = 20) {
+	function truncateProjectName(name: string, maxLength: number = 30) {
 		if (name.length <= maxLength) return name;
 		return name.substring(0, maxLength) + '...';
+	}
+
+	function truncateDescription(description: string, maxLength: number = 50) {
+		if (description.length <= maxLength) return description;
+		return description.substring(0, maxLength) + '...';
 	}
 
 	async function handleDeleteProject() {
@@ -104,6 +112,20 @@
 			console.error('Error deleting project:', error);
 			alert('Failed to delete project');
 		}
+	}
+
+	function startEditProject(project: any) {
+		editProject = project;
+		showEditModal = true;
+	}
+
+	function handleCloseEditModal() {
+		editProject = null;
+		showEditModal = false;
+	}
+
+	async function handleProjectUpdated() {
+		await loadProjects();
 	}
 </script>
 
@@ -150,7 +172,7 @@
 								</div>
 							</div>
 							{#if project.description}
-								<p class="project-description">{project.description}</p>
+								<p class="project-description">{truncateDescription(project.description)}</p>
 							{/if}
 							<div class="project-footer">
 								<span class="task-status">
@@ -162,11 +184,18 @@
 								<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
 							</div>
 						</a>
-						<button class="delete-icon-btn" on:click|stopPropagation={() => deleteConfirmProject = project} title="Delete project">
-							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-							</svg>
-						</button>
+						<div class="card-actions">
+							<button class="edit-icon-btn" on:click|stopPropagation={() => startEditProject(project)} title="Edit project">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+								</svg>
+							</button>
+							<button class="delete-icon-btn" on:click|stopPropagation={() => deleteConfirmProject = project} title="Delete project">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+								</svg>
+							</button>
+						</div>
 					</div>
 				{/each}
 			</div>
@@ -250,6 +279,14 @@
 		</div>
 	{/if}
 
+	<!-- Edit Project Modal -->
+	<EditProjectModal
+		show={showEditModal}
+		project={editProject}
+		onClose={handleCloseEditModal}
+		onUpdate={handleProjectUpdated}
+	/>
+
 	<!-- Delete Confirmation Modal -->
 	{#if deleteConfirmProject}
 		<div class="modal-overlay" on:click={() => deleteConfirmProject = null}>
@@ -326,6 +363,8 @@
 
 	.project-card {
 		position: relative;
+		width: 100%;
+		min-width: 0;
 	}
 
 	.project-card-link {
@@ -340,7 +379,8 @@
 		flex-direction: column;
 		gap: 12px;
 		min-height: 180px;
-		min-width: 285px;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	.project-card-link:hover {
@@ -353,10 +393,23 @@
 		transform: scale(0.98);
 	}
 
-	.delete-icon-btn {
+	.card-actions {
 		position: absolute;
 		top: 16px;
 		right: 16px;
+		display: flex;
+		gap: 8px;
+		opacity: 0;
+		transition: opacity 0.2s ease;
+		z-index: 1;
+	}
+
+	.project-card:hover .card-actions {
+		opacity: 1;
+	}
+
+	.edit-icon-btn,
+	.delete-icon-btn {
 		width: 32px;
 		height: 32px;
 		display: flex;
@@ -365,15 +418,23 @@
 		background: var(--bg-tertiary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-sm);
-		color: rgb(239, 68, 68);
 		cursor: pointer;
 		transition: all 0.2s ease;
-		opacity: 0;
-		z-index: 1;
 	}
 
-	.project-card:hover .delete-icon-btn {
-		opacity: 1;
+	.edit-icon-btn {
+		color: var(--text-primary);
+	}
+
+	.edit-icon-btn:hover {
+		background: var(--bg-primary);
+		border-color: var(--accent-primary);
+		color: var(--accent-primary);
+		transform: scale(1.1);
+	}
+
+	.delete-icon-btn {
+		color: rgb(239, 68, 68);
 	}
 
 	.delete-icon-btn:hover {
@@ -413,6 +474,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		word-break: break-all;
 	}
 
 	.project-meta {
@@ -426,6 +488,9 @@
 		color: var(--text-secondary);
 		line-height: 1.5;
 		margin: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.project-footer {
@@ -436,6 +501,7 @@
 		color: var(--text-muted);
 		padding-top: 8px;
 		border-top: 1px solid var(--border-color);
+		margin-top: auto;
 	}
 
 	.task-status {
@@ -694,16 +760,10 @@
 		color: var(--accent-primary);
 	}
 
-	/* Responsive */
+	/* Responsive - max 2 columns */
 	@media (min-width: 640px) {
 		.projects-grid {
 			grid-template-columns: repeat(2, 1fr);
-		}
-	}
-
-	@media (min-width: 1024px) {
-		.projects-grid {
-			grid-template-columns: repeat(3, 1fr);
 		}
 	}
 </style>

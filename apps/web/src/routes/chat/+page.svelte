@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -45,10 +46,10 @@
 		}, 50);
 	}
 
-	async function sendMessage() {
-		if (!inputMessage.trim() || isStreaming) return;
+	async function sendMessage(message?: string) {
+		const userMessage = message || inputMessage.trim();
+		if (!userMessage || isStreaming) return;
 
-		const userMessage = inputMessage.trim();
 		inputMessage = '';
 
 		// Add user message
@@ -63,7 +64,8 @@
 		// Show loading message
 		messages[aiMessageIndex] = {
 			role: 'ai',
-			content: 'Thinking...'
+			content: '',
+		isTyping: true
 		};
 		messages = messages;
 		scrollToBottom();
@@ -184,88 +186,142 @@
 
 <AppLayout>
 <div class="chat-page">
-	<header class="chat-header">
-		<div class="header-content">
-			<h1>Chat</h1>
-			<div class="header-actions">
-				<div class="create-menu-container">
-					<button class="icon-btn" title="Create new" on:click={() => showCreateMenu = !showCreateMenu}>
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M10 4v12M4 10h12"/>
-						</svg>
-					</button>
-					{#if showCreateMenu}
-						<div class="create-menu">
-							<a href="/projects" class="menu-item">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<rect x="2" y="2" width="4" height="4" rx="1"/>
-									<rect x="10" y="2" width="4" height="4" rx="1"/>
-									<rect x="2" y="10" width="4" height="4" rx="1"/>
-									<rect x="10" y="10" width="4" height="4" rx="1"/>
-								</svg>
-								New Project
-							</a>
-							<a href="/tasks" class="menu-item">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M4 8l2 2 6-6"/>
-									<rect x="2" y="2" width="12" height="12" rx="2"/>
-								</svg>
-								New Task
-							</a>
-							<a href="/notes" class="menu-item">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M4 6h8M4 10h6"/>
-									<rect x="2" y="2" width="12" height="12" rx="2"/>
-								</svg>
-								New Note
-							</a>
-						</div>
-					{/if}
+	<!-- Desktop: Full-screen chat -->
+	<div class="desktop-chat">
+		<header class="chat-header">
+			<div class="header-content">
+				<h1>Chat</h1>
+				<div class="header-actions">
+					<div class="create-menu-container">
+						<button class="icon-btn" title="Create new" on:click={() => showCreateMenu = !showCreateMenu}>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M10 4v12M4 10h12"/>
+							</svg>
+						</button>
+						{#if showCreateMenu}
+							<div class="create-menu">
+								<a href="/projects" class="menu-item">
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<rect x="2" y="2" width="4" height="4" rx="1"/>
+										<rect x="10" y="2" width="4" height="4" rx="1"/>
+										<rect x="2" y="10" width="4" height="4" rx="1"/>
+										<rect x="10" y="10" width="4" height="4" rx="1"/>
+									</svg>
+									New Project
+								</a>
+								<a href="/tasks" class="menu-item">
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M4 8l2 2 6-6"/>
+										<rect x="2" y="2" width="12" height="12" rx="2"/>
+									</svg>
+									New Task
+								</a>
+								<a href="/notes" class="menu-item">
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M4 6h8M4 10h6"/>
+										<rect x="2" y="2" width="12" height="12" rx="2"/>
+									</svg>
+									New Note
+								</a>
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<div class="messages" bind:this={messagesContainer}>
+			{#each messages as message (message)}
+				<div class="message {message.role}">
+					<div class="message-bubble">
+						{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
+							<p>{message.content}</p>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+
+		<form class="input-container" on:submit|preventDefault={() => sendMessage()}>
+			<FileUpload
+				accept="image/*,application/pdf,.doc,.docx,.txt"
+				maxSizeMB={10}
+				onUploadComplete={(file) => {
+					console.log('File uploaded:', file);
+				}}
+			/>
+			<input
+				type="text"
+				bind:value={inputMessage}
+				placeholder="Ask me anything..."
+				class="message-input"
+				disabled={isStreaming}
+			/>
+			<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+					<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
+				</svg>
+			</button>
+		</form>
+	</div>
+
+	<!-- Mobile: Welcome content + expandable chat -->
+	<div class="mobile-content">
+		<div class="welcome-section">
+			<div class="welcome-card">
+				<h2>Welcome to Chatkin</h2>
+				<p>Your AI-powered productivity assistant</p>
+			</div>
+
+			<div class="quick-actions">
+				<h3>Quick Actions</h3>
+				<div class="action-grid">
+					<a href="/projects" class="action-card">
+						<img src="/projects.png" alt="Projects" class="action-icon" />
+						<span>Projects</span>
+					</a>
+					<a href="/tasks" class="action-card">
+						<img src="/tasks.png" alt="Tasks" class="action-icon" />
+						<span>Tasks</span>
+					</a>
+					<a href="/notes" class="action-card">
+						<img src="/notes.png" alt="Notes" class="action-icon" />
+						<span>Notes</span>
+					</a>
 				</div>
 			</div>
 		</div>
-	</header>
-
-	<div class="messages" bind:this={messagesContainer}>
-		{#each messages as message (message)}
-			<div class="message {message.role}">
-				<div class="message-bubble">
-					<p>{message.content}</p>
-				</div>
-			</div>
-		{/each}
 	</div>
 
-	<form class="input-container" on:submit|preventDefault={sendMessage}>
-		<FileUpload
-			accept="image/*,application/pdf,.doc,.docx,.txt"
-			maxSizeMB={10}
-			onUploadComplete={(file) => {
-				console.log('File uploaded:', file);
-			}}
-		/>
-		<input
-			type="text"
-			bind:value={inputMessage}
-			placeholder="Ask me anything..."
-			class="message-input"
-			disabled={isStreaming}
-		/>
-		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
-			<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-				<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
-			</svg>
-		</button>
-	</form>
+	<!-- Expandable Chat Panel (Mobile Only) -->
+	<ExpandableChatPanel
+		messages={messages}
+		onSendMessage={sendMessage}
+		placeholder="Ask me anything..."
+		isStreaming={isStreaming}
+		context="global"
+		showFileUpload={true}
+	/>
 </div>
 </AppLayout>
 
 <style>
-	/* Critical mobile chat UI pattern - ONLY for chat pages */
 	.chat-page {
+		min-height: 100vh;
+		background: var(--bg-primary);
+	}
+
+	/* Desktop: Full-screen chat */
+	.desktop-chat {
 		position: absolute;
 		top: 0;
-		left: 0;
+		left: 240px;
 		right: 0;
 		bottom: 0;
 		display: flex;
@@ -274,10 +330,24 @@
 		background: var(--bg-primary);
 	}
 
-	/* Desktop: offset by sidebar width */
-	@media (min-width: 1024px) {
+	/* Mobile: Welcome content + expandable panel */
+	.mobile-content {
+		display: none;
+	}
+
+	@media (max-width: 1023px) {
+		.desktop-chat {
+			display: none;
+		}
+
+		.mobile-content {
+			display: block;
+			padding: 20px;
+			padding-bottom: 130px; /* Space for chat input + bottom nav */
+		}
+
 		.chat-page {
-			left: 240px;
+			padding-bottom: 110px; /* Space for bottom nav (50px) + chat input (60px) */
 		}
 	}
 
@@ -423,6 +493,45 @@
 		max-width: 95%;
 	}
 
+	/* Typing Indicator */
+	.typing-indicator {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 8px 4px;
+	}
+
+	.typing-indicator span {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background-color: var(--text-secondary);
+		animation: typing 1.2s ease-in-out infinite;
+	}
+
+	.typing-indicator span:nth-child(1) {
+		animation-delay: 0s;
+	}
+
+	.typing-indicator span:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.typing-indicator span:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
+	@keyframes typing {
+		0%, 80%, 100% {
+			transform: scale(1);
+			opacity: 0.5;
+		}
+		40% {
+			transform: scale(1.3);
+			opacity: 1;
+		}
+	}
+
 	/* Input Container */
 	.input-container {
 		flex-shrink: 0;
@@ -486,5 +595,77 @@
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	/* Mobile Welcome Section */
+	.welcome-section {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	.welcome-card {
+		background: var(--bg-secondary);
+		border-radius: var(--radius-lg);
+		padding: 32px 24px;
+		text-align: center;
+		border: 1px solid var(--border-color);
+	}
+
+	.welcome-card h2 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-bottom: 8px;
+	}
+
+	.welcome-card p {
+		font-size: 0.9375rem;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.quick-actions h3 {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 16px;
+		color: var(--text-primary);
+	}
+
+	.action-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 12px;
+	}
+
+	.action-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 20px 16px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		text-decoration: none;
+		color: var(--text-primary);
+		transition: all 0.2s ease;
+	}
+
+	.action-card:hover {
+		transform: translateY(-2px);
+		border-color: var(--accent-primary);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	.action-icon {
+		width: 32px;
+		height: 32px;
+		object-fit: contain;
+	}
+
+	.action-card span {
+		font-size: 0.875rem;
+		font-weight: 500;
 	}
 </style>

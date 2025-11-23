@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
 	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
@@ -187,10 +188,10 @@
 		}, 50);
 	}
 
-	async function sendChatMessage() {
-		if (!chatInput.trim() || isChatStreaming) return;
+	async function sendChatMessage(message?: string) {
+		const userMessage = message || chatInput.trim();
+		if (!userMessage || isChatStreaming) return;
 
-		const userMessage = chatInput.trim();
 		chatInput = '';
 
 		// Add user message
@@ -205,7 +206,8 @@
 		// Show loading message
 		chatMessages[aiMessageIndex] = {
 			role: 'ai',
-			content: 'Thinking...'
+			content: '',
+		isTyping: true
 		};
 		chatMessages = chatMessages;
 		scrollChatToBottom();
@@ -466,7 +468,15 @@
 				{#each chatMessages as message (message)}
 					<div class="message {message.role}">
 						<div class="message-bubble">
+							{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
 							<p>{message.content}</p>
+						{/if}
 						</div>
 					</div>
 				{/each}
@@ -627,6 +637,15 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Expandable Chat Panel (Mobile Only) -->
+	<ExpandableChatPanel
+		messages={chatMessages}
+		onSendMessage={sendChatMessage}
+		placeholder="Ask about tasks..."
+		isStreaming={isChatStreaming}
+		context="tasks"
+	/>
 </div>
 </AppLayout>
 
@@ -909,6 +928,45 @@
 		max-width: 95%;
 	}
 
+	/* Typing Indicator */
+	.typing-indicator {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 8px 4px;
+	}
+
+	.typing-indicator span {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background-color: var(--text-secondary);
+		animation: typing 1.2s ease-in-out infinite;
+	}
+
+	.typing-indicator span:nth-child(1) {
+		animation-delay: 0s;
+	}
+
+	.typing-indicator span:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.typing-indicator span:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
+	@keyframes typing {
+		0%, 80%, 100% {
+			transform: scale(1);
+			opacity: 0.5;
+		}
+		40% {
+			transform: scale(1.3);
+			opacity: 1;
+		}
+	}
+
 	.input-container {
 		flex-shrink: 0;
 		padding: 16px;
@@ -1136,6 +1194,14 @@
 
 		.tasks-section {
 			border-right: none;
+		}
+
+		.tasks-page {
+			padding-bottom: 110px; /* Space for bottom nav (50px) + chat input (60px) */
+		}
+
+		.tasks-list {
+			padding-bottom: 20px;
 		}
 
 		.form-row {

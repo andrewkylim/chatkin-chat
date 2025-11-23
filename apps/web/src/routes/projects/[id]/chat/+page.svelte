@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
+	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -39,6 +40,7 @@
 	let messagesContainer: HTMLDivElement;
 	let showMenu = false;
 	let showDeleteConfirm = false;
+	let showEditModal = false;
 
 	onMount(async () => {
 		try {
@@ -95,6 +97,21 @@
 		}
 	}
 
+	function startEditProject() {
+		if (!project) return;
+		showMenu = false;
+		showEditModal = true;
+	}
+
+	function handleCloseEditModal() {
+		showEditModal = false;
+	}
+
+	async function handleProjectUpdated() {
+		// Reload project data
+		project = await getProject(projectId);
+	}
+
 	async function sendMessage() {
 		if (!inputMessage.trim() || isStreaming) return;
 
@@ -113,7 +130,8 @@
 		// Show loading message
 		messages[aiMessageIndex] = {
 			role: 'ai',
-			content: 'Thinking...'
+			content: '',
+		isTyping: true
 		};
 		messages = messages;
 		scrollToBottom();
@@ -216,7 +234,7 @@
 	}
 </script>
 
-<AppLayout>
+<AppLayout hideBottomNav={true}>
 <div class="project-chat-page">
 	<header class="chat-header">
 		<div class="header-content">
@@ -235,7 +253,7 @@
 			{:else if project}
 				<div class="project-info">
 					<div class="project-icon">{project.color || '📁'}</div>
-					<div>
+					<div class="project-text">
 						<h1>{project.name}</h1>
 						{#if project.description}
 							<p class="project-subtitle">{project.description}</p>
@@ -254,6 +272,12 @@
 					</button>
 					{#if showMenu}
 						<div class="dropdown-menu">
+							<button class="menu-item" on:click={startEditProject}>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+								</svg>
+								Edit Project
+							</button>
 							<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
 								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
@@ -271,7 +295,15 @@
 		{#each messages as message (message)}
 			<div class="message {message.role}">
 				<div class="message-bubble">
-					<p>{message.content}</p>
+					{#if message.isTyping}
+						<div class="typing-indicator">
+							<span></span>
+							<span></span>
+							<span></span>
+						</div>
+					{:else}
+						<p>{message.content}</p>
+					{/if}
 				</div>
 			</div>
 		{/each}
@@ -298,6 +330,14 @@
 			</svg>
 		</button>
 	</form>
+
+	<!-- Edit Project Modal -->
+	<EditProjectModal
+		show={showEditModal}
+		project={project}
+		onClose={handleCloseEditModal}
+		onUpdate={handleProjectUpdated}
+	/>
 
 	<!-- Delete Confirmation Modal -->
 	{#if showDeleteConfirm}
@@ -385,6 +425,7 @@
 		align-items: center;
 		gap: 12px;
 		min-width: 0;
+		padding-right: 50px;
 	}
 
 	.project-icon {
@@ -397,6 +438,11 @@
 		background: var(--bg-tertiary);
 		border-radius: var(--radius-md);
 		flex-shrink: 0;
+	}
+
+	.project-text {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.project-info h1 {
@@ -541,6 +587,45 @@
 		border: 1px solid var(--border-color);
 		text-align: left;
 		max-width: 95%;
+	}
+
+	/* Typing Indicator */
+	.typing-indicator {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 8px 4px;
+	}
+
+	.typing-indicator span {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background-color: var(--text-secondary);
+		animation: typing 1.2s ease-in-out infinite;
+	}
+
+	.typing-indicator span:nth-child(1) {
+		animation-delay: 0s;
+	}
+
+	.typing-indicator span:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.typing-indicator span:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
+	@keyframes typing {
+		0%, 80%, 100% {
+			transform: scale(1);
+			opacity: 0.5;
+		}
+		40% {
+			transform: scale(1.3);
+			opacity: 1;
+		}
 	}
 
 	/* Input Container */
