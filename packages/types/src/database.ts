@@ -19,7 +19,7 @@ export interface Task {
   user_id: string;
   title: string;
   description: string | null;
-  status: 'todo' | 'in_progress' | 'done';
+  status: 'todo' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   due_date: string | null; // ISO date string
   completed_at: string | null;

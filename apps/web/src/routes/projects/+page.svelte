@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import { getProjects, getProjectStats, createProject } from '$lib/db/projects';
+	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 
 	let projects: any[] = [];
@@ -11,16 +11,17 @@
 	let newProjectDescription = '';
 	let selectedEmoji = '📁';
 	let showAllEmojis = false;
+	let deleteConfirmProject: any = null;
 
 	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨'];
 
 	const allEmojis = [
 		'📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨',
 		'🌟', '💡', '🎉', '🔥', '⚡', '🎵', '🎮',
-		'✈️', '🏋️', '🍕', '☕', '🌈', '🎭', '🎬',
-		'📸', '🎪', '🌱', '🌸', '🌻', '🌷', '🍀',
-		'🦄', '🐶', '🐱', '🐼', '🦊', '🦁', '🐯',
-		'🐸', '🎃', '⭐', '🎁', '💝', '🎈'
+		'✈️', '🍕', '☕', '🌈', '🎭', '🎬', '📸',
+		'🎪', '🌱', '🌸', '🌻', '🌷', '🍀', '🦄',
+		'🐶', '🐱', '🎄', '🦊', '🦁', '🐯', '🎃',
+		'⭐', '🎁', '💝', '🎈'
 	];
 
 	$: availableEmojis = showAllEmojis ? allEmojis : quickEmojis;
@@ -86,6 +87,24 @@
 	function getProjectEmoji(project: any) {
 		return project.color || '📁';
 	}
+
+	function truncateProjectName(name: string, maxLength: number = 20) {
+		if (name.length <= maxLength) return name;
+		return name.substring(0, maxLength) + '...';
+	}
+
+	async function handleDeleteProject() {
+		if (!deleteConfirmProject) return;
+
+		try {
+			await deleteProject(deleteConfirmProject.id);
+			deleteConfirmProject = null;
+			await loadProjects();
+		} catch (error) {
+			console.error('Error deleting project:', error);
+			alert('Failed to delete project');
+		}
+	}
 </script>
 
 <AppLayout>
@@ -119,29 +138,36 @@
 			<div class="projects-grid">
 				{#each projects as project (project.id)}
 					{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0 }}
-					<a href="/projects/{project.id}/chat" class="project-card">
-						<div class="project-header">
-							<div class="project-icon" style="background: rgba(199, 124, 92, 0.1);">
-								{getProjectEmoji(project)}
+					<div class="project-card">
+						<a href="/projects/{project.id}/chat" class="project-card-link">
+							<div class="project-header">
+								<div class="project-icon" style="background: rgba(199, 124, 92, 0.1);">
+									{getProjectEmoji(project)}
+								</div>
+								<div class="project-info">
+									<h3>{truncateProjectName(project.name)}</h3>
+									<p class="project-meta">{stats.totalTasks} tasks · {stats.totalNotes} notes</p>
+								</div>
 							</div>
-							<div class="project-info">
-								<h3>{project.name}</h3>
-								<p class="project-meta">{stats.totalTasks} tasks · {stats.totalNotes} notes</p>
+							{#if project.description}
+								<p class="project-description">{project.description}</p>
+							{/if}
+							<div class="project-footer">
+								<span class="task-status">
+									{#if stats.totalTasks > 0}
+										<span class="status-dot {stats.completedTasks === stats.totalTasks ? 'completed' : 'in-progress'}"></span>
+									{/if}
+									{stats.completedTasks} of {stats.totalTasks} completed
+								</span>
+								<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
 							</div>
-						</div>
-						{#if project.description}
-							<p class="project-description">{project.description}</p>
-						{/if}
-						<div class="project-footer">
-							<span class="task-status">
-								{#if stats.totalTasks > 0}
-									<span class="status-dot {stats.completedTasks === stats.totalTasks ? 'completed' : 'in-progress'}"></span>
-								{/if}
-								{stats.completedTasks} of {stats.totalTasks} completed
-							</span>
-							<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
-						</div>
-					</a>
+						</a>
+						<button class="delete-icon-btn" on:click|stopPropagation={() => deleteConfirmProject = project} title="Delete project">
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+							</svg>
+						</button>
+					</div>
 				{/each}
 			</div>
 		{/if}
@@ -196,6 +222,7 @@
 							id="project-name"
 							bind:value={newProjectName}
 							placeholder="e.g., Wedding Planning"
+							maxlength="50"
 							required
 							autofocus
 						/>
@@ -206,6 +233,7 @@
 							id="project-description"
 							bind:value={newProjectDescription}
 							placeholder="Briefly describe your project..."
+							maxlength="200"
 							rows="3"
 						></textarea>
 					</div>
@@ -218,6 +246,24 @@
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Delete Confirmation Modal -->
+	{#if deleteConfirmProject}
+		<div class="modal-overlay" on:click={() => deleteConfirmProject = null}>
+			<div class="modal" on:click|stopPropagation>
+				<h2>Delete Project?</h2>
+				<p>Are you sure you want to delete "{deleteConfirmProject.name}"? This will also delete all tasks and notes in this project. This action cannot be undone.</p>
+				<div class="modal-actions">
+					<button type="button" class="secondary-btn" on:click={() => deleteConfirmProject = null}>
+						Cancel
+					</button>
+					<button type="button" class="danger-btn" on:click={handleDeleteProject}>
+						Delete Project
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -279,6 +325,10 @@
 	}
 
 	.project-card {
+		position: relative;
+	}
+
+	.project-card-link {
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-lg);
@@ -289,16 +339,47 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+		min-height: 180px;
+		min-width: 285px;
 	}
 
-	.project-card:hover {
+	.project-card-link:hover {
 		transform: translateY(-2px);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 		border-color: var(--accent-primary);
 	}
 
-	.project-card:active {
+	.project-card-link:active {
 		transform: scale(0.98);
+	}
+
+	.delete-icon-btn {
+		position: absolute;
+		top: 16px;
+		right: 16px;
+		width: 32px;
+		height: 32px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-sm);
+		color: rgb(239, 68, 68);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		opacity: 0;
+		z-index: 1;
+	}
+
+	.project-card:hover .delete-icon-btn {
+		opacity: 1;
+	}
+
+	.delete-icon-btn:hover {
+		background: rgba(239, 68, 68, 0.1);
+		border-color: rgb(239, 68, 68);
+		transform: scale(1.1);
 	}
 
 	.project-header {
@@ -321,6 +402,7 @@
 	.project-info {
 		flex: 1;
 		min-width: 0;
+		padding-right: 40px;
 	}
 
 	.project-info h3 {
@@ -328,6 +410,9 @@
 		font-weight: 600;
 		margin-bottom: 4px;
 		letter-spacing: -0.02em;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.project-meta {
@@ -519,6 +604,27 @@
 		background: var(--bg-tertiary);
 	}
 
+	.danger-btn {
+		padding: 10px 20px;
+		background: rgb(239, 68, 68);
+		border: none;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.danger-btn:hover {
+		background: rgb(220, 38, 38);
+		transform: translateY(-1px);
+	}
+
+	.danger-btn:active {
+		transform: translateY(0);
+	}
+
 	/* Emoji Selector */
 	.emoji-selector {
 		padding: 12px;
@@ -533,6 +639,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
+		justify-content: center;
 	}
 
 	.emoji-btn {

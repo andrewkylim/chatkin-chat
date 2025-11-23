@@ -81,6 +81,11 @@
 		}
 	}
 
+	function truncateTitle(title: string, maxLength: number = 30) {
+		if (title.length <= maxLength) return title;
+		return title.substring(0, maxLength) + '...';
+	}
+
 	function formatDate(dateString: string) {
 		const date = new Date(dateString);
 		const now = new Date();
@@ -324,7 +329,7 @@
 						<div class="note-card" class:standalone={!note.project_id}>
 							<a href="/notes/{note.id}" class="note-link">
 								<div class="note-header">
-									<h3>{note.title}</h3>
+									<h3>{truncateTitle(note.title)}</h3>
 									{#if note.project_id && projectsMap[note.project_id]}
 										<span class="note-project">{projectsMap[note.project_id].name}</span>
 									{:else}
@@ -417,6 +422,7 @@
 							id="note-title"
 							bind:value={newNoteTitle}
 							placeholder="e.g., Meeting Notes"
+							maxlength="50"
 							required
 						/>
 					</div>
@@ -464,6 +470,7 @@
 							id="edit-title"
 							bind:value={editNoteTitle}
 							placeholder="Note title"
+							maxlength="50"
 							required
 							autofocus
 						/>

@@ -2,9 +2,10 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
-	import { getProject } from '$lib/db/projects';
+	import { getProject, deleteProject } from '$lib/db/projects';
 	import { createTask } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
 
@@ -36,6 +37,8 @@
 	let inputMessage = '';
 	let isStreaming = false;
 	let messagesContainer: HTMLDivElement;
+	let showMenu = false;
+	let showDeleteConfirm = false;
 
 	onMount(async () => {
 		try {
@@ -58,6 +61,20 @@
 			loading = false;
 		}
 		scrollToBottom();
+
+		// Close menu when clicking outside
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (showMenu && !target.closest('.menu-container')) {
+				showMenu = false;
+			}
+		};
+
+		document.addEventListener('click', handleClickOutside);
+
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 
 	function scrollToBottom() {
@@ -66,6 +83,16 @@
 				messagesContainer.scrollTop = messagesContainer.scrollHeight;
 			}
 		}, 50);
+	}
+
+	async function handleDeleteProject() {
+		try {
+			await deleteProject(projectId);
+			goto('/projects');
+		} catch (error) {
+			console.error('Error deleting project:', error);
+			alert('Failed to delete project');
+		}
 	}
 
 	async function sendMessage() {
@@ -207,7 +234,7 @@
 				</div>
 			{:else if project}
 				<div class="project-info">
-					<div class="project-icon">{project.name.charAt(0).toUpperCase()}</div>
+					<div class="project-icon">{project.color || '📁'}</div>
 					<div>
 						<h1>{project.name}</h1>
 						{#if project.description}
@@ -217,13 +244,25 @@
 				</div>
 			{/if}
 			<div class="header-actions">
-				<button class="icon-btn" title="Project details">
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-						<circle cx="10" cy="10" r="1"/>
-						<circle cx="10" cy="5" r="1"/>
-						<circle cx="10" cy="15" r="1"/>
-					</svg>
-				</button>
+				<div class="menu-container">
+					<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
+						<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+							<circle cx="10" cy="10" r="1.5"/>
+							<circle cx="4" cy="10" r="1.5"/>
+							<circle cx="16" cy="10" r="1.5"/>
+						</svg>
+					</button>
+					{#if showMenu}
+						<div class="dropdown-menu">
+							<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+								</svg>
+								Delete Project
+							</button>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</header>
@@ -259,6 +298,24 @@
 			</svg>
 		</button>
 	</form>
+
+	<!-- Delete Confirmation Modal -->
+	{#if showDeleteConfirm}
+		<div class="modal-overlay" on:click={() => showDeleteConfirm = false}>
+			<div class="modal" on:click|stopPropagation>
+				<h2>Delete Project?</h2>
+				<p>Are you sure you want to delete "{project?.name || 'this project'}"? This will also delete all tasks and notes in this project. This action cannot be undone.</p>
+				<div class="modal-actions">
+					<button type="button" class="secondary-btn" on:click={() => showDeleteConfirm = false}>
+						Cancel
+					</button>
+					<button type="button" class="danger-btn" on:click={handleDeleteProject}>
+						Delete Project
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 </AppLayout>
 
@@ -276,15 +333,27 @@
 		background: var(--bg-primary);
 	}
 
+	/* Desktop: offset by sidebar width */
+	@media (min-width: 1024px) {
+		.project-chat-page {
+			left: 240px;
+		}
+	}
+
 	/* Header */
 	.chat-header {
 		flex-shrink: 0;
 		padding: 16px 20px;
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
 	}
 
 	.header-content {
+		width: 100%;
 		display: flex;
 		align-items: center;
 		gap: 12px;
@@ -377,6 +446,55 @@
 		transform: translateY(0);
 	}
 
+	.menu-container {
+		position: relative;
+	}
+
+	.dropdown-menu {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		min-width: 180px;
+		z-index: 100;
+		overflow: hidden;
+	}
+
+	.menu-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		width: 100%;
+		background: none;
+		border: none;
+		color: var(--text-primary);
+		text-decoration: none;
+		font-size: 0.9375rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-align: left;
+	}
+
+	.menu-item:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.delete-item {
+		color: rgb(239, 68, 68);
+	}
+
+	.delete-item svg {
+		color: rgb(239, 68, 68);
+	}
+
+	.delete-item:hover {
+		background: rgba(239, 68, 68, 0.1);
+	}
+
 	/* Messages */
 	.messages {
 		flex: 1;
@@ -432,8 +550,11 @@
 		padding-bottom: max(16px, env(safe-area-inset-bottom));
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
+		height: 76px;
 		display: flex;
+		align-items: center;
 		gap: 12px;
+		box-sizing: border-box;
 	}
 
 	.message-input {
@@ -485,6 +606,84 @@
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	/* Modal */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 20px;
+	}
+
+	.modal {
+		background: var(--bg-secondary);
+		border-radius: var(--radius-lg);
+		padding: 24px;
+		max-width: 400px;
+		width: 100%;
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+	}
+
+	.modal h2 {
+		font-size: 1.25rem;
+		margin-bottom: 12px;
+	}
+
+	.modal p {
+		color: var(--text-secondary);
+		margin-bottom: 24px;
+		line-height: 1.5;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 12px;
+		justify-content: flex-end;
+	}
+
+	.secondary-btn {
+		padding: 10px 20px;
+		background: transparent;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.secondary-btn:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.danger-btn {
+		padding: 10px 20px;
+		background: rgb(239, 68, 68);
+		border: none;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.danger-btn:hover {
+		background: rgb(220, 38, 38);
+		transform: translateY(-1px);
+	}
+
+	.danger-btn:active {
+		transform: translateY(0);
 	}
 
 	/* Mobile adjustments */

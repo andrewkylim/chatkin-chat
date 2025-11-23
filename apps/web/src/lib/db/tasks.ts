@@ -68,7 +68,7 @@ export async function deleteTask(id: string) {
 
 export async function toggleTaskComplete(id: string, completed: boolean) {
 	return updateTask(id, {
-		status: completed ? 'done' : 'todo',
+		status: completed ? 'completed' : 'todo',
 		completed_at: completed ? new Date().toISOString() : null
 	});
 }

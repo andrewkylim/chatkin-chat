@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import { getTasks, createTask, toggleTaskComplete } from '$lib/db/tasks';
+	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
 	import { onMount } from 'svelte';
@@ -20,6 +20,15 @@
 	let newTaskPriority = 'medium';
 	let newTaskDueDate = '';
 	let newTaskProjectId: string | null = null;
+
+	// Edit modal state
+	let showEditTaskModal = false;
+	let editingTask: any = null;
+	let editTaskTitle = '';
+	let editTaskDescription = '';
+	let editTaskPriority = 'medium';
+	let editTaskDueDate = '';
+	let editTaskProjectId: string | null = null;
 
 	// Chat state
 	let chatMessages: ChatMessage[] = [
@@ -83,6 +92,54 @@
 		} catch (error) {
 			console.error('Error toggling task:', error);
 		}
+	}
+
+	function openEditTask(task: any) {
+		editingTask = task;
+		editTaskTitle = task.title;
+		editTaskDescription = task.description || '';
+		editTaskPriority = task.priority;
+		editTaskDueDate = task.due_date || '';
+		editTaskProjectId = task.project_id;
+		showEditTaskModal = true;
+	}
+
+	async function handleUpdateTask() {
+		if (!editingTask || !editTaskTitle.trim()) return;
+
+		try {
+			await updateTask(editingTask.id, {
+				title: editTaskTitle,
+				description: editTaskDescription || null,
+				priority: editTaskPriority as any,
+				due_date: editTaskDueDate || null,
+				project_id: editTaskProjectId
+			});
+
+			showEditTaskModal = false;
+			editingTask = null;
+			await loadData();
+		} catch (error) {
+			console.error('Error updating task:', error);
+		}
+	}
+
+	async function handleDeleteTask() {
+		if (!editingTask) return;
+
+		try {
+			await deleteTask(editingTask.id);
+			showEditTaskModal = false;
+			editingTask = null;
+			await loadData();
+		} catch (error) {
+			console.error('Error deleting task:', error);
+		}
+	}
+
+	function truncateTitle(title: string, maxLength: number = 30) {
+		if (title.length <= maxLength) return title;
+		return title.substring(0, maxLength) + '...';
 	}
 
 	function getProjectName(projectId: string | null) {
@@ -282,9 +339,9 @@
 										checked={task.status === 'completed'}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<label for={task.id} class="task-content" class:completed={task.status === 'completed'}>
+									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openEditTask(task)}>
 										<div class="task-main">
-											<span class="task-title">{task.title}</span>
+											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -293,7 +350,7 @@
 											<span class="priority {task.priority}">{task.priority}</span>
 											<span class="task-time">{formatDueDate(task.due_date)}</span>
 										</div>
-									</label>
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -312,9 +369,9 @@
 										checked={task.status === 'completed'}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<label for={task.id} class="task-content" class:completed={task.status === 'completed'}>
+									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openEditTask(task)}>
 										<div class="task-main">
-											<span class="task-title">{task.title}</span>
+											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -323,7 +380,7 @@
 											<span class="priority {task.priority}">{task.priority}</span>
 											<span class="task-time">{formatDueDate(task.due_date)}</span>
 										</div>
-									</label>
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -342,9 +399,9 @@
 										checked={task.status === 'completed'}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<label for={task.id} class="task-content" class:completed={task.status === 'completed'}>
+									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openEditTask(task)}>
 										<div class="task-main">
-											<span class="task-title">{task.title}</span>
+											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -353,7 +410,7 @@
 											<span class="priority {task.priority}">{task.priority}</span>
 											<span class="task-time">{formatDueDate(task.due_date)}</span>
 										</div>
-									</label>
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -372,9 +429,9 @@
 										checked={true}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<label for={task.id} class="task-content completed">
+									<div class="task-content completed" on:click={() => openEditTask(task)}>
 										<div class="task-main">
-											<span class="task-title">{task.title}</span>
+											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -382,7 +439,7 @@
 										<div class="task-meta">
 											<span class="task-time">Completed</span>
 										</div>
-									</label>
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -445,6 +502,7 @@
 							id="task-title"
 							bind:value={newTaskTitle}
 							placeholder="e.g., Call the contractor"
+							maxlength="50"
 							required
 						/>
 					</div>
@@ -490,6 +548,79 @@
 						</button>
 						<button type="submit" class="primary-btn">
 							Create Task
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Edit Task Modal -->
+	{#if showEditTaskModal}
+		<div class="modal-overlay" on:click={() => showEditTaskModal = false}>
+			<div class="modal" on:click|stopPropagation>
+				<h2>Edit Task</h2>
+				<form on:submit|preventDefault={handleUpdateTask}>
+					<div class="form-group">
+						<label for="edit-task-title">Task Title</label>
+						<input
+							type="text"
+							id="edit-task-title"
+							bind:value={editTaskTitle}
+							placeholder="e.g., Call the contractor"
+							maxlength="50"
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label for="edit-task-description">Description (optional)</label>
+						<textarea
+							id="edit-task-description"
+							bind:value={editTaskDescription}
+							placeholder="Add details..."
+							rows="2"
+						></textarea>
+					</div>
+					<div class="form-row">
+						<div class="form-group">
+							<label for="edit-task-priority">Priority</label>
+							<select id="edit-task-priority" bind:value={editTaskPriority}>
+								<option value="low">Low</option>
+								<option value="medium">Medium</option>
+								<option value="high">High</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="edit-task-due-date">Due Date (optional)</label>
+							<input
+								type="date"
+								id="edit-task-due-date"
+								bind:value={editTaskDueDate}
+							/>
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="edit-task-project">Project (optional)</label>
+						<select id="edit-task-project" bind:value={editTaskProjectId}>
+							<option value={null}>No project</option>
+							{#each projects as project}
+								<option value={project.id}>{project.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="modal-actions">
+						<button type="button" class="delete-btn" on:click={handleDeleteTask}>
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m2 0v9.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V4"/>
+							</svg>
+							Delete
+						</button>
+						<div style="flex: 1;"></div>
+						<button type="button" class="secondary-btn" on:click={() => showEditTaskModal = false}>
+							Cancel
+						</button>
+						<button type="submit" class="primary-btn">
+							Update Task
 						</button>
 					</div>
 				</form>
@@ -630,12 +761,18 @@
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
+		flex: 1;
+		min-width: 0;
+		padding-right: 16px;
 	}
 
 	.task-title {
 		font-size: 0.9375rem;
 		font-weight: 500;
 		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.task-project {
@@ -960,6 +1097,25 @@
 
 	.secondary-btn:hover {
 		background: var(--bg-tertiary);
+	}
+
+	.delete-btn {
+		padding: 10px 20px;
+		background: transparent;
+		border: 1px solid var(--danger);
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: var(--danger);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.delete-btn:hover {
+		background: rgba(211, 47, 47, 0.1);
 	}
 
 	.send-btn:disabled {
