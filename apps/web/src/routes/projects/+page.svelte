@@ -171,11 +171,12 @@
 										type="button"
 										class="emoji-more-btn"
 										on:click={() => showAllEmojis = true}
+										title="More emojis"
 									>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-											<circle cx="8" cy="4" r="0.5"/>
-											<circle cx="8" cy="8" r="0.5"/>
-											<circle cx="8" cy="12" r="0.5"/>
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+											<circle cx="4" cy="10" r="1.5"/>
+											<circle cx="10" cy="10" r="1.5"/>
+											<circle cx="16" cy="10" r="1.5"/>
 										</svg>
 									</button>
 								{/if}
@@ -520,8 +521,8 @@
 
 	.emoji-row {
 		display: flex;
-		flex-wrap: wrap;
 		gap: 8px;
+		overflow-x: auto;
 	}
 
 	.emoji-btn {
@@ -557,17 +558,18 @@
 		align-items: center;
 		justify-content: center;
 		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
+		border: 2px solid transparent;
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 		transition: all 0.2s ease;
 		flex-shrink: 0;
-		color: var(--text-secondary);
+		color: var(--text-muted);
 	}
 
 	.emoji-more-btn:hover {
 		background: var(--bg-primary);
-		color: var(--text-primary);
+		border-color: var(--border-color);
+		color: var(--text-secondary);
 	}
 
 	/* Responsive */
