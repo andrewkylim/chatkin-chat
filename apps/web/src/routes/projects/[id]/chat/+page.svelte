@@ -10,6 +10,9 @@
 	import { getProject, deleteProject } from '$lib/db/projects';
 	import { createTask } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
+	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
+	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
+	import type { Conversation } from '@chatkin/types';
 
 	interface Message {
 		role: 'user' | 'ai';
@@ -42,18 +45,58 @@
 	let showMenu = false;
 	let showDeleteConfirm = false;
 	let showEditModal = false;
+	let conversation: Conversation | null = null;
+	let workspaceContextString = '';
+	let isLoadingConversation = true;
 
 	onMount(async () => {
 		try {
 			project = await getProject(projectId);
-			messages = [
-				{
-					role: 'ai',
-					content: `Hi! I'm here to help you with ${project.name}. What would you like to work on?`
+
+			// Load conversation and context
+			try {
+				// Get or create conversation for this project
+				conversation = await getOrCreateConversation('project', projectId);
+
+				// Load recent messages from database
+				const dbMessages = await getRecentMessages(conversation.id, 50);
+
+				// Convert DB messages to UI messages
+				if (dbMessages.length > 0) {
+					messages = dbMessages.map(msg => ({
+						role: msg.role === 'assistant' ? 'ai' : 'user',
+						content: msg.content
+					}));
+				} else {
+					// Show welcome message if no history
+					messages = [
+						{
+							role: 'ai',
+							content: `Hi! I'm here to help you with ${project.name}. What would you like to work on?`
+						}
+					];
 				}
-			];
+
+				// Load workspace context
+				const workspaceContext = await loadWorkspaceContext();
+				workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
+
+				isLoadingConversation = false;
+				scrollToBottom();
+			} catch (convError) {
+				console.error('Error loading conversation:', convError);
+				isLoadingConversation = false;
+				// Show welcome message as fallback
+				messages = [
+					{
+						role: 'ai',
+						content: `Hi! I'm here to help you with ${project.name}. What would you like to work on?`
+					}
+				];
+			}
 		} catch (error) {
 			console.error('Error loading project:', error);
+			isLoadingConversation = false;
 			messages = [
 				{
 					role: 'ai',
@@ -115,9 +158,16 @@
 
 	async function sendMessage(message?: string) {
 		const userMessage = message || inputMessage.trim();
-		if (!userMessage || isStreaming) return;
+		if (!userMessage || isStreaming || !conversation) return;
 
 		inputMessage = '';
+
+		// Save user message to database
+		try {
+			await addMessage(conversation.id, 'user', userMessage);
+		} catch (error) {
+			console.error('Error saving user message:', error);
+		}
 
 		// Add user message
 		messages = [...messages, { role: 'user', content: userMessage }];
@@ -138,6 +188,15 @@
 		scrollToBottom();
 
 		try {
+			// Build conversation history (last 50 messages)
+			const allMessages = messages.filter(m => m.content && m.content.trim() && !(m as any).isTyping);
+			const recentMessages = allMessages.slice(-50);
+
+			const conversationHistory = recentMessages.map(m => ({
+				role: m.role,
+				content: m.content
+			}));
+
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
 				headers: {
@@ -145,8 +204,12 @@
 				},
 				body: JSON.stringify({
 					message: userMessage,
+					conversationHistory: conversationHistory,
+					conversationSummary: conversation.conversation_summary,
+					workspaceContext: workspaceContextString,
 					context: {
-						projectId: projectId
+						projectId: projectId,
+						scope: 'project'
 					}
 				}),
 			});
@@ -207,6 +270,13 @@
 				if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 				confirmMessage += parts.join(' and ') + ' for you.';
 
+				// Save AI response to database
+				try {
+					await addMessage(conversation!.id, 'assistant', confirmMessage);
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
 				messages[aiMessageIndex] = {
 					role: 'ai',
 					content: confirmMessage,
@@ -214,6 +284,13 @@
 				};
 				messages = messages;
 			} else if (data.type === 'message') {
+				// Save conversational AI response
+				try {
+					await addMessage(conversation!.id, 'assistant', data.message);
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
 				// Conversational response
 				messages[aiMessageIndex] = {
 					role: 'ai',
