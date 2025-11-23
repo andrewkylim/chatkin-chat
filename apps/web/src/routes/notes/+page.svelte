@@ -4,6 +4,9 @@
 	import { getNotes, createNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
 	import { createTask } from '$lib/db/tasks';
 	import { getProjects } from '$lib/db/projects';
+	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
+	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
+	import type { Conversation } from '@chatkin/types';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { goto } from '$app/navigation';
@@ -28,18 +31,54 @@
 	let editBlockId = '';
 
 	// Chat state
-	let chatMessages: ChatMessage[] = [
-		{
-			role: 'ai',
-			content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
-		}
-	];
+	let chatMessages: ChatMessage[] = [];
 	let chatInput = '';
 	let isChatStreaming = false;
 	let chatMessagesContainer: HTMLDivElement;
+	let conversation: Conversation | null = null;
+	let workspaceContextString = '';
+	let isLoadingConversation = true;
 
 	onMount(async () => {
 		await loadData();
+
+		// Load conversation and context
+		try {
+			// Get or create conversation for notes scope
+			conversation = await getOrCreateConversation('notes');
+
+			// Load recent messages from database
+			const dbMessages = await getRecentMessages(conversation.id, 50);
+
+			// Convert DB messages to UI messages
+			if (dbMessages.length > 0) {
+				chatMessages = dbMessages.map(msg => ({
+					role: msg.role === 'assistant' ? 'ai' : 'user',
+					content: msg.content
+				}));
+			} else {
+				// Show welcome message if no history
+				chatMessages = [{
+					role: 'ai',
+					content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
+				}];
+			}
+
+			// Load workspace context
+			const workspaceContext = await loadWorkspaceContext();
+			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
+
+			isLoadingConversation = false;
+			scrollChatToBottom();
+		} catch (error) {
+			console.error('Error loading conversation:', error);
+			isLoadingConversation = false;
+			// Show welcome message as fallback
+			chatMessages = [{
+				role: 'ai',
+				content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
+			}];
+		}
 	});
 
 	async function loadData() {
@@ -186,9 +225,16 @@
 
 	async function sendChatMessage(message?: string) {
 		const userMessage = message || chatInput.trim();
-		if (!userMessage || isChatStreaming) return;
+		if (!userMessage || isChatStreaming || !conversation) return;
 
 		chatInput = '';
+
+		// Save user message to database
+		try {
+			await addMessage(conversation.id, 'user', userMessage);
+		} catch (error) {
+			console.error('Error saving user message:', error);
+		}
 
 		// Add user message
 		chatMessages = [...chatMessages, { role: 'user', content: userMessage }];
@@ -209,6 +255,15 @@
 		scrollChatToBottom();
 
 		try {
+			// Build conversation history (last 50 messages)
+			const allMessages = chatMessages.filter(m => m.content && m.content.trim() && !(m as any).isTyping);
+			const recentMessages = allMessages.slice(-50);
+
+			const conversationHistory = recentMessages.map(m => ({
+				role: m.role,
+				content: m.content
+			}));
+
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
 				headers: {
@@ -216,6 +271,9 @@
 				},
 				body: JSON.stringify({
 					message: userMessage,
+					conversationHistory: conversationHistory,
+					conversationSummary: conversation.conversation_summary,
+					workspaceContext: workspaceContextString,
 					context: {
 						scope: 'notes'
 					}
@@ -263,12 +321,26 @@
 				// Show custom confirmation message
 				const confirmMessage = `Created ${noteCount} note${noteCount > 1 ? 's' : ''} for you.`;
 
+				// Save AI response to database
+				try {
+					await addMessage(conversation!.id, 'assistant', confirmMessage);
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
 					content: confirmMessage
 				};
 				chatMessages = chatMessages;
 			} else if (data.type === 'message') {
+				// Save conversational AI response
+				try {
+					await addMessage(conversation!.id, 'assistant', data.message);
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
 				// Conversational response
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
