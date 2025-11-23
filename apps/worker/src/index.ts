@@ -21,10 +21,12 @@ interface ChatRequest {
   conversationId?: string;
   message: string;
   conversationHistory?: ChatMessage[];
+  conversationSummary?: string; // AI-generated summary of older messages
+  workspaceContext?: string; // Formatted workspace context (projects, tasks, notes)
   context?: {
     projectId?: string;
     taskIds?: string[];
-    scope?: 'tasks' | 'notes';
+    scope?: 'global' | 'tasks' | 'notes' | 'project';
   };
 }
 
@@ -62,7 +64,7 @@ export default {
 
       try {
         const body = await request.json() as ChatRequest;
-        const { message, conversationHistory, context } = body;
+        const { message, conversationHistory, conversationSummary, workspaceContext, context } = body;
 
         if (!message) {
           return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -78,6 +80,8 @@ export default {
 
         // Build system prompt with context if provided
         let systemPrompt = `You are a helpful AI assistant for Chatkin OS, a productivity suite. You help users manage tasks, notes, and projects.
+
+${workspaceContext || ''}
 
 ## When to Ask Clarifying Questions (Hybrid Approach)
 Ask follow-up questions for critical missing information:
@@ -145,19 +149,36 @@ Be conversational and helpful. Ask questions when needed, but don't over-ask - u
           systemPrompt += '\n\nYou are currently assisting with a specific project. All tasks/notes you create should be relevant to this project context.';
         }
 
+        // Scope-specific prompts for focused AIs
+        if (context?.scope === 'global') {
+          systemPrompt += '\n\nYou are the GLOBAL AI assistant. You help with everything - projects, tasks, notes, planning, and organizing. You can see all workspace data and create any type of item.';
+        }
+
         if (context?.scope === 'tasks') {
-          systemPrompt += '\n\nIMPORTANT: You are in the TASKS context. ONLY create tasks (type: "task"), never create notes or projects. Users come here for actionable to-do items. Remember: task titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the TASKS AI assistant. You help manage tasks and to-dos. When users ask about tasks, ONLY create tasks (type: "task"), never notes or projects. You CAN see workspace data (projects, notes) for context, but focus on actionable to-do items. Remember: task titles must be 50 characters or less.';
         }
 
         if (context?.scope === 'notes') {
-          systemPrompt += '\n\nIMPORTANT: You are in the NOTES context. ONLY create notes (type: "note"), never create tasks or projects. Users come here to capture information, research, and ideas in detailed notes. Remember: note titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the NOTES AI assistant. You help capture knowledge and information. When users ask about notes, ONLY create notes (type: "note"), never tasks or projects. You CAN see workspace data (projects, tasks) for context, but focus on information capture and detailed content. Remember: note titles must be 50 characters or less.';
+        }
+
+        if (context?.scope === 'project' && context?.projectId) {
+          systemPrompt += `\n\nYou are assisting with a specific PROJECT. All tasks and notes you create should be relevant to this project context (project_id: ${context.projectId}). You can create tasks and notes, but they will be scoped to this project.`;
         }
 
         // Build messages array from conversation history
         const apiMessages: any[] = [];
 
+        // Add conversation summary if it exists (older messages)
+        if (conversationSummary) {
+          apiMessages.push({
+            role: 'user',
+            content: `[Previous conversation summary: ${conversationSummary}]`
+          });
+        }
+
         if (conversationHistory && conversationHistory.length > 0) {
-          // Convert conversation history to Anthropic format
+          // Convert conversation history to Anthropic format (last 50 messages)
           for (const msg of conversationHistory) {
             // Skip the initial AI greeting if it's the first message
             if (apiMessages.length === 0 && msg.role === 'ai') continue;

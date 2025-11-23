@@ -51,6 +51,9 @@ export interface Conversation {
   project_id: string | null; // NULL = not project-scoped
   scope: 'global' | 'project' | 'tasks' | 'notes';
   title: string | null;
+  conversation_summary: string | null; // AI-generated summary of older messages
+  message_count: number;
+  last_summarized_at: string | null;
   created_at: string;
   updated_at: string;
 }
