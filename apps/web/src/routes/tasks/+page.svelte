@@ -524,6 +524,8 @@
 		flex-shrink: 0;
 		padding: 16px 20px;
 		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		box-sizing: border-box;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -539,6 +541,14 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
+	}
+
+	.header-actions .primary-btn {
+		display: flex;
+		align-items: center;
+		padding: 10px 20px;
+		font-size: 0.9375rem;
+		gap: 8px;
 	}
 
 	.icon-btn {

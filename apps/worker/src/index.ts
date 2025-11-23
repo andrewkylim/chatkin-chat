@@ -186,14 +186,16 @@ If unsure, prefer JSON - users love seeing tasks/notes created automatically!`;
 
       try {
         const formData = await request.formData();
-        const file = formData.get('file') as File;
+        const fileEntry = formData.get('file');
 
-        if (!file) {
+        if (!fileEntry || typeof fileEntry === 'string') {
           return new Response(JSON.stringify({ error: 'No file provided' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+
+        const file = fileEntry as File;
 
         // Generate unique filename
         const timestamp = Date.now();

@@ -31,12 +31,7 @@
 			</div>
 
 			<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-				<svg class="nav-icon-svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-					<rect x="2" y="2" width="6" height="6" rx="1"/>
-					<rect x="12" y="2" width="6" height="6" rx="1"/>
-					<rect x="2" y="12" width="6" height="6" rx="1"/>
-					<rect x="12" y="12" width="6" height="6" rx="1"/>
-				</svg>
+				<img src="/projects.png" alt="" class="nav-icon" />
 				<span>Projects</span>
 			</a>
 
@@ -90,6 +85,10 @@
 	.sidebar-header {
 		padding: 16px 20px;
 		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
 	}
 
 	.logo {
@@ -98,15 +97,21 @@
 		gap: 8px;
 		text-decoration: none;
 		color: var(--text-primary);
-		font-size: 1.25rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		letter-spacing: -0.02em;
+		cursor: pointer;
 	}
 
 	.logo-icon {
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
 		border-radius: 8px;
+		transition: all 0.1s ease;
+	}
+
+	.logo:active .logo-icon {
+		transform: scale(0.95);
 	}
 
 	.sidebar-nav {
@@ -142,13 +147,13 @@
 	}
 
 	.nav-icon {
-		width: 20px;
-		height: 20px;
-		opacity: 0.7;
+		width: 40px;
+		height: 40px;
+		transition: all 0.1s ease;
 	}
 
-	.nav-item.active .nav-icon {
-		opacity: 1;
+	.nav-item:active .nav-icon {
+		transform: scale(0.95);
 	}
 
 	.nav-icon-svg {
@@ -178,8 +183,12 @@
 	}
 
 	.sidebar-footer {
-		padding: 12px;
+		padding: 16px;
 		border-top: 1px solid var(--border-color);
+		height: 76px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
 	}
 
 	.user-profile {
@@ -187,7 +196,7 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 10px 12px;
+		padding: 6px 8px;
 		background: transparent;
 		border: none;
 		border-radius: var(--radius-md);

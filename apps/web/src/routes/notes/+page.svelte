@@ -1,10 +1,11 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import { getNotes, createNote } from '$lib/db/notes';
+	import { getNotes, createNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
 	import { createTask } from '$lib/db/tasks';
 	import { getProjects } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
+	import { goto } from '$app/navigation';
 
 	interface ChatMessage {
 		role: 'user' | 'ai';
@@ -19,6 +20,11 @@
 	let newNoteTitle = '';
 	let newNoteContent = '';
 	let newNoteProjectId: string | null = null;
+	let deleteNoteId: string | null = null;
+	let editNoteId: string | null = null;
+	let editNoteTitle = '';
+	let editNoteContent = '';
+	let editBlockId = '';
 
 	// Chat state
 	let chatMessages: ChatMessage[] = [
@@ -121,6 +127,47 @@
 
 		if (!allText.trim()) return 0;
 		return allText.trim().split(/\s+/).length;
+	}
+
+	async function handleDeleteNote() {
+		if (!deleteNoteId) return;
+
+		try {
+			await deleteNote(deleteNoteId);
+			deleteNoteId = null;
+			await loadData();
+		} catch (error) {
+			console.error('Error deleting note:', error);
+			alert('Failed to delete note');
+		}
+	}
+
+	function startEditNote(note: any) {
+		editNoteId = note.id;
+		editNoteTitle = note.title;
+		const firstTextBlock = note.note_blocks?.find((b: any) => b.type === 'text');
+		editNoteContent = firstTextBlock?.content?.text || '';
+		editBlockId = firstTextBlock?.id || '';
+	}
+
+	async function handleUpdateNote() {
+		if (!editNoteId || !editNoteTitle.trim()) return;
+
+		try {
+			// Update note title
+			await updateNote(editNoteId, { title: editNoteTitle });
+
+			// Update note block content if it exists
+			if (editBlockId && editNoteContent !== undefined) {
+				await updateNoteBlock(editBlockId, editNoteContent);
+			}
+
+			editNoteId = null;
+			await loadData();
+		} catch (error) {
+			console.error('Error updating note:', error);
+			alert('Failed to update note');
+		}
 	}
 
 	function scrollChatToBottom() {
@@ -274,21 +321,43 @@
 			{:else}
 				<div class="notes-list">
 					{#each notes as note (note.id)}
-						<a href="/notes/{note.id}" class="note-card" class:standalone={!note.project_id}>
-							<div class="note-header">
-								<h3>{note.title}</h3>
-								{#if note.project_id && projectsMap[note.project_id]}
-									<span class="note-project">{projectsMap[note.project_id].name}</span>
-								{:else}
-									<span class="note-badge">Standalone</span>
-								{/if}
+						<div class="note-card" class:standalone={!note.project_id}>
+							<a href="/notes/{note.id}" class="note-link">
+								<div class="note-header">
+									<h3>{note.title}</h3>
+									{#if note.project_id && projectsMap[note.project_id]}
+										<span class="note-project">{projectsMap[note.project_id].name}</span>
+									{:else}
+										<span class="note-badge">Standalone</span>
+									{/if}
+								</div>
+								<p class="note-preview">{getContentPreview(note)}</p>
+								<div class="note-footer">
+									<span class="note-date">{formatDate(note.updated_at)}</span>
+									<span class="note-meta">{getWordCount(note)} words</span>
+								</div>
+							</a>
+							<div class="card-actions">
+								<button
+									class="icon-action-btn"
+									on:click|stopPropagation={() => startEditNote(note)}
+									title="Edit note"
+								>
+									<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M10.5 2l1.5 1.5L5 10.5H3.5V9L10.5 2z"/>
+									</svg>
+								</button>
+								<button
+									class="icon-action-btn delete-action-btn"
+									on:click|stopPropagation={() => deleteNoteId = note.id}
+									title="Delete note"
+								>
+									<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M11 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3"/>
+									</svg>
+								</button>
 							</div>
-							<p class="note-preview">{getContentPreview(note)}</p>
-							<div class="note-footer">
-								<span class="note-date">{formatDate(note.updated_at)}</span>
-								<span class="note-meta">{getWordCount(note)} words</span>
-							</div>
-						</a>
+						</div>
 					{/each}
 				</div>
 			{/if}
@@ -381,6 +450,63 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Edit Note Modal -->
+	{#if editNoteId}
+		<div class="modal-overlay" on:click={() => editNoteId = null}>
+			<div class="modal edit-modal" on:click|stopPropagation>
+				<h2>Edit Note</h2>
+				<form on:submit|preventDefault={handleUpdateNote}>
+					<div class="form-group">
+						<label for="edit-title">Title</label>
+						<input
+							type="text"
+							id="edit-title"
+							bind:value={editNoteTitle}
+							placeholder="Note title"
+							required
+							autofocus
+						/>
+					</div>
+					<div class="form-group">
+						<label for="edit-content">Content</label>
+						<textarea
+							id="edit-content"
+							bind:value={editNoteContent}
+							placeholder="Note content (supports Markdown)"
+							rows="10"
+						></textarea>
+					</div>
+					<div class="modal-actions">
+						<button type="button" class="secondary-btn" on:click={() => editNoteId = null}>
+							Cancel
+						</button>
+						<button type="submit" class="primary-btn">
+							Save Changes
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Delete Confirmation Modal -->
+	{#if deleteNoteId}
+		<div class="modal-overlay" on:click={() => deleteNoteId = null}>
+			<div class="modal" on:click|stopPropagation>
+				<h2>Delete Note?</h2>
+				<p>Are you sure you want to delete this note? This action cannot be undone.</p>
+				<div class="modal-actions">
+					<button type="button" class="secondary-btn" on:click={() => deleteNoteId = null}>
+						Cancel
+					</button>
+					<button type="button" class="danger-btn" on:click={handleDeleteNote}>
+						Delete Note
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 </AppLayout>
 
@@ -409,6 +535,8 @@
 		flex-shrink: 0;
 		padding: 16px 20px;
 		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		box-sizing: border-box;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -424,6 +552,14 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
+	}
+
+	.header-actions .primary-btn {
+		display: flex;
+		align-items: center;
+		padding: 10px 20px;
+		font-size: 0.9375rem;
+		gap: 8px;
 	}
 
 	.icon-btn {
@@ -459,10 +595,14 @@
 		background: var(--bg-tertiary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-lg);
+		position: relative;
+		transition: all 0.2s ease;
+	}
+
+	.note-link {
 		padding: 16px;
 		text-decoration: none;
 		color: var(--text-primary);
-		transition: all 0.2s ease;
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
@@ -475,8 +615,53 @@
 		background: var(--bg-secondary);
 	}
 
+	.note-card:hover .card-actions {
+		opacity: 1;
+	}
+
 	.note-card:active {
 		transform: scale(0.99);
+	}
+
+	.card-actions {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		display: flex;
+		gap: 6px;
+		opacity: 0;
+		transition: all 0.2s ease;
+		z-index: 2;
+	}
+
+	.icon-action-btn {
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.icon-action-btn:hover {
+		background: var(--bg-primary);
+		border-color: var(--accent-primary);
+		color: var(--accent-primary);
+	}
+
+	.delete-action-btn:hover {
+		background: rgba(239, 68, 68, 0.1);
+		border-color: rgb(239, 68, 68);
+		color: rgb(239, 68, 68);
+	}
+
+	.icon-action-btn:active {
+		transform: scale(0.95);
 	}
 
 	.note-header {
@@ -745,6 +930,10 @@
 		overflow-y: auto;
 	}
 
+	.edit-modal {
+		max-width: 600px;
+	}
+
 	.modal h2 {
 		font-size: 1.5rem;
 		font-weight: 700;
@@ -806,6 +995,96 @@
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	/* Modal buttons */
+	.secondary-btn {
+		padding: 10px 20px;
+		background: transparent;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.secondary-btn:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.danger-btn {
+		padding: 10px 20px;
+		background: rgb(239, 68, 68);
+		border: none;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.danger-btn:hover {
+		background: rgb(220, 38, 38);
+		transform: translateY(-1px);
+	}
+
+	.danger-btn:active {
+		transform: translateY(0);
+	}
+
+	.primary-btn {
+		padding: 10px 20px;
+		background: var(--accent-primary);
+		border: none;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.primary-btn:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.primary-btn:active {
+		transform: translateY(0);
+	}
+
+	.form-group {
+		margin-bottom: 20px;
+	}
+
+	.form-group label {
+		display: block;
+		font-weight: 600;
+		font-size: 0.875rem;
+		margin-bottom: 8px;
+		color: var(--text-primary);
+	}
+
+	.form-group input,
+	.form-group textarea {
+		width: 100%;
+		padding: 12px 16px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		font-family: 'Inter', sans-serif;
+	}
+
+	.form-group input:focus,
+	.form-group textarea:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
 	}
 
 	/* Mobile Responsive */

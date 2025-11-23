@@ -95,6 +95,21 @@ export async function updateNote(id: string, updates: NoteUpdate) {
 	return data as Note;
 }
 
+export async function updateNoteBlock(blockId: string, content: string) {
+	const { data, error } = await supabase
+		.from('note_blocks')
+		.update({
+			content: { text: content },
+			updated_at: new Date().toISOString()
+		})
+		.eq('id', blockId)
+		.select()
+		.single();
+
+	if (error) throw error;
+	return data;
+}
+
 export async function deleteNote(id: string) {
 	const { error } = await supabase
 		.from('notes')

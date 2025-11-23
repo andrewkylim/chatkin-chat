@@ -94,7 +94,7 @@
 			</div>
 		{:else if projects.length === 0}
 			<div class="empty-state">
-				<div class="empty-icon">📁</div>
+				<img src="/projects.png" alt="Projects" class="empty-icon" />
 				<h2>No projects yet</h2>
 				<p>Create your first project to get started</p>
 				<button class="primary-btn" on:click={() => showNewProjectModal = true}>Create Project</button>
@@ -180,12 +180,17 @@
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);
 		padding: 16px 20px;
+		height: 64px;
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
 		position: sticky;
 		top: 0;
 		z-index: 10;
 	}
 
 	.header-content {
+		width: 100%;
 		max-width: 1200px;
 		margin: 0 auto;
 		display: flex;
@@ -203,6 +208,8 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		padding: 10px 20px;
+		font-size: 0.9375rem;
 	}
 
 	.page-content {
@@ -322,13 +329,18 @@
 
 	/* Empty State */
 	.empty-state {
-		text-align: center;
 		padding: 60px 20px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-height: 400px;
 	}
 
 	.empty-icon {
-		font-size: 64px;
-		margin-bottom: 16px;
+		width: 100px;
+		height: 100px;
+		margin-bottom: 24px;
 	}
 
 	.empty-state h2 {

@@ -35,6 +35,7 @@
 	let inputMessage = '';
 	let isStreaming = false;
 	let messagesContainer: HTMLDivElement;
+	let showCreateMenu = false;
 
 	function scrollToBottom() {
 		setTimeout(() => {
@@ -164,6 +165,20 @@
 
 	onMount(() => {
 		scrollToBottom();
+
+		// Close create menu when clicking outside
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (showCreateMenu && !target.closest('.create-menu-container')) {
+				showCreateMenu = false;
+			}
+		};
+
+		document.addEventListener('click', handleClickOutside);
+
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 </script>
 
@@ -173,11 +188,40 @@
 		<div class="header-content">
 			<h1>Chat</h1>
 			<div class="header-actions">
-				<button class="icon-btn" title="New conversation">
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M10 4v12M4 10h12"/>
-					</svg>
-				</button>
+				<div class="create-menu-container">
+					<button class="icon-btn" title="Create new" on:click={() => showCreateMenu = !showCreateMenu}>
+						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M10 4v12M4 10h12"/>
+						</svg>
+					</button>
+					{#if showCreateMenu}
+						<div class="create-menu">
+							<a href="/projects" class="menu-item">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<rect x="2" y="2" width="4" height="4" rx="1"/>
+									<rect x="10" y="2" width="4" height="4" rx="1"/>
+									<rect x="2" y="10" width="4" height="4" rx="1"/>
+									<rect x="10" y="10" width="4" height="4" rx="1"/>
+								</svg>
+								New Project
+							</a>
+							<a href="/tasks" class="menu-item">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M4 8l2 2 6-6"/>
+									<rect x="2" y="2" width="12" height="12" rx="2"/>
+								</svg>
+								New Task
+							</a>
+							<a href="/notes" class="menu-item">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M4 6h8M4 10h6"/>
+									<rect x="2" y="2" width="12" height="12" rx="2"/>
+								</svg>
+								New Note
+							</a>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</header>
@@ -230,15 +274,27 @@
 		background: var(--bg-primary);
 	}
 
+	/* Desktop: offset by sidebar width */
+	@media (min-width: 1024px) {
+		.chat-page {
+			left: 240px;
+		}
+	}
+
 	/* Header */
 	.chat-header {
 		flex-shrink: 0;
 		padding: 16px 20px;
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
 	}
 
 	.header-content {
+		width: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -276,6 +332,47 @@
 
 	.icon-btn:active {
 		transform: translateY(0);
+	}
+
+	.create-menu-container {
+		position: relative;
+	}
+
+	.create-menu {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		min-width: 180px;
+		z-index: 100;
+		overflow: hidden;
+	}
+
+	.menu-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		color: var(--text-primary);
+		text-decoration: none;
+		font-size: 0.9375rem;
+		transition: all 0.2s ease;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.menu-item:last-child {
+		border-bottom: none;
+	}
+
+	.menu-item:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.menu-item svg {
+		color: var(--text-secondary);
 	}
 
 	/* Messages */
@@ -333,8 +430,11 @@
 		padding-bottom: max(16px, env(safe-area-inset-bottom));
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
+		height: 76px;
 		display: flex;
+		align-items: center;
 		gap: 12px;
+		box-sizing: border-box;
 	}
 
 	.message-input {
