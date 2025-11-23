@@ -7,6 +7,9 @@
 	import { createTask } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
 	import { createProject } from '$lib/db/projects';
+	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
+	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
+	import type { Conversation, Message as DBMessage } from '@chatkin/types';
 
 	interface Message {
 		role: 'user' | 'ai';
@@ -33,16 +36,14 @@
 		actions?: AIAction[];
 	}
 
-	let messages: Message[] = [
-		{
-			role: 'ai',
-			content: '👋 Hi! What would you like to work on today?'
-		}
-	];
+	let messages: Message[] = [];
 	let inputMessage = '';
 	let isStreaming = false;
 	let messagesContainer: HTMLDivElement;
 	let showCreateMenu = false;
+	let conversation: Conversation | null = null;
+	let workspaceContextString = '';
+	let isLoadingConversation = true;
 
 	function scrollToBottom() {
 		setTimeout(() => {
@@ -54,11 +55,18 @@
 
 	async function sendMessage(message?: string) {
 		const userMessage = message || inputMessage.trim();
-		if (!userMessage || isStreaming) return;
+		if (!userMessage || isStreaming || !conversation) return;
 
 		inputMessage = '';
 
-		// Add user message
+		// Save user message to database
+		try {
+			await addMessage(conversation.id, 'user', userMessage);
+		} catch (error) {
+			console.error('Error saving user message:', error);
+		}
+
+		// Add user message to UI
 		messages = [...messages, { role: 'user', content: userMessage }];
 		scrollToBottom();
 
@@ -78,12 +86,14 @@
 
 		try {
 			// Build conversation history for context (filter out empty messages)
-			const conversationHistory = messages
-				.filter(m => m.content && m.content.trim() && !m.isTyping)
-				.map(m => ({
-					role: m.role,
-					content: m.content
-				}));
+			// Only send last 50 messages
+			const allMessages = messages.filter(m => m.content && m.content.trim() && !m.isTyping);
+			const recentMessages = allMessages.slice(-50);
+
+			const conversationHistory = recentMessages.map(m => ({
+				role: m.role,
+				content: m.content
+			}));
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -93,6 +103,11 @@
 				body: JSON.stringify({
 					message: userMessage,
 					conversationHistory: conversationHistory,
+					conversationSummary: conversation.conversation_summary,
+					workspaceContext: workspaceContextString,
+					context: {
+						scope: 'global'
+					}
 				}),
 			});
 
@@ -117,6 +132,13 @@
 
 				const previewMessage = `I'll create ${parts.join(', ')} for you:`;
 
+				// Save AI response with proposed actions
+				try {
+					await addMessage(conversation!.id, 'assistant', previewMessage, { proposedActions: data.actions });
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
 				// Show proposed actions with confirmation buttons
 				messages[aiMessageIndex] = {
 					role: 'ai',
@@ -127,6 +149,13 @@
 				messages = messages;
 				scrollToBottom();
 			} else if (data.type === 'message') {
+				// Save conversational AI response
+				try {
+					await addMessage(conversation!.id, 'assistant', data.message);
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
 				// Conversational response
 				messages[aiMessageIndex] = {
 					role: 'ai',
@@ -223,8 +252,45 @@
 		messages = messages;
 	}
 
-	onMount(() => {
-		scrollToBottom();
+	onMount(async () => {
+		// Load conversation and context
+		try {
+			// Get or create conversation for global scope
+			conversation = await getOrCreateConversation('global');
+
+			// Load recent messages from database
+			const dbMessages = await getRecentMessages(conversation.id, 50);
+
+			// Convert DB messages to UI messages
+			if (dbMessages.length > 0) {
+				messages = dbMessages.map(msg => ({
+					role: msg.role === 'assistant' ? 'ai' : 'user',
+					content: msg.content,
+					proposedActions: msg.metadata?.proposedActions
+				}));
+			} else {
+				// Show welcome message if no history
+				messages = [{
+					role: 'ai',
+					content: '👋 Hi! What would you like to work on today?'
+				}];
+			}
+
+			// Load workspace context
+			const workspaceContext = await loadWorkspaceContext();
+			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
+
+			isLoadingConversation = false;
+			scrollToBottom();
+		} catch (error) {
+			console.error('Error loading conversation:', error);
+			isLoadingConversation = false;
+			// Show welcome message as fallback
+			messages = [{
+				role: 'ai',
+				content: '👋 Hi! What would you like to work on today?'
+			}];
+		}
 
 		// Close create menu when clicking outside
 		const handleClickOutside = (event: MouseEvent) => {
