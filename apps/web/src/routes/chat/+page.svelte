@@ -77,11 +77,13 @@
 		scrollToBottom();
 
 		try {
-			// Build conversation history for context
-			const conversationHistory = messages.map(m => ({
-				role: m.role,
-				content: m.content
-			}));
+			// Build conversation history for context (filter out empty messages)
+			const conversationHistory = messages
+				.filter(m => m.content && m.content.trim() && !m.isTyping)
+				.map(m => ({
+					role: m.role,
+					content: m.content
+				}));
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
