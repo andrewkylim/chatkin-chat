@@ -6,20 +6,26 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
+	import { createProject } from '$lib/db/projects';
 
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
-		actions?: Array<{ type: string; title: string; [key: string]: any }>;
+		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		awaitingConfirmation?: boolean;
+		isTyping?: boolean;
 	}
 
 	interface AIAction {
-		type: 'task' | 'note';
-		title: string;
+		type: 'task' | 'note' | 'project';
+		title?: string;  // for tasks/notes
+		name?: string;   // for projects
 		description?: string;
 		content?: string;
 		priority?: 'low' | 'medium' | 'high';
+		due_date?: string;
+		color?: string;
 	}
 
 	interface AIResponse {
@@ -89,61 +95,28 @@
 
 			// Handle structured response from worker
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
-				// Update loading message
+				// Count proposed items
+				const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
+				const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
+				const noteCount = data.actions.filter((a: AIAction) => a.type === 'note').length;
+
+				// Build preview message
+				const parts = [];
+				if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
+				if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+				if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+
+				const previewMessage = `I'll create ${parts.join(', ')} for you:`;
+
+				// Show proposed actions with confirmation buttons
 				messages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating tasks and notes...'
+					content: previewMessage,
+					proposedActions: data.actions,
+					awaitingConfirmation: true
 				};
 				messages = messages;
 				scrollToBottom();
-
-				// Create tasks and notes
-				const createdActions = [];
-				let taskCount = 0;
-				let noteCount = 0;
-
-				for (const action of data.actions) {
-					try {
-						if (action.type === 'task') {
-							await createTask({
-								title: action.title,
-								description: action.description,
-								priority: action.priority || 'medium',
-								status: 'todo',
-								project_id: null,
-								due_date: null
-							});
-							createdActions.push(action);
-							taskCount++;
-							console.log('Created task:', action.title);
-						} else if (action.type === 'note') {
-							await createNote({
-								title: action.title,
-								content: action.content,
-								project_id: null
-							});
-							createdActions.push(action);
-							noteCount++;
-							console.log('Created note:', action.title);
-						}
-					} catch (createError) {
-						console.error(`Error creating ${action.type}:`, createError);
-					}
-				}
-
-				// Show custom confirmation message
-				let confirmMessage = 'Created ';
-				const parts = [];
-				if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
-				if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
-				confirmMessage += parts.join(' and ') + ' for you.';
-
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: confirmMessage,
-					actions: createdActions
-				};
-				messages = messages;
 			} else if (data.type === 'message') {
 				// Conversational response
 				messages[aiMessageIndex] = {
@@ -163,6 +136,82 @@
 			isStreaming = false;
 			scrollToBottom();
 		}
+	}
+
+	async function confirmActions(messageIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.proposedActions || !message.awaitingConfirmation) return;
+
+		// Update message to show creating status
+		messages[messageIndex] = {
+			...message,
+			content: 'Creating items...',
+			awaitingConfirmation: false
+		};
+		messages = messages;
+
+		// Create all proposed items
+		let projectCount = 0, taskCount = 0, noteCount = 0;
+
+		for (const action of message.proposedActions) {
+			try {
+				if (action.type === 'project') {
+					await createProject({
+						name: action.name || 'Untitled Project',
+						description: action.description || null,
+						color: action.color || '📁'
+					});
+					projectCount++;
+				} else if (action.type === 'task') {
+					await createTask({
+						title: action.title || 'Untitled Task',
+						description: action.description || null,
+						priority: action.priority || 'medium',
+						status: 'todo',
+						project_id: null,
+						due_date: action.due_date || null
+					});
+					taskCount++;
+				} else if (action.type === 'note') {
+					await createNote({
+						title: action.title || 'Untitled Note',
+						content: action.content || '',
+						project_id: null
+					});
+					noteCount++;
+				}
+			} catch (error) {
+				console.error(`Error creating ${action.type}:`, error);
+			}
+		}
+
+		// Show success message
+		const parts = [];
+		if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
+		if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+		if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+
+		messages[messageIndex] = {
+			...message,
+			content: `Created ${parts.join(', ')} for you!`,
+			awaitingConfirmation: false,
+			proposedActions: undefined
+		};
+		messages = messages;
+	}
+
+	function cancelActions(messageIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.awaitingConfirmation) return;
+
+		// Update message to show cancellation
+		messages[messageIndex] = {
+			...message,
+			content: 'Okay, I won\'t create those items.',
+			awaitingConfirmation: false,
+			proposedActions: undefined
+		};
+		messages = messages;
 	}
 
 	onMount(() => {
@@ -231,7 +280,7 @@
 		</header>
 
 		<div class="messages" bind:this={messagesContainer}>
-			{#each messages as message (message)}
+			{#each messages as message, index (message)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
 						{#if message.isTyping}
@@ -242,6 +291,60 @@
 							</div>
 						{:else}
 							<p>{message.content}</p>
+
+							{#if message.proposedActions && message.awaitingConfirmation}
+								<!-- Action Preview List -->
+								<div class="actions-preview">
+									{#each message.proposedActions as action}
+										<div class="action-item">
+											{#if action.type === 'project'}
+												<span class="action-icon">📁</span>
+												<div class="action-details">
+													<strong>{action.name}</strong>
+													{#if action.description}
+														<span class="action-desc">{action.description}</span>
+													{/if}
+												</div>
+											{:else if action.type === 'task'}
+												<span class="action-icon">✓</span>
+												<div class="action-details">
+													<strong>{action.title}</strong>
+													{#if action.description}
+														<span class="action-desc">{action.description}</span>
+													{/if}
+													{#if action.due_date}
+														<span class="action-meta">Due: {action.due_date}</span>
+													{/if}
+													{#if action.priority}
+														<span class="action-meta priority-{action.priority}">{action.priority}</span>
+													{/if}
+												</div>
+											{:else if action.type === 'note'}
+												<span class="action-icon">📝</span>
+												<div class="action-details">
+													<strong>{action.title}</strong>
+													{#if action.content}
+														<span class="action-desc">{action.content.substring(0, 100)}{action.content.length > 100 ? '...' : ''}</span>
+													{/if}
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+
+								<!-- Confirmation Buttons -->
+								<div class="confirmation-buttons">
+									<button class="confirm-btn" on:click={() => confirmActions(index)}>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M4 8l2 2 6-6"/>
+										</svg>
+										Confirm
+									</button>
+									<button class="cancel-btn" on:click={() => cancelActions(index)}>
+										Cancel
+									</button>
+								</div>
+							{/if}
 						{/if}
 					</div>
 				</div>
@@ -492,6 +595,124 @@
 		border: 1px solid var(--border-color);
 		text-align: left;
 		max-width: 95%;
+	}
+
+	/* Actions Preview */
+	.actions-preview {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.action-item {
+		display: flex;
+		gap: 10px;
+		padding: 8px;
+		background: var(--bg-secondary);
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-color);
+	}
+
+	.action-icon {
+		font-size: 18px;
+		flex-shrink: 0;
+	}
+
+	.action-details {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.action-details strong {
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+	}
+
+	.action-desc {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
+
+	.action-meta {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		padding: 2px 6px;
+		background: var(--bg-tertiary);
+		border-radius: 4px;
+		display: inline-block;
+		width: fit-content;
+		margin-right: 6px;
+	}
+
+	.action-meta.priority-high {
+		background: rgba(211, 47, 47, 0.1);
+		color: var(--danger);
+	}
+
+	.action-meta.priority-medium {
+		background: rgba(199, 124, 92, 0.1);
+		color: var(--accent-primary);
+	}
+
+	.action-meta.priority-low {
+		background: rgba(115, 115, 115, 0.1);
+		color: var(--text-secondary);
+	}
+
+	/* Confirmation Buttons */
+	.confirmation-buttons {
+		display: flex;
+		gap: 8px;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+	}
+
+	.confirm-btn,
+	.cancel-btn {
+		flex: 1;
+		padding: 8px 16px;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+	}
+
+	.confirm-btn {
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+	}
+
+	.confirm-btn:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.confirm-btn:active {
+		transform: translateY(0);
+	}
+
+	.cancel-btn {
+		background: transparent;
+		color: var(--text-secondary);
+		border: 1px solid var(--border-color);
+	}
+
+	.cancel-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
 	}
 
 	/* Typing Indicator */
