@@ -12,9 +12,15 @@ export interface Env {
   CHATKIN_BUCKET: any; // R2Bucket type from Cloudflare Workers
 }
 
+interface ChatMessage {
+  role: 'user' | 'ai';
+  content: string;
+}
+
 interface ChatRequest {
   conversationId?: string;
   message: string;
+  conversationHistory?: ChatMessage[];
   context?: {
     projectId?: string;
     taskIds?: string[];
@@ -56,7 +62,7 @@ export default {
 
       try {
         const body = await request.json() as ChatRequest;
-        const { message, context } = body;
+        const { message, conversationHistory, context } = body;
 
         if (!message) {
           return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -147,17 +153,34 @@ Be conversational and helpful. Ask questions when needed, but don't over-ask - u
           systemPrompt += '\n\nIMPORTANT: You are in the NOTES context. ONLY create notes (type: "note"), never create tasks or projects. Users come here to capture information, research, and ideas in detailed notes. Remember: note titles must be 50 characters or less.';
         }
 
+        // Build messages array from conversation history
+        const apiMessages: any[] = [];
+
+        if (conversationHistory && conversationHistory.length > 0) {
+          // Convert conversation history to Anthropic format
+          for (const msg of conversationHistory) {
+            // Skip the initial AI greeting if it's the first message
+            if (apiMessages.length === 0 && msg.role === 'ai') continue;
+
+            apiMessages.push({
+              role: msg.role === 'ai' ? 'assistant' : 'user',
+              content: msg.content
+            });
+          }
+        }
+
+        // Add the new user message
+        apiMessages.push({
+          role: 'user',
+          content: message
+        });
+
         // Create non-streaming response
         const response = await anthropic.messages.create({
           model: 'claude-3-5-haiku-20241022',
           max_tokens: 4096,
           system: systemPrompt,
-          messages: [
-            {
-              role: 'user',
-              content: message,
-            },
-          ],
+          messages: apiMessages,
         });
 
         const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';

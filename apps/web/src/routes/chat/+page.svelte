@@ -77,6 +77,12 @@
 		scrollToBottom();
 
 		try {
+			// Build conversation history for context
+			const conversationHistory = messages.map(m => ({
+				role: m.role,
+				content: m.content
+			}));
+
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
 				headers: {
@@ -84,6 +90,7 @@
 				},
 				body: JSON.stringify({
 					message: userMessage,
+					conversationHistory: conversationHistory,
 				}),
 			});
 
