@@ -10,14 +10,19 @@
 	let newProjectName = '';
 	let newProjectDescription = '';
 	let selectedEmoji = '📁';
+	let showAllEmojis = false;
 
-	const availableEmojis = [
+	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨', '🌟'];
+
+	const allEmojis = [
 		'📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨', '🌟',
 		'💡', '🎉', '🔥', '⚡', '🎵', '🎮', '✈️', '🏋️',
-		'🍕', '☕', '🌈', '🎭', '🎬', '📸', '🎪', '🎨',
-		'🌸', '🌺', '🌻', '🌼', '🌷', '🌱', '🌿', '🍀',
-		'🐶', '🐱', '🐼', '🦊', '🦁', '🐯', '🐸', '🦄'
+		'🍕', '☕', '🌈', '🎭', '🎬', '📸', '🎪', '🌱',
+		'🌸', '🌺', '🌻', '🌼', '🌷', '🌿', '🍀', '🦄',
+		'🐶', '🐱', '🐼', '🦊', '🦁', '🐯', '🐸', '🎃'
 	];
+
+	$: availableEmojis = showAllEmojis ? allEmojis : quickEmojis;
 
 	onMount(async () => {
 		await loadProjects();
@@ -53,6 +58,7 @@
 			newProjectName = '';
 			newProjectDescription = '';
 			selectedEmoji = '📁';
+			showAllEmojis = false;
 			showNewProjectModal = false;
 
 			// Reload projects
@@ -148,17 +154,32 @@
 				<form on:submit|preventDefault={handleCreateProject}>
 					<div class="form-group">
 						<label>Project Icon</label>
-						<div class="emoji-grid">
-							{#each availableEmojis as emoji}
-								<button
-									type="button"
-									class="emoji-btn"
-									class:selected={selectedEmoji === emoji}
-									on:click={() => selectedEmoji = emoji}
-								>
-									{emoji}
-								</button>
-							{/each}
+						<div class="emoji-selector">
+							<div class="emoji-row">
+								{#each availableEmojis as emoji}
+									<button
+										type="button"
+										class="emoji-btn"
+										class:selected={selectedEmoji === emoji}
+										on:click={() => selectedEmoji = emoji}
+									>
+										{emoji}
+									</button>
+								{/each}
+								{#if !showAllEmojis}
+									<button
+										type="button"
+										class="emoji-more-btn"
+										on:click={() => showAllEmojis = true}
+									>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<circle cx="8" cy="4" r="0.5"/>
+											<circle cx="8" cy="8" r="0.5"/>
+											<circle cx="8" cy="12" r="0.5"/>
+										</svg>
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 					<div class="form-group">
@@ -489,20 +510,23 @@
 		background: var(--bg-tertiary);
 	}
 
-	/* Emoji Grid */
-	.emoji-grid {
-		display: grid;
-		grid-template-columns: repeat(8, 1fr);
-		gap: 8px;
+	/* Emoji Selector */
+	.emoji-selector {
 		padding: 12px;
 		background: var(--bg-tertiary);
 		border-radius: var(--radius-md);
 		border: 1px solid var(--border-color);
 	}
 
+	.emoji-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
 	.emoji-btn {
-		width: 100%;
-		aspect-ratio: 1;
+		width: 44px;
+		height: 44px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -512,6 +536,7 @@
 		font-size: 1.5rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
+		flex-shrink: 0;
 	}
 
 	.emoji-btn:hover {
@@ -522,7 +547,27 @@
 	.emoji-btn.selected {
 		background: var(--bg-primary);
 		border-color: var(--accent-primary);
-		transform: scale(1.1);
+		transform: scale(1.05);
+	}
+
+	.emoji-more-btn {
+		width: 44px;
+		height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		flex-shrink: 0;
+		color: var(--text-secondary);
+	}
+
+	.emoji-more-btn:hover {
+		background: var(--bg-primary);
+		color: var(--text-primary);
 	}
 
 	/* Responsive */
