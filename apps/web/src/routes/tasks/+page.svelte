@@ -22,6 +22,10 @@
 	let newTaskDueDate = '';
 	let newTaskProjectId: string | null = null;
 
+	// Task detail modal state
+	let showTaskDetailModal = false;
+	let selectedTask: any = null;
+
 	// Edit modal state
 	let showEditTaskModal = false;
 	let editingTask: any = null;
@@ -95,14 +99,36 @@
 		}
 	}
 
-	function openEditTask(task: any) {
-		editingTask = task;
-		editTaskTitle = task.title;
-		editTaskDescription = task.description || '';
-		editTaskPriority = task.priority;
-		editTaskDueDate = task.due_date || '';
-		editTaskProjectId = task.project_id;
+	function openTaskDetail(task: any) {
+		selectedTask = task;
+		showTaskDetailModal = true;
+	}
+
+	function openEditFromDetail() {
+		if (!selectedTask) return;
+
+		editingTask = selectedTask;
+		editTaskTitle = selectedTask.title;
+		editTaskDescription = selectedTask.description || '';
+		editTaskPriority = selectedTask.priority;
+		editTaskDueDate = selectedTask.due_date || '';
+		editTaskProjectId = selectedTask.project_id;
+
+		showTaskDetailModal = false;
 		showEditTaskModal = true;
+	}
+
+	async function handleDeleteFromDetail() {
+		if (!selectedTask) return;
+
+		try {
+			await deleteTask(selectedTask.id);
+			showTaskDetailModal = false;
+			selectedTask = null;
+			await loadData();
+		} catch (error) {
+			console.error('Error deleting task:', error);
+		}
 	}
 
 	async function handleUpdateTask() {
@@ -341,7 +367,7 @@
 										checked={task.status === 'completed'}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openEditTask(task)}>
+									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
@@ -371,7 +397,7 @@
 										checked={task.status === 'completed'}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openEditTask(task)}>
+									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
@@ -401,7 +427,7 @@
 										checked={task.status === 'completed'}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openEditTask(task)}>
+									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
@@ -431,7 +457,7 @@
 										checked={true}
 										on:change={() => handleToggleTask(task.id, task.status)}
 									/>
-									<div class="task-content completed" on:click={() => openEditTask(task)}>
+									<div class="task-content completed" on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{truncateTitle(task.title)}</span>
 											{#if getProjectName(task.project_id)}
@@ -491,8 +517,9 @@
 					disabled={isChatStreaming}
 				/>
 				<button type="submit" class="send-btn" disabled={isChatStreaming || !chatInput.trim()}>
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-						<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M5 15L15 5"/>
+						<path d="M9 5h6v6"/>
 					</svg>
 				</button>
 			</form>
@@ -561,6 +588,73 @@
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Task Detail Modal -->
+	{#if showTaskDetailModal && selectedTask}
+		<div class="modal-overlay" on:click={() => showTaskDetailModal = false}>
+			<div class="modal" on:click|stopPropagation>
+				<h2>Task Details</h2>
+				<div class="task-detail-content">
+					<div class="detail-section">
+						<label>Title</label>
+						<p class="detail-text">{selectedTask.title}</p>
+					</div>
+
+					{#if selectedTask.description}
+						<div class="detail-section">
+							<label>Description</label>
+							<p class="detail-text">{selectedTask.description}</p>
+						</div>
+					{/if}
+
+					<div class="detail-row">
+						<div class="detail-section">
+							<label>Priority</label>
+							<span class="priority {selectedTask.priority}">{selectedTask.priority}</span>
+						</div>
+
+						<div class="detail-section">
+							<label>Status</label>
+							<p class="detail-text">{selectedTask.status === 'completed' ? 'Completed' : 'To Do'}</p>
+						</div>
+					</div>
+
+					{#if selectedTask.due_date}
+						<div class="detail-section">
+							<label>Due Date</label>
+							<p class="detail-text">{formatDueDate(selectedTask.due_date)}</p>
+						</div>
+					{/if}
+
+					{#if getProjectName(selectedTask.project_id)}
+						<div class="detail-section">
+							<label>Project</label>
+							<p class="detail-text">{getProjectName(selectedTask.project_id)}</p>
+						</div>
+					{/if}
+				</div>
+
+				<div class="modal-actions">
+					<button type="button" class="delete-btn" on:click={handleDeleteFromDetail}>
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m2 0v9.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V4"/>
+						</svg>
+						Delete
+					</button>
+					<div style="flex: 1;"></div>
+					<button type="button" class="secondary-btn" on:click={() => showTaskDetailModal = false}>
+						Close
+					</button>
+					<button type="button" class="primary-btn" on:click={openEditFromDetail}>
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+						</svg>
+						Edit
+					</button>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -1089,6 +1183,64 @@
 	.modal h2 {
 		font-size: 1.5rem;
 		margin-bottom: 20px;
+	}
+
+	/* Task Detail Styles */
+	.task-detail-content {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		margin-bottom: 24px;
+	}
+
+	.detail-section {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.detail-section label {
+		display: block;
+		font-weight: 600;
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+	}
+
+	.detail-text {
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		margin: 0;
+		line-height: 1.5;
+	}
+
+	.detail-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 20px;
+	}
+
+	.primary-btn {
+		padding: 10px 20px;
+		background: var(--accent-primary);
+		border: none;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.primary-btn:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.primary-btn:active {
+		transform: translateY(0);
 	}
 
 	.form-group {

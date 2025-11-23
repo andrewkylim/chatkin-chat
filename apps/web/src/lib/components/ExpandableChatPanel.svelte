@@ -101,12 +101,12 @@
 	<form class="input-bar" on:submit|preventDefault={handleSubmit}>
 		<button type="button" class="expand-btn" on:click={toggleExpand} title={isExpanded ? 'Minimize chat' : 'Expand chat'}>
 			{#if isExpanded}
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M5 12l5 5 5-5"/>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M5 8l5 5 5-5"/>
 				</svg>
 			{:else}
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M15 12l-5-5-5 5"/>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M5 12l5-5 5 5"/>
 				</svg>
 			{/if}
 		</button>
@@ -128,8 +128,9 @@
 		/>
 
 		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
-			<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-				<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
+			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M5 15L15 5"/>
+				<path d="M9 5h6v6"/>
 			</svg>
 		</button>
 	</form>

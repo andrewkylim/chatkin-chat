@@ -76,7 +76,7 @@ export async function getProjectStats(projectId: string) {
 	const tasks = tasksResult.data || [];
 	const notes = notesResult.data || [];
 
-	const completedTasks = tasks.filter(t => t.status === 'completed').length;
+	const completedTasks = tasks.filter((t: any) => t.status === 'completed').length;
 
 	return {
 		totalTasks: tasks.length,

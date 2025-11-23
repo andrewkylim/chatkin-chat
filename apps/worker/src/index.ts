@@ -9,7 +9,7 @@ export interface Env {
   ANTHROPIC_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
-  CHATKIN_BUCKET: R2Bucket;
+  CHATKIN_BUCKET: any; // R2Bucket type from Cloudflare Workers
 }
 
 interface ChatRequest {

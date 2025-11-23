@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
+	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import { page } from '$app/stores';
@@ -112,10 +113,10 @@
 		project = await getProject(projectId);
 	}
 
-	async function sendMessage() {
-		if (!inputMessage.trim() || isStreaming) return;
+	async function sendMessage(message?: string) {
+		const userMessage = message || inputMessage.trim();
+		if (!userMessage || isStreaming) return;
 
-		const userMessage = inputMessage.trim();
 		inputMessage = '';
 
 		// Add user message
@@ -234,102 +235,192 @@
 	}
 </script>
 
-<AppLayout hideBottomNav={true}>
+<AppLayout>
 <div class="project-chat-page">
-	<header class="chat-header">
-		<div class="header-content">
-			<a href="/projects" class="back-btn">
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M12 4l-8 8 8 8"/>
-				</svg>
-			</a>
-			{#if loading}
-				<div class="project-info">
-					<div class="project-icon">📁</div>
-					<div>
-						<h1>Loading...</h1>
+	<!-- Desktop: Full-screen chat interface -->
+	<div class="desktop-chat">
+		<header class="chat-header">
+			<div class="header-content">
+				<a href="/projects" class="back-btn">
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 4l-8 8 8 8"/>
+					</svg>
+				</a>
+				{#if loading}
+					<div class="project-info">
+						<div class="project-icon">📁</div>
+						<div>
+							<h1>Loading...</h1>
+						</div>
 					</div>
-				</div>
-			{:else if project}
-				<div class="project-info">
-					<div class="project-icon">{project.color || '📁'}</div>
-					<div class="project-text">
-						<h1>{project.name}</h1>
-						{#if project.description}
-							<p class="project-subtitle">{project.description}</p>
+				{:else if project}
+					<div class="project-info">
+						<div class="project-icon">{project.color || '📁'}</div>
+						<div class="project-text">
+							<h1>{project.name}</h1>
+							{#if project.description}
+								<p class="project-subtitle">{project.description}</p>
+							{/if}
+						</div>
+					</div>
+				{/if}
+				<div class="header-actions">
+					<div class="menu-container">
+						<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+								<circle cx="10" cy="10" r="1.5"/>
+								<circle cx="4" cy="10" r="1.5"/>
+								<circle cx="16" cy="10" r="1.5"/>
+							</svg>
+						</button>
+						{#if showMenu}
+							<div class="dropdown-menu">
+								<button class="menu-item" on:click={startEditProject}>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+									</svg>
+									Edit Project
+								</button>
+								<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+									</svg>
+									Delete Project
+								</button>
+							</div>
 						{/if}
 					</div>
 				</div>
-			{/if}
-			<div class="header-actions">
-				<div class="menu-container">
-					<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-							<circle cx="10" cy="10" r="1.5"/>
-							<circle cx="4" cy="10" r="1.5"/>
-							<circle cx="16" cy="10" r="1.5"/>
-						</svg>
-					</button>
-					{#if showMenu}
-						<div class="dropdown-menu">
-							<button class="menu-item" on:click={startEditProject}>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
-								</svg>
-								Edit Project
-							</button>
-							<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-								</svg>
-								Delete Project
-							</button>
-						</div>
-					{/if}
-				</div>
 			</div>
-		</div>
-	</header>
+		</header>
 
-	<div class="messages" bind:this={messagesContainer}>
-		{#each messages as message (message)}
-			<div class="message {message.role}">
-				<div class="message-bubble">
-					{#if message.isTyping}
-						<div class="typing-indicator">
-							<span></span>
-							<span></span>
-							<span></span>
-						</div>
-					{:else}
-						<p>{message.content}</p>
-					{/if}
+		<div class="messages" bind:this={messagesContainer}>
+			{#each messages as message (message)}
+				<div class="message {message.role}">
+					<div class="message-bubble">
+						{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
+							<p>{message.content}</p>
+						{/if}
+					</div>
 				</div>
-			</div>
-		{/each}
+			{/each}
+		</div>
+
+		<form class="input-container" on:submit|preventDefault={sendMessage}>
+			<FileUpload
+				accept="image/*,application/pdf,.doc,.docx,.txt"
+				maxSizeMB={10}
+				onUploadComplete={(file) => {
+					console.log('File uploaded:', file);
+				}}
+			/>
+			<input
+				type="text"
+				bind:value={inputMessage}
+				placeholder="Ask about this project..."
+				class="message-input"
+				disabled={isStreaming}
+			/>
+			<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M5 15L15 5"/>
+					<path d="M9 5h6v6"/>
+				</svg>
+			</button>
+		</form>
 	</div>
 
-	<form class="input-container" on:submit|preventDefault={sendMessage}>
-		<FileUpload
-			accept="image/*,application/pdf,.doc,.docx,.txt"
-			maxSizeMB={10}
-			onUploadComplete={(file) => {
-				console.log('File uploaded:', file);
-			}}
-		/>
-		<input
-			type="text"
-			bind:value={inputMessage}
-			placeholder="Ask about this project..."
-			class="message-input"
-			disabled={isStreaming}
-		/>
-		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
-			<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-				<path d="M2 3l16 7-16 7V3zm0 8.5V14l8-4-8-4v5.5z"/>
-			</svg>
-		</button>
-	</form>
+	<!-- Mobile: Message history + expandable panel -->
+	<div class="mobile-chat">
+		<header class="chat-header">
+			<div class="header-content">
+				<a href="/projects" class="back-btn">
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 4l-8 8 8 8"/>
+					</svg>
+				</a>
+				{#if loading}
+					<div class="project-info">
+						<div class="project-icon">📁</div>
+						<div>
+							<h1>Loading...</h1>
+						</div>
+					</div>
+				{:else if project}
+					<div class="project-info">
+						<div class="project-icon">{project.color || '📁'}</div>
+						<div class="project-text">
+							<h1>{project.name}</h1>
+							{#if project.description}
+								<p class="project-subtitle">{project.description}</p>
+							{/if}
+						</div>
+					</div>
+				{/if}
+				<div class="header-actions">
+					<div class="menu-container">
+						<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+								<circle cx="10" cy="10" r="1.5"/>
+								<circle cx="4" cy="10" r="1.5"/>
+								<circle cx="16" cy="10" r="1.5"/>
+							</svg>
+						</button>
+						{#if showMenu}
+							<div class="dropdown-menu">
+								<button class="menu-item" on:click={startEditProject}>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+									</svg>
+									Edit Project
+								</button>
+								<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+									</svg>
+									Delete Project
+								</button>
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<div class="messages mobile-messages">
+			{#each messages as message (message)}
+				<div class="message {message.role}">
+					<div class="message-bubble">
+						{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
+							<p>{message.content}</p>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+	</div>
+
+	<!-- Expandable Chat Panel (Mobile Only) -->
+	<ExpandableChatPanel
+		messages={messages}
+		onSendMessage={sendMessage}
+		placeholder="Ask about this project..."
+		isStreaming={isStreaming}
+		context="project"
+		showFileUpload={true}
+	/>
 
 	<!-- Edit Project Modal -->
 	<EditProjectModal
@@ -360,11 +451,16 @@
 </AppLayout>
 
 <style>
-	/* Critical mobile chat UI pattern - ONLY for chat pages */
 	.project-chat-page {
+		min-height: 100vh;
+		background: var(--bg-primary);
+	}
+
+	/* Desktop Chat - Full screen chat interface */
+	.desktop-chat {
 		position: absolute;
 		top: 0;
-		left: 0;
+		left: 240px;
 		right: 0;
 		bottom: 0;
 		display: flex;
@@ -373,10 +469,27 @@
 		background: var(--bg-primary);
 	}
 
-	/* Desktop: offset by sidebar width */
-	@media (min-width: 1024px) {
-		.project-chat-page {
-			left: 240px;
+	/* Mobile Chat - Header + message history */
+	.mobile-chat {
+		display: none;
+	}
+
+	/* Show/hide based on screen size */
+	@media (max-width: 1023px) {
+		.desktop-chat {
+			display: none;
+		}
+
+		.mobile-chat {
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+			padding-bottom: 110px; /* Space for bottom nav (50px) + chat input (60px) */
+		}
+
+		.mobile-messages {
+			flex: 1;
+			padding-bottom: 20px;
 		}
 	}
 
@@ -769,16 +882,5 @@
 
 	.danger-btn:active {
 		transform: translateY(0);
-	}
-
-	/* Mobile adjustments */
-	@media (max-width: 640px) {
-		.project-subtitle {
-			display: none;
-		}
-
-		.project-info h1 {
-			font-size: 1.125rem;
-		}
 	}
 </style>

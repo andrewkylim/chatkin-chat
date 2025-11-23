@@ -9,7 +9,7 @@ interface AuthState {
 }
 
 function createAuthStore() {
-	const { subscribe, set, update } = writable<AuthState>({
+	const { subscribe, set } = writable<AuthState>({
 		user: null,
 		session: null,
 		loading: true
@@ -28,7 +28,7 @@ function createAuthStore() {
 			});
 
 			// Listen for auth changes
-			supabase.auth.onAuthStateChange((_event, session) => {
+			supabase.auth.onAuthStateChange((_event: any, session: Session | null) => {
 				set({
 					user: session?.user ?? null,
 					session: session ?? null,
