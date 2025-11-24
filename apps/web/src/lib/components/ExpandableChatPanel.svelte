@@ -70,14 +70,14 @@
 <div class="chat-panel-container">
 	<!-- Messages Area (only visible when expanded) -->
 	{#if isExpanded}
-		{#if !messagesReady}
-			<div class="chat-loading-overlay">
-				<div class="spinner"></div>
-				<p>Loading conversation...</p>
-			</div>
-		{/if}
-
-		<div class="messages-area" bind:this={messagesContainer} style:opacity={messagesReady ? '1' : '0'}>
+		<div class="messages-area" bind:this={messagesContainer}>
+			{#if !messagesReady}
+				<div class="loading-content">
+					<div class="spinner"></div>
+					<p>Loading conversation...</p>
+				</div>
+			{/if}
+			<div class="messages-list" style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message}
 				<div class="message {message.role}">
 					<div class="message-bubble">
@@ -93,6 +93,7 @@
 					</div>
 				</div>
 			{/each}
+			</div>
 		</div>
 	{/if}
 
@@ -157,31 +158,32 @@
 
 	/* Messages Area */
 	.messages-area {
-		height: 50vh;
-		max-height: 50vh;
+		height: 35vh;
+		max-height: 35vh;
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
+		background: var(--bg-primary);
+		position: relative;
+	}
+
+	.messages-list {
 		padding: 16px;
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
-		background: var(--bg-primary);
-		animation: slideDown 0.3s ease;
-		opacity: 0;
+		transition: opacity 0.3s ease;
 	}
 
-	.chat-loading-overlay {
-		height: 50vh;
-		max-height: 50vh;
+	.loading-content {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		gap: 16px;
-		background: var(--bg-primary);
+		height: 100%;
 	}
 
-	.chat-loading-overlay p {
+	.loading-content p {
 		color: var(--text-secondary);
 		font-size: 0.9375rem;
 		margin: 0;

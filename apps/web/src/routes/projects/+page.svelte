@@ -17,6 +17,7 @@
 	let deleteConfirmProject: any = null;
 	let editProject: any = null;
 	let showEditModal = false;
+	let openMenuId: string | null = null;
 
 	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨'];
 
@@ -133,6 +134,10 @@
 	async function handleProjectUpdated() {
 		await loadProjects();
 	}
+
+	function toggleMenu(projectId: string) {
+		openMenuId = openMenuId === projectId ? null : projectId;
+	}
 </script>
 
 <AppLayout>
@@ -197,16 +202,29 @@
 							</div>
 						</a>
 						<div class="card-actions">
-							<button class="edit-icon-btn" on:click|stopPropagation={() => startEditProject(project)} title="Edit project">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+							<button class="menu-btn" on:click|stopPropagation={() => toggleMenu(project.id)} title="Actions">
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+									<circle cx="8" cy="3" r="1.5"/>
+									<circle cx="8" cy="8" r="1.5"/>
+									<circle cx="8" cy="13" r="1.5"/>
 								</svg>
 							</button>
-							<button class="delete-icon-btn" on:click|stopPropagation={() => deleteConfirmProject = project} title="Delete project">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-								</svg>
-							</button>
+							{#if openMenuId === project.id}
+								<div class="dropdown-menu">
+									<button class="menu-item" on:click|stopPropagation={() => { startEditProject(project); openMenuId = null; }}>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+										</svg>
+										Edit
+									</button>
+									<button class="menu-item delete" on:click|stopPropagation={() => { deleteConfirmProject = project; openMenuId = null; }}>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+										</svg>
+										Delete
+									</button>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -416,15 +434,12 @@
 		position: absolute;
 		top: 16px;
 		right: 16px;
-		display: flex;
-		gap: 8px;
 		opacity: 1;
 		transition: opacity 0.2s ease;
 		z-index: 1;
 	}
 
-	.edit-icon-btn,
-	.delete-icon-btn {
+	.menu-btn {
 		width: 32px;
 		height: 32px;
 		display: flex;
@@ -435,27 +450,57 @@
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 		transition: all 0.2s ease;
+		color: var(--text-secondary);
 	}
 
-	.edit-icon-btn {
+	.menu-btn:hover {
+		background: var(--bg-primary);
+		border-color: var(--text-secondary);
 		color: var(--text-primary);
 	}
 
-	.edit-icon-btn:hover {
-		background: var(--bg-primary);
-		border-color: var(--accent-primary);
-		color: var(--accent-primary);
-		transform: scale(1.1);
+	.dropdown-menu {
+		position: absolute;
+		top: 40px;
+		right: 0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		overflow: hidden;
+		min-width: 120px;
+		z-index: 10;
 	}
 
-	.delete-icon-btn {
+	.menu-item {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 14px;
+		background: transparent;
+		border: none;
+		text-align: left;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: background 0.2s ease;
+	}
+
+	.menu-item:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.menu-item.delete {
 		color: rgb(239, 68, 68);
 	}
 
-	.delete-icon-btn:hover {
+	.menu-item.delete:hover {
 		background: rgba(239, 68, 68, 0.1);
-		border-color: rgb(239, 68, 68);
-		transform: scale(1.1);
+	}
+
+	.menu-item svg {
+		flex-shrink: 0;
 	}
 
 	.project-header {

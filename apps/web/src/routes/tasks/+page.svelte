@@ -1190,7 +1190,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
+		padding-top: calc(50% + 20px);
 		gap: 16px;
 		background: var(--bg-primary);
 	}

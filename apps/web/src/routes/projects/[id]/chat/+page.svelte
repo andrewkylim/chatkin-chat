@@ -513,8 +513,8 @@
 				{:else if project}
 					<div class="title-group">
 						<a href="/projects" class="back-btn">
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M12 4l-8 8 8 8"/>
+							<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M14 2l-8 8 8 8"/>
 							</svg>
 						</a>
 						<h1>{project.name}</h1>
@@ -782,8 +782,8 @@
 	<div class="mobile-content">
 		<header class="mobile-header">
 			<a href="/projects" class="back-btn">
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M12 4l-8 8 8 8"/>
+				<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M14 2l-8 8 8 8"/>
 				</svg>
 			</a>
 			{#if project}
@@ -1112,6 +1112,8 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 		text-decoration: none;
+		padding: 0;
+		margin: 0;
 	}
 
 	.back-btn:hover {
@@ -1436,7 +1438,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
+		padding-top: calc(50% + 20px);
 		gap: 16px;
 		background: var(--bg-primary);
 	}
@@ -1621,6 +1624,16 @@
 	.empty-state p {
 		color: var(--text-secondary);
 		margin-bottom: 24px;
+	}
+
+	.project-icon-large {
+		width: 100px;
+		height: 100px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 64px;
+		margin-bottom: 8px;
 	}
 
 	/* Modal */
