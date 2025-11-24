@@ -1391,7 +1391,7 @@
 			.fab {
 				position: fixed;
 				bottom: 140px;
-				right: 60px;
+				left: 20px;
 				width: 56px;
 				height: 56px;
 				border-radius: 50%;
