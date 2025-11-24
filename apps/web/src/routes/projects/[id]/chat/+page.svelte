@@ -5,7 +5,7 @@
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { getProject, deleteProject } from '$lib/db/projects';
 	import { createTask } from '$lib/db/tasks';
@@ -19,6 +19,7 @@
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
 		actions?: Array<{ type: string; title: string; [key: string]: any }>;
+		isTyping?: boolean;
 	}
 
 	interface AIAction {
@@ -48,6 +49,7 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let isLoadingConversation = true;
+	let messagesReady = false;
 
 	onMount(async () => {
 		try {
@@ -82,7 +84,8 @@
 				workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
 				isLoadingConversation = false;
-				scrollToBottom();
+				await scrollToBottom();
+				messagesReady = true;
 			} catch (convError) {
 				console.error('Error loading conversation:', convError);
 				isLoadingConversation = false;
@@ -106,7 +109,8 @@
 		} finally {
 			loading = false;
 		}
-		scrollToBottom();
+		await scrollToBottom();
+		messagesReady = true;
 
 		// Close menu when clicking outside
 		const handleClickOutside = (event: MouseEvent) => {
@@ -123,12 +127,12 @@
 		};
 	});
 
-	function scrollToBottom() {
-		setTimeout(() => {
-			if (messagesContainer) {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
-			}
-		}, 50);
+	async function scrollToBottom() {
+		// Wait for DOM to update, then scroll immediately (for new messages during session)
+		await tick();
+		if (messagesContainer) {
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
 	}
 
 	async function handleDeleteProject() {
@@ -162,6 +166,15 @@
 
 		inputMessage = '';
 
+		// Build conversation history BEFORE adding new message (last 50 messages)
+		const allMessages = messages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !(m as any).isTyping);
+		const recentMessages = allMessages.slice(-50);
+
+		const conversationHistory = recentMessages.map(m => ({
+			role: m.role,
+			content: m.content
+		}));
+
 		// Save user message to database
 		try {
 			await addMessage(conversation.id, 'user', userMessage);
@@ -188,14 +201,6 @@
 		scrollToBottom();
 
 		try {
-			// Build conversation history (last 50 messages)
-			const allMessages = messages.filter(m => m.content && m.content.trim() && !(m as any).isTyping);
-			const recentMessages = allMessages.slice(-50);
-
-			const conversationHistory = recentMessages.map(m => ({
-				role: m.role,
-				content: m.content
-			}));
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -225,7 +230,8 @@
 				// Update loading message
 				messages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating tasks and notes...'
+					content: 'Creating tasks and notes...',
+					isTyping: false
 				};
 				messages = messages;
 				scrollToBottom();
@@ -280,7 +286,8 @@
 				messages[aiMessageIndex] = {
 					role: 'ai',
 					content: confirmMessage,
-					actions: createdActions
+					actions: createdActions,
+					isTyping: false
 				};
 				messages = messages;
 			} else if (data.type === 'message') {
@@ -294,7 +301,8 @@
 				// Conversational response
 				messages[aiMessageIndex] = {
 					role: 'ai',
-					content: data.message
+					content: data.message,
+					isTyping: false
 				};
 				messages = messages;
 			}
@@ -302,7 +310,8 @@
 			console.error('Error sending message:', error);
 			messages[aiMessageIndex] = {
 				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.'
+				content: 'Sorry, I encountered an error processing your request. Please try again.',
+				isTyping: false
 			};
 			messages = messages;
 		} finally {
@@ -371,7 +380,7 @@
 			</div>
 		</header>
 
-		<div class="messages" bind:this={messagesContainer}>
+		<div class="messages" bind:this={messagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message (message)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
@@ -389,7 +398,7 @@
 			{/each}
 		</div>
 
-		<form class="input-container" on:submit|preventDefault={sendMessage}>
+		<form class="input-container" on:submit|preventDefault={() => sendMessage()}>
 			<FileUpload
 				accept="image/*,application/pdf,.doc,.docx,.txt"
 				maxSizeMB={10}
@@ -470,7 +479,7 @@
 			</div>
 		</header>
 
-		<div class="messages mobile-messages">
+		<div class="messages mobile-messages" style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message (message)}
 				<div class="message {message.role}">
 					<div class="message-bubble">

@@ -7,12 +7,13 @@
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 
 	interface ChatMessage {
 		role: 'user' | 'ai';
 		content: string;
+		isTyping?: boolean;
 	}
 
 	let tasks: any[] = [];
@@ -46,6 +47,7 @@
 	let chatMessagesContainer: HTMLDivElement;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
+	let messagesReady = false;
 	let isLoadingConversation = true;
 
 	onMount(async () => {
@@ -91,7 +93,8 @@
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
 			isLoadingConversation = false;
-			scrollChatToBottom();
+			await scrollChatToBottom();
+			messagesReady = true;
 		} catch (error) {
 			console.error('Error loading conversation:', error);
 			isLoadingConversation = false;
@@ -100,6 +103,8 @@
 				role: 'ai',
 				content: "Hi! I'm your Tasks AI. I can help you create, organize, and prioritize your tasks. What would you like to work on?"
 			}];
+			await scrollChatToBottom();
+			messagesReady = true;
 		}
 	});
 
@@ -249,6 +254,10 @@
 		const today = new Date();
 
 		if (isToday(date)) return 'Due today';
+
+		// Compare dates without time component
+		taskDate.setHours(0, 0, 0, 0);
+		today.setHours(0, 0, 0, 0);
 		if (taskDate < today) return 'Overdue';
 
 		return taskDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -270,12 +279,11 @@
 		localStorage.setItem('showCompletedTasks', String(showCompletedTasks));
 	}
 
-	function scrollChatToBottom() {
-		setTimeout(() => {
-			if (chatMessagesContainer) {
-				chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-			}
-		}, 50);
+	async function scrollChatToBottom() {
+		await tick();
+		if (chatMessagesContainer) {
+			chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+		}
 	}
 
 	async function sendChatMessage(message?: string) {
@@ -283,6 +291,15 @@
 		if (!userMessage || isChatStreaming || !conversation) return;
 
 		chatInput = '';
+
+		// Build conversation history BEFORE adding new message (last 50 messages)
+		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !(m as any).isTyping);
+		const recentMessages = allMessages.slice(-50);
+
+		const conversationHistory = recentMessages.map(m => ({
+			role: m.role,
+			content: m.content
+		}));
 
 		// Save user message to database
 		try {
@@ -310,14 +327,6 @@
 		scrollChatToBottom();
 
 		try {
-			// Build conversation history (last 50 messages)
-			const allMessages = chatMessages.filter(m => m.content && m.content.trim() && !(m as any).isTyping);
-			const recentMessages = allMessages.slice(-50);
-
-			const conversationHistory = recentMessages.map(m => ({
-				role: m.role,
-				content: m.content
-			}));
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -346,7 +355,8 @@
 				// Update loading message
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating tasks...'
+					content: 'Creating tasks...',
+					isTyping: false
 				};
 				chatMessages = chatMessages;
 				scrollChatToBottom();
@@ -356,17 +366,23 @@
 
 				for (const action of data.actions) {
 					try {
+						// Check if it's the new operations format
+						const isNewFormat = action.operation === 'create' && action.data;
+						const taskData = isNewFormat ? action.data : action;
+
 						if (action.type === 'task') {
+							const dueDate = taskData.due_date || null;
+							console.log('Creating task with due_date:', dueDate, 'Raw:', taskData.due_date);
 							await createTask({
-								title: action.title,
-								description: action.description,
-								priority: action.priority || 'medium',
+								title: taskData.title,
+								description: taskData.description,
+								priority: taskData.priority || 'medium',
 								status: 'todo',
 								project_id: null,
-								due_date: action.due_date || null
+								due_date: dueDate
 							});
 							taskCount++;
-							console.log('Created task:', action.title);
+							console.log('Created task:', taskData.title, 'Due:', dueDate);
 						}
 					} catch (createError) {
 						console.error(`Error creating task:`, createError);
@@ -388,7 +404,8 @@
 
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: confirmMessage
+					content: confirmMessage,
+					isTyping: false
 				};
 				chatMessages = chatMessages;
 			} else if (data.type === 'message') {
@@ -402,7 +419,8 @@
 				// Conversational response
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: data.message
+					content: data.message,
+					isTyping: false
 				};
 				chatMessages = chatMessages;
 			}
@@ -410,7 +428,8 @@
 			console.error('Error sending message:', error);
 			chatMessages[aiMessageIndex] = {
 				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.'
+				content: 'Sorry, I encountered an error processing your request. Please try again.',
+				isTyping: false
 			};
 			chatMessages = chatMessages;
 		} finally {
@@ -451,10 +470,16 @@
 				</div>
 			{:else}
 				<div class="tasks-list">
+					{#if !showCompletedTasks}
 					<!-- Today Section -->
 					{#if todayTasks.length > 0}
 						<div class="task-group">
-							<h2 class="group-title">Today</h2>
+							<div class="group-header">
+								<h2 class="group-title">Today</h2>
+								{#if completedTasks.length > 0}
+									<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+								{/if}
+							</div>
 							{#each todayTasks as task (task.id)}
 								<div class="task-item">
 									<input
@@ -484,7 +509,12 @@
 					<!-- This Week Section -->
 					{#if thisWeekTasks.length > 0}
 						<div class="task-group">
-							<h2 class="group-title">This Week</h2>
+							<div class="group-header">
+								<h2 class="group-title">This Week</h2>
+								{#if completedTasks.length > 0 && todayTasks.length === 0}
+									<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+								{/if}
+							</div>
 							{#each thisWeekTasks as task (task.id)}
 								<div class="task-item">
 									<input
@@ -516,10 +546,8 @@
 						<div class="task-group">
 							<div class="group-header">
 								<h2 class="group-title">Later</h2>
-								{#if completedTasks.length > 0}
-									<button class="toggle-link" on:click={toggleShowCompleted}>
-										{showCompletedTasks ? 'Hide' : 'Show'} Completed
-									</button>
+								{#if completedTasks.length > 0 && todayTasks.length === 0 && thisWeekTasks.length === 0}
+									<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
 								{/if}
 							</div>
 							{#each laterTasks as task (task.id)}
@@ -546,22 +574,16 @@
 								</div>
 							{/each}
 						</div>
-					{:else if completedTasks.length > 0}
-						<!-- Show toggle even if no later tasks -->
-						<div class="task-group">
-							<div class="group-header">
-								<div></div>
-								<button class="toggle-link" on:click={toggleShowCompleted}>
-									{showCompletedTasks ? 'Hide' : 'Show'} Completed
-								</button>
-							</div>
-						</div>
+					{/if}
 					{/if}
 
 					<!-- Completed -->
 					{#if showCompletedTasks && completedTasks.length > 0}
 						<div class="task-group">
-							<h2 class="group-title">Completed</h2>
+							<div class="group-header">
+								<h2 class="group-title">Completed</h2>
+								<button class="toggle-link" on:click={toggleShowCompleted}>Show All Tasks</button>
+							</div>
 							{#each completedTasks as task (task.id)}
 								<div class="task-item">
 									<input
@@ -604,7 +626,7 @@
 				</div>
 			</div>
 
-			<div class="messages" bind:this={chatMessagesContainer}>
+			<div class="messages" bind:this={chatMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 				{#each chatMessages as message (message)}
 					<div class="message {message.role}">
 						<div class="message-bubble">
@@ -622,7 +644,7 @@
 				{/each}
 			</div>
 
-			<form class="input-container" on:submit|preventDefault={sendChatMessage}>
+			<form class="input-container" on:submit|preventDefault={() => sendChatMessage()}>
 				<input
 					type="text"
 					bind:value={chatInput}
@@ -665,10 +687,16 @@
 					<button class="primary-btn" on:click={() => showNewTaskModal = true}>Create Task</button>
 				</div>
 			{:else}
+				{#if !showCompletedTasks}
 				<!-- Today Section -->
 				{#if todayTasks.length > 0}
 					<div class="task-group">
-						<h2 class="group-title">Today</h2>
+						<div class="group-header">
+							<h2 class="group-title">Today</h2>
+							{#if completedTasks.length > 0}
+								<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+							{/if}
+						</div>
 						{#each todayTasks as task (task.id)}
 							<div class="task-item">
 								<input
@@ -698,7 +726,12 @@
 				<!-- This Week Section -->
 				{#if thisWeekTasks.length > 0}
 					<div class="task-group">
-						<h2 class="group-title">This Week</h2>
+						<div class="group-header">
+							<h2 class="group-title">This Week</h2>
+							{#if completedTasks.length > 0 && todayTasks.length === 0}
+								<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+							{/if}
+						</div>
 						{#each thisWeekTasks as task (task.id)}
 							<div class="task-item">
 								<input
@@ -730,10 +763,8 @@
 					<div class="task-group">
 						<div class="group-header">
 							<h2 class="group-title">Later</h2>
-							{#if completedTasks.length > 0}
-								<button class="toggle-link" on:click={toggleShowCompleted}>
-									{showCompletedTasks ? 'Hide' : 'Show'} Completed
-								</button>
+							{#if completedTasks.length > 0 && todayTasks.length === 0 && thisWeekTasks.length === 0}
+								<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
 							{/if}
 						</div>
 						{#each laterTasks as task (task.id)}
@@ -760,22 +791,16 @@
 							</div>
 						{/each}
 					</div>
-				{:else if completedTasks.length > 0}
-					<!-- Show toggle even if no later tasks -->
-					<div class="task-group">
-						<div class="group-header">
-							<div></div>
-							<button class="toggle-link" on:click={toggleShowCompleted}>
-								{showCompletedTasks ? 'Hide' : 'Show'} Completed
-							</button>
-						</div>
-					</div>
+				{/if}
 				{/if}
 
 				<!-- Completed -->
 				{#if showCompletedTasks && completedTasks.length > 0}
 					<div class="task-group">
-						<h2 class="group-title">Completed</h2>
+						<div class="group-header">
+							<h2 class="group-title">Completed</h2>
+							<button class="toggle-link" on:click={toggleShowCompleted}>Show All Tasks</button>
+						</div>
 						{#each completedTasks as task (task.id)}
 							<div class="task-item">
 								<input
@@ -900,12 +925,19 @@
 						</div>
 					</div>
 
-					{#if selectedTask.due_date}
-						<div class="detail-section">
-							<label>Due Date</label>
-							<p class="detail-text">{formatDueDate(selectedTask.due_date)}</p>
-						</div>
-					{/if}
+					<div class="detail-section">
+						<label>Due Date</label>
+						{#if selectedTask.due_date}
+							<p class="detail-text">
+								{new Date(selectedTask.due_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+								{#if formatDueDate(selectedTask.due_date) !== 'No due date'}
+									<span class="due-status">({formatDueDate(selectedTask.due_date)})</span>
+								{/if}
+							</p>
+						{:else}
+							<p class="detail-text">No due date</p>
+						{/if}
+					</div>
 
 					{#if getProjectName(selectedTask.project_id)}
 						<div class="detail-section">
@@ -1017,6 +1049,7 @@
 		placeholder="Ask about tasks..."
 		isStreaming={isChatStreaming}
 		context="tasks"
+		messagesReady={messagesReady}
 	/>
 </div>
 </AppLayout>
@@ -1277,6 +1310,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
+		opacity: 0;
 	}
 
 	.message {

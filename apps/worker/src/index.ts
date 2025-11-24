@@ -199,11 +199,13 @@ When users request operations:
 - **note**: title (required, max 50 chars), content (required, detailed 200-500 words with KEY POINTS section)
 
 ## Due Date Handling
+IMPORTANT: Today's date is ${new Date().toISOString().split('T')[0]} (YYYY-MM-DD format)
+
 Convert time references to ISO date format (YYYY-MM-DD):
-- "today" → calculate today's date
-- "tomorrow" → tomorrow's date
-- "next Friday" → calculate next Friday's date
-- "in 2 weeks" → calculate date 2 weeks from now
+- "today" → ${new Date().toISOString().split('T')[0]}
+- "tomorrow" → calculate tomorrow's date from today
+- "next Friday" → calculate next Friday's date from today
+- "in 2 weeks" → calculate date 2 weeks from today
 
 ## Finding Items to Update/Delete
 Reference items by their IDs shown in the Workspace Context (e.g., "- Task title [id: uuid-here]")
@@ -229,11 +231,11 @@ Be conversational and helpful. Use smart defaults when appropriate!`;
         }
 
         if (context?.scope === 'tasks') {
-          systemPrompt += '\n\nYou are the TASKS AI assistant. You help manage tasks and to-dos. When users ask about tasks, ONLY create tasks (type: "task"), never notes or projects. You CAN see workspace data (projects, notes) for context, but focus on actionable to-do items. Remember: task titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the TASKS AI assistant. You ONLY work with tasks and to-dos. If a user asks you to create notes or projects, politely decline and tell them you only handle tasks - they should use the Notes AI or Project chat instead. ONLY create tasks (type: "task"), never notes or projects under any circumstances. You CAN see workspace data (projects, notes) for context, but focus exclusively on actionable to-do items. Remember: task titles must be 50 characters or less.';
         }
 
         if (context?.scope === 'notes') {
-          systemPrompt += '\n\nYou are the NOTES AI assistant. You help capture knowledge and information. When users ask about notes, ONLY create notes (type: "note"), never tasks or projects. You CAN see workspace data (projects, tasks) for context, but focus on information capture and detailed content. Remember: note titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the NOTES AI assistant. You ONLY work with notes and knowledge capture. If a user asks you to create tasks or projects, politely decline and tell them you only handle notes - they should use the Tasks AI or Project chat instead. ONLY create notes (type: "note"), never tasks or projects under any circumstances. You CAN see workspace data (projects, tasks) for context, but focus exclusively on information capture and detailed content. Remember: note titles must be 50 characters or less.';
         }
 
         if (context?.scope === 'project' && context?.projectId) {

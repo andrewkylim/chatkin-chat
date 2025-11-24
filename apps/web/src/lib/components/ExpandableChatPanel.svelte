@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 
 	interface Message {
@@ -14,6 +14,7 @@
 	export let isStreaming: boolean = false;
 	export let context: 'global' | 'project' | 'tasks' | 'notes' = 'global';
 	export let showFileUpload: boolean = false;
+	export let messagesReady: boolean = false;
 
 	let isExpanded = false;
 	let panelHeight = 50; // Default 50%
@@ -49,28 +50,26 @@
 		}
 	}
 
-	function scrollToBottom() {
-		setTimeout(() => {
-			if (messagesContainer) {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
-			}
-		}, 100);
+	async function scrollToBottom() {
+		// Wait for DOM to update, then scroll immediately (WhatsApp-style)
+		await tick();
+		if (messagesContainer) {
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
 	}
 
-	function handleSubmit() {
+	async function handleSubmit() {
 		if (!inputMessage.trim() || isStreaming) return;
 
 		const message = inputMessage.trim();
 		inputMessage = '';
 		onSendMessage(message);
 
-		setTimeout(() => {
-			scrollToBottom();
-		}, 100);
+		await scrollToBottom();
 	}
 
-	// Auto-scroll when new messages arrive
-	$: if (messages.length > 0 && isExpanded) {
+	// Auto-scroll when new messages arrive (but only after initial load is complete)
+	$: if (messages.length > 0 && isExpanded && messagesReady) {
 		scrollToBottom();
 	}
 </script>
@@ -78,7 +77,7 @@
 <div class="chat-panel-container" style="--panel-height: {panelHeight}%">
 	<!-- Messages Area (only visible when expanded) -->
 	{#if isExpanded}
-		<div class="messages-area" bind:this={messagesContainer}>
+		<div class="messages-area" bind:this={messagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message}
 				<div class="message {message.role}">
 					<div class="message-bubble">
@@ -168,6 +167,7 @@
 		gap: 12px;
 		background: var(--bg-primary);
 		animation: slideDown 0.3s ease;
+		opacity: 0;
 	}
 
 	@keyframes slideDown {

@@ -7,13 +7,14 @@
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { goto } from '$app/navigation';
 
 	interface ChatMessage {
 		role: 'user' | 'ai';
 		content: string;
+		isTyping?: boolean;
 	}
 
 	let notes: any[] = [];
@@ -38,6 +39,7 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let isLoadingConversation = true;
+	let messagesReady = false;
 
 	onMount(async () => {
 		await loadData();
@@ -69,7 +71,8 @@
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
 			isLoadingConversation = false;
-			scrollChatToBottom();
+			await scrollChatToBottom();
+			messagesReady = true;
 		} catch (error) {
 			console.error('Error loading conversation:', error);
 			isLoadingConversation = false;
@@ -78,6 +81,8 @@
 				role: 'ai',
 				content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
 			}];
+			await scrollChatToBottom();
+			messagesReady = true;
 		}
 	});
 
@@ -122,6 +127,7 @@
 	}
 
 	function truncateTitle(title: string, maxLength: number = 30) {
+		if (!title) return 'Untitled';
 		if (title.length <= maxLength) return title;
 		return title.substring(0, maxLength) + '...';
 	}
@@ -215,12 +221,11 @@
 		}
 	}
 
-	function scrollChatToBottom() {
-		setTimeout(() => {
-			if (chatMessagesContainer) {
-				chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-			}
-		}, 50);
+	async function scrollChatToBottom() {
+		await tick();
+		if (chatMessagesContainer) {
+			chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+		}
 	}
 
 	async function sendChatMessage(message?: string) {
@@ -228,6 +233,15 @@
 		if (!userMessage || isChatStreaming || !conversation) return;
 
 		chatInput = '';
+
+		// Build conversation history BEFORE adding new message (last 50 messages)
+		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !(m as any).isTyping);
+		const recentMessages = allMessages.slice(-50);
+
+		const conversationHistory = recentMessages.map(m => ({
+			role: m.role,
+			content: m.content
+		}));
 
 		// Save user message to database
 		try {
@@ -255,14 +269,6 @@
 		scrollChatToBottom();
 
 		try {
-			// Build conversation history (last 50 messages)
-			const allMessages = chatMessages.filter(m => m.content && m.content.trim() && !(m as any).isTyping);
-			const recentMessages = allMessages.slice(-50);
-
-			const conversationHistory = recentMessages.map(m => ({
-				role: m.role,
-				content: m.content
-			}));
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
@@ -291,7 +297,8 @@
 				// Update loading message
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating notes...'
+					content: 'Creating notes...',
+					isTyping: false
 				};
 				chatMessages = chatMessages;
 				scrollChatToBottom();
@@ -301,14 +308,18 @@
 
 				for (const action of data.actions) {
 					try {
+						// Check if it's the new operations format
+						const isNewFormat = action.operation === 'create' && action.data;
+						const noteData = isNewFormat ? action.data : action;
+
 						if (action.type === 'note') {
 							await createNote({
-								title: action.title,
-								content: action.content,
+								title: noteData.title,
+								content: noteData.content,
 								project_id: null
 							});
 							noteCount++;
-							console.log('Created note:', action.title);
+							console.log('Created note:', noteData.title);
 						}
 					} catch (createError) {
 						console.error(`Error creating note:`, createError);
@@ -330,7 +341,8 @@
 
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: confirmMessage
+					content: confirmMessage,
+					isTyping: false
 				};
 				chatMessages = chatMessages;
 			} else if (data.type === 'message') {
@@ -344,7 +356,8 @@
 				// Conversational response
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: data.message
+					content: data.message,
+					isTyping: false
 				};
 				chatMessages = chatMessages;
 			}
@@ -352,7 +365,8 @@
 			console.error('Error sending message:', error);
 			chatMessages[aiMessageIndex] = {
 				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.'
+				content: 'Sorry, I encountered an error processing your request. Please try again.',
+				isTyping: false
 			};
 			chatMessages = chatMessages;
 		} finally {
@@ -456,7 +470,7 @@
 				</div>
 			</div>
 
-			<div class="messages" bind:this={chatMessagesContainer}>
+			<div class="messages" bind:this={chatMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 				{#each chatMessages as message (message)}
 					<div class="message {message.role}">
 						<div class="message-bubble">
@@ -474,7 +488,7 @@
 				{/each}
 			</div>
 
-			<form class="input-container" on:submit|preventDefault={sendChatMessage}>
+			<form class="input-container" on:submit|preventDefault={() => sendChatMessage()}>
 				<input
 					type="text"
 					bind:value={chatInput}
@@ -673,6 +687,7 @@
 		placeholder="Ask about notes..."
 		isStreaming={isChatStreaming}
 		context="notes"
+		messagesReady={messagesReady}
 	/>
 </div>
 </AppLayout>
@@ -787,10 +802,6 @@
 		background: var(--bg-secondary);
 	}
 
-	.note-card:hover .card-actions {
-		opacity: 1;
-	}
-
 	.note-card:active {
 		transform: scale(0.99);
 	}
@@ -801,7 +812,7 @@
 		right: 12px;
 		display: flex;
 		gap: 6px;
-		opacity: 0;
+		opacity: 1;
 		transition: all 0.2s ease;
 		z-index: 2;
 	}
@@ -944,6 +955,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
+		opacity: 0;
 	}
 
 	.message {

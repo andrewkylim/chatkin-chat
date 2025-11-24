@@ -399,13 +399,9 @@
 		right: 16px;
 		display: flex;
 		gap: 8px;
-		opacity: 0;
+		opacity: 1;
 		transition: opacity 0.2s ease;
 		z-index: 1;
-	}
-
-	.project-card:hover .card-actions {
-		opacity: 1;
 	}
 
 	.edit-icon-btn,
