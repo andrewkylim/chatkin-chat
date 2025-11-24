@@ -1,7 +1,11 @@
+<script lang="ts">
+	import { playClick } from '$lib/utils/sound';
+</script>
+
 <div class="landing">
 	<nav class="nav">
 		<div class="nav-container">
-			<a href="/" class="logo">
+			<a href="/" class="logo" on:click={playClick}>
 				<img src="/logo.webp" alt="Chatkin" class="logo-icon" />
 				<span>Chatkin</span>
 			</a>
@@ -54,7 +58,7 @@
 		<div class="features-container">
 			<h2 class="section-title">Everything you need, one conversation away</h2>
 			<div class="features-grid">
-				<div class="feature-card">
+				<div class="feature-card" role="button" tabindex="0" on:click={playClick}>
 					<div class="app-icon">
 						<img src="/chat.png" alt="Chat" />
 					</div>
@@ -67,7 +71,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card">
+				<div class="feature-card" role="button" tabindex="0" on:click={playClick}>
 					<div class="app-icon">
 						<img src="/projects.png" alt="Projects" />
 					</div>
@@ -80,7 +84,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card">
+				<div class="feature-card" role="button" tabindex="0" on:click={playClick}>
 					<div class="app-icon">
 						<img src="/tasks.png" alt="Tasks" />
 					</div>
@@ -93,7 +97,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card">
+				<div class="feature-card" role="button" tabindex="0" on:click={playClick}>
 					<div class="app-icon">
 						<img src="/notes.png" alt="Notes" />
 					</div>
@@ -304,10 +308,17 @@
 		transition: all 0.2s ease;
 		min-height: 100px;
 		-webkit-tap-highlight-color: transparent;
+		cursor: pointer;
+		user-select: none;
 	}
 
 	.feature-card:active {
 		transform: scale(0.98);
+	}
+
+	.feature-card:focus {
+		outline: none;
+		border-color: var(--accent-primary);
 	}
 
 	@media (hover: hover) {
