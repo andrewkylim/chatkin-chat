@@ -16,6 +16,9 @@
 	let editContent = '';
 	let editBlockId = '';
 
+	$: backUrl = note?.project_id ? `/projects/${note.project_id}/chat` : '/notes';
+	$: backText = note?.project_id ? 'Back to Project' : 'Back to Notes';
+
 	onMount(async () => {
 		await loadNote();
 	});
@@ -86,11 +89,11 @@
 		</div>
 	{:else if note}
 		<header class="note-header">
-			<a href="/notes" class="back-btn">
+			<a href={backUrl} class="back-btn">
 				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M12 4l-8 8 8 8"/>
 				</svg>
-				Back to Notes
+				{backText}
 			</a>
 			<div class="header-title-row">
 				<h1>{note.title || 'Untitled'}</h1>

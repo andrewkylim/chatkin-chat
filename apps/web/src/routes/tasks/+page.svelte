@@ -1,6 +1,8 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
+	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
+	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask, deleteOldCompletedTasks } from '$lib/db/tasks';
 	import { createNote } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
@@ -34,11 +36,6 @@
 	// Edit modal state
 	let showEditTaskModal = false;
 	let editingTask: any = null;
-	let editTaskTitle = '';
-	let editTaskDescription = '';
-	let editTaskPriority = 'medium';
-	let editTaskDueDate = '';
-	let editTaskProjectId: string | null = null;
 
 	// Chat state
 	let chatMessages: ChatMessage[] = [];
@@ -163,15 +160,7 @@
 	}
 
 	function openEditFromDetail() {
-		if (!selectedTask) return;
-
 		editingTask = selectedTask;
-		editTaskTitle = selectedTask.title;
-		editTaskDescription = selectedTask.description || '';
-		editTaskPriority = selectedTask.priority;
-		editTaskDueDate = selectedTask.due_date || '';
-		editTaskProjectId = selectedTask.project_id;
-
 		showTaskDetailModal = false;
 		showEditTaskModal = true;
 	}
@@ -189,23 +178,16 @@
 		}
 	}
 
-	async function handleUpdateTask() {
-		if (!editingTask || !editTaskTitle.trim()) return;
+	async function handleUpdateTask(updatedTask: any) {
+		if (!editingTask) return;
 
 		try {
-			await updateTask(editingTask.id, {
-				title: editTaskTitle,
-				description: editTaskDescription || null,
-				priority: editTaskPriority as any,
-				due_date: editTaskDueDate || null,
-				project_id: editTaskProjectId
-			});
-
+			await updateTask(editingTask.id, updatedTask);
 			showEditTaskModal = false;
-			editingTask = null;
 			await loadData();
 		} catch (error) {
 			console.error('Error updating task:', error);
+			alert('Failed to update task');
 		}
 	}
 
@@ -902,152 +884,24 @@
 		</div>
 	{/if}
 
-	<!-- Task Detail Modal -->
-	{#if showTaskDetailModal && selectedTask}
-		<div class="modal-overlay" on:click={() => showTaskDetailModal = false}>
-			<div class="modal" on:click|stopPropagation>
-				<h2>Task Details</h2>
-				<div class="task-detail-content">
-					<div class="detail-section">
-						<label>Title</label>
-						<p class="detail-text">{selectedTask.title}</p>
-					</div>
+	<!-- Task Modals -->
+	<TaskDetailModal
+		show={showTaskDetailModal}
+		task={selectedTask}
+		projects={projects}
+		onClose={() => showTaskDetailModal = false}
+		onEdit={openEditFromDetail}
+		onDelete={handleDeleteFromDetail}
+	/>
 
-					{#if selectedTask.description}
-						<div class="detail-section">
-							<label>Description</label>
-							<p class="detail-text">{selectedTask.description}</p>
-						</div>
-					{/if}
-
-					<div class="detail-row">
-						<div class="detail-section">
-							<label>Priority</label>
-							<span class="priority {selectedTask.priority}">{selectedTask.priority}</span>
-						</div>
-
-						<div class="detail-section">
-							<label>Status</label>
-							<p class="detail-text">{selectedTask.status === 'completed' ? 'Completed' : 'To Do'}</p>
-						</div>
-					</div>
-
-					<div class="detail-section">
-						<label>Due Date</label>
-						{#if selectedTask.due_date}
-							<p class="detail-text">
-								{new Date(selectedTask.due_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-								{#if formatDueDate(selectedTask.due_date) !== 'No due date'}
-									<span class="due-status">({formatDueDate(selectedTask.due_date)})</span>
-								{/if}
-							</p>
-						{:else}
-							<p class="detail-text">No due date</p>
-						{/if}
-					</div>
-
-					{#if getProjectName(selectedTask.project_id)}
-						<div class="detail-section">
-							<label>Project</label>
-							<p class="detail-text">{getProjectName(selectedTask.project_id)}</p>
-						</div>
-					{/if}
-				</div>
-
-				<div class="modal-actions">
-					<button type="button" class="delete-btn" on:click={handleDeleteFromDetail}>
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m2 0v9.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V4"/>
-						</svg>
-						Delete
-					</button>
-					<div style="flex: 1;"></div>
-					<button type="button" class="secondary-btn" on:click={() => showTaskDetailModal = false}>
-						Close
-					</button>
-					<button type="button" class="primary-btn" on:click={openEditFromDetail}>
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
-						</svg>
-						Edit
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Edit Task Modal -->
-	{#if showEditTaskModal}
-		<div class="modal-overlay" on:click={() => showEditTaskModal = false}>
-			<div class="modal" on:click|stopPropagation>
-				<h2>Edit Task</h2>
-				<form on:submit|preventDefault={handleUpdateTask}>
-					<div class="form-group">
-						<label for="edit-task-title">Task Title</label>
-						<input
-							type="text"
-							id="edit-task-title"
-							bind:value={editTaskTitle}
-							placeholder="e.g., Call the contractor"
-							maxlength="50"
-							required
-						/>
-					</div>
-					<div class="form-group">
-						<label for="edit-task-description">Description (optional)</label>
-						<textarea
-							id="edit-task-description"
-							bind:value={editTaskDescription}
-							placeholder="Add details..."
-							rows="2"
-						></textarea>
-					</div>
-					<div class="form-row">
-						<div class="form-group">
-							<label for="edit-task-priority">Priority</label>
-							<select id="edit-task-priority" bind:value={editTaskPriority}>
-								<option value="low">Low</option>
-								<option value="medium">Medium</option>
-								<option value="high">High</option>
-							</select>
-						</div>
-						<div class="form-group">
-							<label for="edit-task-due-date">Due Date (optional)</label>
-							<input
-								type="date"
-								id="edit-task-due-date"
-								bind:value={editTaskDueDate}
-							/>
-						</div>
-					</div>
-					<div class="form-group">
-						<label for="edit-task-project">Project (optional)</label>
-						<select id="edit-task-project" bind:value={editTaskProjectId}>
-							<option value={null}>No project</option>
-							{#each projects as project}
-								<option value={project.id}>{project.name}</option>
-							{/each}
-						</select>
-					</div>
-					<div class="modal-actions">
-						<button type="button" class="delete-btn" on:click={handleDeleteTask}>
-							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m2 0v9.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V4"/>
-							</svg>
-							Delete
-						</button>
-						<div style="flex: 1;"></div>
-						<button type="button" class="secondary-btn" on:click={() => showEditTaskModal = false}>
-							Cancel
-						</button>
-						<button type="submit" class="primary-btn">
-							Update Task
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	{/if}
+	<TaskEditModal
+		show={showEditTaskModal}
+		task={editingTask}
+		projects={projects}
+		onClose={() => showEditTaskModal = false}
+		onSave={handleUpdateTask}
+		onDelete={handleDeleteTask}
+	/>
 
 	<!-- Expandable Chat Panel (Mobile Only) -->
 	<ExpandableChatPanel
@@ -1677,18 +1531,17 @@
 	.toggle-link {
 		background: none;
 		border: none;
-		padding: 0;
-		font-size: 0.875rem;
+		color: var(--accent-primary);
+		font-size: 0.8125rem;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--text-secondary);
 		cursor: pointer;
-		transition: color 0.2s ease;
+		padding: 4px 8px;
+		border-radius: var(--radius-sm);
+		transition: all 0.2s ease;
 	}
 
 	.toggle-link:hover {
-		color: var(--accent-primary);
+		background: var(--bg-tertiary);
 	}
 
 	.delete-btn {
