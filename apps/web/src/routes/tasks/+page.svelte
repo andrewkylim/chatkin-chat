@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
+	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask, deleteOldCompletedTasks } from '$lib/db/tasks';
@@ -655,11 +656,14 @@
 	<div class="mobile-content">
 		<header class="mobile-header">
 			<h1>Tasks</h1>
-			<button class="mobile-new-btn" on:click={() => showNewTaskModal = true}>
-				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M8 2v12M2 8h12"/>
-				</svg>
-			</button>
+			<div class="mobile-header-actions">
+				<button class="mobile-new-btn" on:click={() => showNewTaskModal = true}>
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M8 2v12M2 8h12"/>
+					</svg>
+				</button>
+				<MobileUserMenu />
+			</div>
 		</header>
 
 		<div class="mobile-tasks">
@@ -1602,6 +1606,12 @@
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
+		}
+
+		.mobile-header-actions {
+			display: flex;
+			align-items: center;
+			gap: 8px;
 		}
 
 		.mobile-header h1 {

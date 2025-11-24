@@ -69,6 +69,19 @@
 
 				<div class="feature-card">
 					<div class="app-icon">
+						<img src="/projects.png" alt="Projects" />
+					</div>
+					<div class="app-content">
+						<h3 class="app-name">Projects</h3>
+						<p class="app-description">
+							Organize work into projects with AI-powered planning and context management
+						</p>
+					</div>
+					<div class="app-badge badge-active">LIVE</div>
+				</div>
+
+				<div class="feature-card">
+					<div class="app-icon">
 						<img src="/tasks.png" alt="Tasks" />
 					</div>
 					<div class="app-content">
@@ -91,19 +104,6 @@
 						</p>
 					</div>
 					<div class="app-badge badge-active">LIVE</div>
-				</div>
-
-				<div class="feature-card">
-					<div class="app-icon">
-						<img src="/cal.png" alt="Calendar" />
-					</div>
-					<div class="app-content">
-						<h3 class="app-name">Calendar</h3>
-						<p class="app-description">
-							Smart scheduling with AI-powered meeting coordination
-						</p>
-					</div>
-					<div class="app-badge badge-soon">SOON</div>
 				</div>
 			</div>
 		</div>
@@ -377,7 +377,7 @@
 	/* Footer */
 	.footer {
 		padding: 32px 20px;
-		background: #f4e4d4;
+		background: var(--bg-primary);
 		border-top: none;
 	}
 
@@ -388,7 +388,7 @@
 	}
 
 	.footer .text-muted {
-		color: rgba(0, 0, 0, 0.7);
+		color: var(--text-secondary);
 	}
 
 	/* Responsive */

@@ -2,6 +2,7 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
+	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
@@ -791,30 +792,33 @@
 					<h1>{truncateTitle(project.name, 30)}</h1>
 				</div>
 			{/if}
-			<div class="menu-container">
-				<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-						<circle cx="10" cy="10" r="1.5"/>
-						<circle cx="4" cy="10" r="1.5"/>
-						<circle cx="16" cy="10" r="1.5"/>
-					</svg>
-				</button>
-				{#if showMenu}
-					<div class="dropdown-menu">
-						<button class="menu-item" on:click={startEditProject}>
-							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
-							</svg>
-							Edit Project
-						</button>
-						<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
-							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-							</svg>
-							Delete Project
-						</button>
-					</div>
-				{/if}
+			<div class="mobile-header-actions">
+				<div class="menu-container">
+					<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
+						<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+							<circle cx="10" cy="10" r="1.5"/>
+							<circle cx="4" cy="10" r="1.5"/>
+							<circle cx="16" cy="10" r="1.5"/>
+						</svg>
+					</button>
+					{#if showMenu}
+						<div class="dropdown-menu">
+							<button class="menu-item" on:click={startEditProject}>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
+								</svg>
+								Edit Project
+							</button>
+							<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+								</svg>
+								Delete Project
+							</button>
+						</div>
+					{/if}
+				</div>
+				<MobileUserMenu />
 			</div>
 		</header>
 
@@ -1853,8 +1857,15 @@
 			height: 64px;
 			box-sizing: border-box;
 			display: flex;
+			justify-content: space-between;
 			align-items: center;
 			gap: 12px;
+		}
+
+		.mobile-header-actions {
+			display: flex;
+			align-items: center;
+			gap: 8px;
 		}
 
 		.project-info-mobile {

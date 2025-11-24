@@ -3,6 +3,7 @@
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import OperationPreview from '$lib/components/OperationPreview.svelte';
 	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
+	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
@@ -667,9 +668,8 @@
 	<!-- Mobile: Header + full-screen chat -->
 	<div class="mobile-content">
 		<header class="mobile-header">
-			<div class="header-content">
-				<h1>Chat</h1>
-			</div>
+			<h1>Chat</h1>
+			<MobileUserMenu />
 		</header>
 
 		<!-- Full-screen messages area for mobile -->
@@ -790,6 +790,7 @@
 		height: 64px;
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		box-sizing: border-box;
 	}
 

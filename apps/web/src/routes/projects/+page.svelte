@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
+	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 
@@ -140,6 +141,19 @@
 				</svg>
 				New Project
 			</button>
+		</div>
+	</header>
+
+	<!-- Mobile Header -->
+	<header class="mobile-header">
+		<h1>Projects</h1>
+		<div class="mobile-header-actions">
+			<button class="mobile-new-btn" on:click={() => showNewProjectModal = true}>
+				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M8 2v12M2 8h12"/>
+				</svg>
+			</button>
+			<MobileUserMenu />
 		</div>
 	</header>
 
@@ -760,6 +774,70 @@
 	@media (min-width: 640px) {
 		.projects-grid {
 			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	/* Mobile Layout */
+	.mobile-header {
+		display: none;
+	}
+
+	@media (max-width: 1023px) {
+		.page-header {
+			display: none;
+		}
+
+		.mobile-header {
+			display: flex;
+			flex-shrink: 0;
+			padding: 16px 20px;
+			background: var(--bg-secondary);
+			border-bottom: 1px solid var(--border-color);
+			height: 64px;
+			box-sizing: border-box;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.mobile-header h1 {
+			font-size: 1.5rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			margin: 0;
+		}
+
+		.mobile-header-actions {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.mobile-new-btn {
+			width: 44px;
+			height: 44px;
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--accent-primary);
+			color: white;
+			border: none;
+			border-radius: var(--radius-md);
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.mobile-new-btn:hover {
+			background: var(--accent-hover);
+			transform: translateY(-1px);
+		}
+
+		.mobile-new-btn:active {
+			transform: translateY(0);
+		}
+
+		.page-content {
+			padding: 20px;
 		}
 	}
 </style>
