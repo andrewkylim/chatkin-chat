@@ -58,8 +58,8 @@
 </script>
 
 {#if show}
-	<div class="modal-overlay" on:click={handleClose}>
-		<div class="modal" on:click|stopPropagation>
+	<div class="modal-overlay" role="button" tabindex="0" on:click={handleClose} on:keydown={(e) => e.key === 'Escape' && handleClose()}>
+		<div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
 			<h2>Edit Project</h2>
 			<form on:submit|preventDefault={handleUpdateProject}>
 				<div class="form-group">

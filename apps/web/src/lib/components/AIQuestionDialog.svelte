@@ -47,8 +47,8 @@
 	});
 </script>
 
-<div class="modal-overlay" on:click={onCancel} on:keydown={(e) => e.key === 'Escape' && onCancel()}>
-	<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation>
+<div class="modal-overlay" role="button" tabindex="0" on:click={onCancel} on:keydown={(e) => e.key === 'Escape' && onCancel()}>
+	<div class="modal-content" role="dialog" tabindex="0" on:click|stopPropagation on:keydown|stopPropagation>
 		<div class="modal-header">
 			<h2>I need some more information</h2>
 			<button class="close-button" on:click={onCancel}>×</button>
@@ -76,7 +76,6 @@
 							class="custom-input"
 							placeholder="Type your answer..."
 							bind:value={customAnswers[questionIndex]}
-							autofocus
 						/>
 					{/if}
 				</div>
