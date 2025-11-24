@@ -17,13 +17,11 @@
 	export let messagesReady: boolean = false;
 
 	let isExpanded = false;
-	let panelHeight = 50; // Default 50%
 	let inputMessage = '';
 	let messagesContainer: HTMLDivElement;
 
-	// LocalStorage keys
+	// LocalStorage key
 	const EXPANDED_KEY = `chatkin-chat-expanded-${context}`;
-	const HEIGHT_KEY = 'chatkin-chat-height';
 
 	onMount(() => {
 		if (browser) {
@@ -31,11 +29,6 @@
 			const savedExpanded = localStorage.getItem(EXPANDED_KEY);
 			if (savedExpanded) {
 				isExpanded = savedExpanded === 'true';
-			}
-
-			const savedHeight = localStorage.getItem(HEIGHT_KEY);
-			if (savedHeight) {
-				panelHeight = parseInt(savedHeight, 10);
 			}
 		}
 	});
@@ -74,7 +67,7 @@
 	}
 </script>
 
-<div class="chat-panel-container" style="--panel-height: {panelHeight}%">
+<div class="chat-panel-container">
 	<!-- Messages Area (only visible when expanded) -->
 	{#if isExpanded}
 		{#if !messagesReady}
@@ -164,8 +157,8 @@
 
 	/* Messages Area */
 	.messages-area {
-		height: var(--panel-height, 50vh);
-		max-height: 70vh;
+		height: 50vh;
+		max-height: 50vh;
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		padding: 16px;
@@ -178,8 +171,8 @@
 	}
 
 	.chat-loading-overlay {
-		height: var(--panel-height, 50vh);
-		max-height: 70vh;
+		height: 50vh;
+		max-height: 50vh;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
