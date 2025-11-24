@@ -3,7 +3,7 @@
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import OperationPreview from '$lib/components/OperationPreview.svelte';
 	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
@@ -54,7 +54,8 @@
 	let messages: Message[] = [];
 	let inputMessage = '';
 	let isStreaming = false;
-	let messagesContainer: HTMLDivElement;
+	let desktopMessagesContainer: HTMLDivElement;
+	let mobileMessagesContainer: HTMLDivElement;
 	let showCreateMenu = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
@@ -63,13 +64,17 @@
 	let pendingOperations: Operation[] = [];
 	let showQuestionDialog = false;
 	let pendingQuestions: AIQuestion[] = [];
+	let messagesReady = false;
 
-	function scrollToBottom() {
-		setTimeout(() => {
-			if (messagesContainer) {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
-			}
-		}, 50);
+	async function scrollToBottom() {
+		// Wait for DOM to update, then scroll immediately (for new messages during session)
+		await tick();
+		if (desktopMessagesContainer) {
+			desktopMessagesContainer.scrollTop = desktopMessagesContainer.scrollHeight;
+		}
+		if (mobileMessagesContainer) {
+			mobileMessagesContainer.scrollTop = mobileMessagesContainer.scrollHeight;
+		}
 	}
 
 	async function sendMessage(message?: string) {
@@ -480,7 +485,8 @@
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
 			isLoadingConversation = false;
-			scrollToBottom();
+			await scrollToBottom();
+			messagesReady = true;
 		} catch (error) {
 			console.error('Error loading conversation:', error);
 			isLoadingConversation = false;
@@ -489,6 +495,8 @@
 				role: 'ai',
 				content: '👋 Hi! What would you like to work on today?'
 			}];
+			await scrollToBottom();
+			messagesReady = true;
 		}
 
 		// Close create menu when clicking outside
@@ -553,7 +561,7 @@
 			</div>
 		</header>
 
-		<div class="messages" bind:this={messagesContainer}>
+		<div class="messages" bind:this={desktopMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message, index (message)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
@@ -658,7 +666,7 @@
 		</header>
 
 		<!-- Full-screen messages area for mobile -->
-		<div class="mobile-messages" bind:this={messagesContainer}>
+		<div class="mobile-messages" bind:this={mobileMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message, index (message)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
