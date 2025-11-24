@@ -58,9 +58,6 @@
 		</a>
 
 		<div class="auth-card">
-			<h1>Welcome back</h1>
-			<p class="subtitle">Sign in to continue to your workspace</p>
-
 			{#if error}
 				<div class="error-message">
 					{error}

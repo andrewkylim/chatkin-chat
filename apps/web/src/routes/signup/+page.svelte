@@ -64,7 +64,6 @@
 		</a>
 
 		<div class="auth-card">
-			<h1>Get started</h1>
 			<p class="subtitle">Create your account to start organizing</p>
 
 			{#if error}

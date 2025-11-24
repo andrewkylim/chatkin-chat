@@ -109,14 +109,6 @@
 		</div>
 	</section>
 
-	<section class="cta-section">
-		<div class="cta-container">
-			<h2>Ready to get started?</h2>
-			<p class="text-secondary">Join thousands of people managing their life with AI</p>
-			<a href="/signup" class="primary-btn">Create Free Account</a>
-		</div>
-	</section>
-
 	<footer class="footer">
 		<div class="footer-container">
 			<p class="text-muted">&copy; 2025 Chatkin. Built with care.</p>
@@ -143,14 +135,14 @@
 	.nav-container {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0 20px;
+		padding: 0 12px;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}
 
 	.logo {
-		font-size: 2rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		color: var(--text-primary);
@@ -162,9 +154,9 @@
 	}
 
 	.logo-icon {
-		width: 72px;
-		height: 72px;
-		border-radius: 14px;
+		width: 56px;
+		height: 56px;
+		border-radius: 12px;
 		overflow: hidden;
 		transition: all 0.15s ease;
 	}
@@ -177,6 +169,12 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
+	}
+
+	.nav-actions .secondary-btn,
+	.nav-actions .primary-btn {
+		padding: 10px 16px;
+		font-size: 0.875rem;
 	}
 
 	.btn-text-mobile {
@@ -376,43 +374,21 @@
 		color: var(--accent-primary);
 	}
 
-	/* CTA Section */
-	.cta-section {
-		padding: 80px 20px;
-		background: #f4e4d4;
-		color: black;
-		text-align: center;
-	}
-
-	.cta-container h2 {
-		color: black;
-		margin-bottom: 16px;
-	}
-
-	.cta-container p {
-		color: rgba(0, 0, 0, 0.7);
-		margin-bottom: 32px;
-	}
-
-	.cta-container .primary-btn {
-		background: var(--accent-primary);
-	}
-
-	.cta-container .primary-btn:hover {
-		background: var(--accent-hover);
-	}
-
 	/* Footer */
 	.footer {
 		padding: 32px 20px;
-		background: var(--bg-secondary);
-		border-top: 1px solid var(--border-color);
+		background: #f4e4d4;
+		border-top: none;
 	}
 
 	.footer-container {
 		max-width: 1200px;
 		margin: 0 auto;
 		text-align: center;
+	}
+
+	.footer .text-muted {
+		color: rgba(0, 0, 0, 0.7);
 	}
 
 	/* Responsive */
@@ -435,6 +411,20 @@
 			grid-template-columns: repeat(2, 1fr);
 			gap: 20px;
 		}
+
+		.logo {
+			font-size: 1.75rem;
+		}
+
+		.logo-icon {
+			width: 64px;
+			height: 64px;
+			border-radius: 13px;
+		}
+
+		.nav-container {
+			padding: 0 20px;
+		}
 	}
 
 	@media (min-width: 1024px) {
@@ -444,7 +434,18 @@
 
 		.nav-actions .secondary-btn,
 		.nav-actions .primary-btn {
-			padding: 12px 20px;
+			padding: 14px 24px;
+			font-size: 0.9375rem;
+		}
+
+		.logo {
+			font-size: 2rem;
+		}
+
+		.logo-icon {
+			width: 72px;
+			height: 72px;
+			border-radius: 14px;
 		}
 	}
 </style>
