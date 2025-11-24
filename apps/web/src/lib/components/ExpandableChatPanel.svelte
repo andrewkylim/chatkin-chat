@@ -77,6 +77,13 @@
 <div class="chat-panel-container" style="--panel-height: {panelHeight}%">
 	<!-- Messages Area (only visible when expanded) -->
 	{#if isExpanded}
+		{#if !messagesReady}
+			<div class="chat-loading-overlay">
+				<div class="spinner"></div>
+				<p>Loading conversation...</p>
+			</div>
+		{/if}
+
 		<div class="messages-area" bind:this={messagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message}
 				<div class="message {message.role}">
@@ -168,6 +175,36 @@
 		background: var(--bg-primary);
 		animation: slideDown 0.3s ease;
 		opacity: 0;
+	}
+
+	.chat-loading-overlay {
+		height: var(--panel-height, 50vh);
+		max-height: 70vh;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		background: var(--bg-primary);
+	}
+
+	.chat-loading-overlay p {
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		margin: 0;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
 
 	@keyframes slideDown {

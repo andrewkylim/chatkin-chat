@@ -470,6 +470,13 @@
 				</div>
 			</div>
 
+			{#if !messagesReady}
+				<div class="chat-loading-overlay">
+					<div class="spinner"></div>
+					<p>Loading conversation...</p>
+				</div>
+			{/if}
+
 			<div class="messages" bind:this={chatMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 				{#each chatMessages as message (message)}
 					<div class="message {message.role}">
@@ -956,6 +963,22 @@
 		flex-direction: column;
 		gap: 16px;
 		opacity: 0;
+	}
+
+	.chat-loading-overlay {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		background: var(--bg-primary);
+	}
+
+	.chat-loading-overlay p {
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		margin: 0;
 	}
 
 	.message {

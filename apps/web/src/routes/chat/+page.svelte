@@ -561,6 +561,13 @@
 			</div>
 		</header>
 
+		{#if !messagesReady}
+			<div class="chat-loading-overlay">
+				<div class="spinner"></div>
+				<p>Loading conversation...</p>
+			</div>
+		{/if}
+
 		<div class="messages" bind:this={desktopMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message, index (message)}
 				<div class="message {message.role}">
@@ -666,6 +673,13 @@
 		</header>
 
 		<!-- Full-screen messages area for mobile -->
+		{#if !messagesReady}
+			<div class="chat-loading-overlay">
+				<div class="spinner"></div>
+				<p>Loading conversation...</p>
+			</div>
+		{/if}
+
 		<div class="mobile-messages" bind:this={mobileMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
 			{#each messages as message, index (message)}
 				<div class="message {message.role}">
@@ -914,6 +928,36 @@
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
+	}
+
+	.chat-loading-overlay {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		background: var(--bg-primary);
+		padding-top: 120px;
+	}
+
+	.chat-loading-overlay p {
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		margin: 0;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
 
 	.message {
