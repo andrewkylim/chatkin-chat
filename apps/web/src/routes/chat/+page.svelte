@@ -12,6 +12,7 @@
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation, Message as DBMessage } from '@chatkin/types';
+	import { notificationCounts } from '$lib/stores/notifications';
 
 	interface Message {
 		role: 'user' | 'ai';
@@ -275,6 +276,7 @@
 						color: action.color || '📁'
 					});
 					projectCount++;
+					notificationCounts.incrementCount('projects');
 				} else if (action.type === 'task') {
 					await createTask({
 						title: action.title || 'Untitled Task',
@@ -285,6 +287,7 @@
 						due_date: action.due_date || null
 					});
 					taskCount++;
+					notificationCounts.incrementCount('tasks');
 				} else if (action.type === 'note') {
 					await createNote({
 						title: action.title || 'Untitled Note',
@@ -292,6 +295,7 @@
 						project_id: null
 					});
 					noteCount++;
+					notificationCounts.incrementCount('notes');
 				}
 			} catch (error) {
 				console.error(`Error creating ${action.type}:`, error);
@@ -350,15 +354,18 @@
 							...op.data,
 							project_id: op.data.project_id || null
 						});
+						notificationCounts.incrementCount('tasks');
 						results.push(`✓ Created task: ${op.data.title}`);
 					} else if (op.type === 'note') {
 						await createNote({
 							...op.data,
 							project_id: op.data.project_id || null
 						});
+						notificationCounts.incrementCount('notes');
 						results.push(`✓ Created note: ${op.data.title}`);
 					} else if (op.type === 'project') {
 						await createProject(op.data);
+						notificationCounts.incrementCount('projects');
 						results.push(`✓ Created project: ${op.data.name}`);
 					}
 					successCount++;
@@ -458,6 +465,9 @@
 	}
 
 	onMount(async () => {
+		// Set current section to null (global chat is not a specific section)
+		notificationCounts.setCurrentSection(null);
+
 		// Load conversation and context
 		try {
 			// Get or create conversation for global scope

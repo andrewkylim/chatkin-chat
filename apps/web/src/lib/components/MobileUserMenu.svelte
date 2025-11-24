@@ -61,8 +61,8 @@
 	}
 
 	.user-avatar {
-		width: 40px;
-		height: 40px;
+		width: 44px;
+		height: 44px;
 		border-radius: 50%;
 		background: var(--accent-primary);
 		color: white;

@@ -12,6 +12,8 @@
 	import type { Conversation } from '@chatkin/types';
 	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
+	import { notificationCounts } from '$lib/stores/notifications';
+	import { page } from '$app/stores';
 
 	interface ChatMessage {
 		role: 'user' | 'ai';
@@ -49,6 +51,10 @@
 	let isLoadingConversation = true;
 
 	onMount(async () => {
+		// Set current section and clear notification count
+		notificationCounts.setCurrentSection('tasks');
+		notificationCounts.clearCount('tasks');
+
 		// Load show completed preference from localStorage
 		const savedShowCompleted = localStorage.getItem('showCompletedTasks');
 		if (savedShowCompleted !== null) {
@@ -656,14 +662,7 @@
 	<div class="mobile-content">
 		<header class="mobile-header">
 			<h1>Tasks</h1>
-			<div class="mobile-header-actions">
-				<button class="mobile-new-btn" on:click={() => showNewTaskModal = true}>
-					<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M8 2v12M2 8h12"/>
-					</svg>
-				</button>
-				<MobileUserMenu />
-			</div>
+			<MobileUserMenu />
 		</header>
 
 		<div class="mobile-tasks">
@@ -906,6 +905,13 @@
 		onSave={handleUpdateTask}
 		onDelete={handleDeleteTask}
 	/>
+
+	<!-- Floating Action Button (Mobile Only) -->
+	<button class="fab" on:click={() => showNewTaskModal = true} aria-label="Create new task">
+		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+			<path d="M12 5v14M5 12h14"/>
+		</svg>
+	</button>
 
 	<!-- Expandable Chat Panel (Mobile Only) -->
 	<ExpandableChatPanel
@@ -1608,12 +1614,6 @@
 			align-items: center;
 		}
 
-		.mobile-header-actions {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-
 		.mobile-header h1 {
 			font-size: 1.5rem;
 			font-weight: 700;
@@ -1621,28 +1621,34 @@
 			margin: 0;
 		}
 
-		.mobile-new-btn {
-			width: 44px;
-			height: 44px;
-			flex-shrink: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: var(--accent-primary);
-			color: white;
-			border: none;
-			border-radius: var(--radius-md);
-			cursor: pointer;
-			transition: all 0.2s ease;
+		.fab {
+			display: none;
 		}
 
-		.mobile-new-btn:hover {
-			background: var(--accent-hover);
-			transform: translateY(-1px);
-		}
+		@media (max-width: 1023px) {
+			.fab {
+				position: fixed;
+				bottom: 140px;
+				right: 60px;
+				width: 56px;
+				height: 56px;
+				border-radius: 50%;
+				background: var(--accent-primary);
+				color: white;
+				border: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+				transition: transform 0.3s ease;
+				z-index: 50;
+				opacity: 0.7;
+			}
 
-		.mobile-new-btn:active {
-			transform: translateY(0);
+			.fab:active {
+				transform: scale(0.95);
+			}
 		}
 
 		.mobile-tasks {
@@ -1650,6 +1656,7 @@
 			overflow-y: auto;
 			-webkit-overflow-scrolling: touch;
 			padding: 20px;
+			padding-bottom: 120px;
 			background: var(--bg-secondary);
 		}
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { notificationCounts } from '$lib/stores/notifications';
 
 	$: currentPath = $page.url.pathname;
 </script>
@@ -11,14 +12,23 @@
 
 	<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
 		<span>Projects</span>
+		{#if $notificationCounts.projects > 0}
+			<span class="notification-dot"></span>
+		{/if}
 	</a>
 
 	<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
 		<span>Tasks</span>
+		{#if $notificationCounts.tasks > 0}
+			<span class="notification-dot"></span>
+		{/if}
 	</a>
 
 	<a href="/notes" class="nav-item" class:active={currentPath === '/notes'}>
 		<span>Notes</span>
+		{#if $notificationCounts.notes > 0}
+			<span class="notification-dot"></span>
+		{/if}
 	</a>
 </nav>
 
@@ -67,10 +77,19 @@
 		border-radius: 0 0 3px 3px;
 	}
 
-	.nav-item span {
+	.nav-item > span:first-child {
 		font-size: 0.8125rem;
 		font-weight: 600;
 		letter-spacing: -0.01em;
+	}
+
+	.notification-dot {
+		width: 8px;
+		height: 8px;
+		background: var(--accent-primary);
+		border-radius: 50%;
+		margin-left: 6px;
+		flex-shrink: 0;
 	}
 
 	/* Hide on desktop */

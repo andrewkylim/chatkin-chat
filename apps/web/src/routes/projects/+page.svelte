@@ -4,6 +4,7 @@
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
 	import { onMount } from 'svelte';
+	import { notificationCounts } from '$lib/stores/notifications';
 
 	let projects: any[] = [];
 	let projectStats: Record<string, any> = {};
@@ -31,6 +32,10 @@
 	$: availableEmojis = showAllEmojis ? allEmojis : quickEmojis;
 
 	onMount(async () => {
+		// Set current section and clear notification count
+		notificationCounts.setCurrentSection('projects');
+		notificationCounts.clearCount('projects');
+
 		await loadProjects();
 	});
 
@@ -147,14 +152,7 @@
 	<!-- Mobile Header -->
 	<header class="mobile-header">
 		<h1>Projects</h1>
-		<div class="mobile-header-actions">
-			<button class="mobile-new-btn" on:click={() => showNewProjectModal = true}>
-				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M8 2v12M2 8h12"/>
-				</svg>
-			</button>
-			<MobileUserMenu />
-		</div>
+		<MobileUserMenu />
 	</header>
 
 	<div class="page-content">
@@ -318,6 +316,13 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Floating Action Button (Mobile Only) -->
+	<button class="fab" on:click={() => showNewProjectModal = true} aria-label="Create new project">
+		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+			<path d="M12 5v14M5 12h14"/>
+		</svg>
+	</button>
 </div>
 </AppLayout>
 
@@ -797,6 +802,9 @@
 			box-sizing: border-box;
 			justify-content: space-between;
 			align-items: center;
+			position: sticky;
+			top: 0;
+			z-index: 10;
 		}
 
 		.mobile-header h1 {
@@ -806,38 +814,40 @@
 			margin: 0;
 		}
 
-		.mobile-header-actions {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-
-		.mobile-new-btn {
-			width: 44px;
-			height: 44px;
-			flex-shrink: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
+		.fab {
+			position: fixed;
+			bottom: 80px;
+			right: 60px;
+			width: 56px;
+			height: 56px;
+			border-radius: 50%;
 			background: var(--accent-primary);
 			color: white;
 			border: none;
-			border-radius: var(--radius-md);
+			display: flex;
+			align-items: center;
+			justify-content: center;
 			cursor: pointer;
-			transition: all 0.2s ease;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			transition: transform 0.3s ease;
+			z-index: 50;
+			margin-bottom: env(safe-area-inset-bottom);
+			opacity: 0.7;
 		}
 
-		.mobile-new-btn:hover {
-			background: var(--accent-hover);
-			transform: translateY(-1px);
-		}
-
-		.mobile-new-btn:active {
-			transform: translateY(0);
+		.fab:active {
+			transform: scale(0.95);
 		}
 
 		.page-content {
 			padding: 20px;
+		}
+	}
+
+	/* Hide FAB on desktop */
+	@media (min-width: 1024px) {
+		.fab {
+			display: none;
 		}
 	}
 </style>

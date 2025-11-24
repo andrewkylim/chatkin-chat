@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { notificationCounts } from '$lib/stores/notifications';
 
 	$: currentPath = $page.url.pathname;
 
@@ -33,16 +34,25 @@
 			<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
 				<img src="/projects.png" alt="" class="nav-icon" />
 				<span>Projects</span>
+				{#if $notificationCounts.projects > 0}
+					<span class="notification-dot"></span>
+				{/if}
 			</a>
 
 			<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
 				<img src="/tasks.png" alt="" class="nav-icon" />
 				<span>Tasks</span>
+				{#if $notificationCounts.tasks > 0}
+					<span class="notification-dot"></span>
+				{/if}
 			</a>
 
 			<a href="/notes" class="nav-item" class:active={currentPath === '/notes'}>
 				<img src="/notes.png" alt="" class="nav-icon" />
 				<span>Notes</span>
+				{#if $notificationCounts.notes > 0}
+					<span class="notification-dot"></span>
+				{/if}
 			</a>
 		</div>
 	</nav>
@@ -156,15 +166,6 @@
 		transform: scale(0.95);
 	}
 
-	.nav-icon-svg {
-		opacity: 0.7;
-	}
-
-	.nav-item.active .nav-icon-svg {
-		opacity: 1;
-		stroke: var(--accent-primary);
-	}
-
 	.nav-section {
 		margin-top: 24px;
 	}
@@ -247,6 +248,15 @@
 
 	.user-profile:hover .signout-icon {
 		opacity: 0.7;
+	}
+
+	.notification-dot {
+		width: 8px;
+		height: 8px;
+		background: var(--accent-primary);
+		border-radius: 50%;
+		margin-left: 4px;
+		flex-shrink: 0;
 	}
 
 	/* Hide on mobile */
