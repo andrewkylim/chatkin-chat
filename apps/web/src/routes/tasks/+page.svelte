@@ -1629,7 +1629,7 @@
 			.fab {
 				position: fixed;
 				bottom: 140px;
-				left: 20px;
+				left: 27px;
 				width: 56px;
 				height: 56px;
 				border-radius: 50%;
