@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
+	// Trigger production rebuild with correct PUBLIC_WORKER_URL
 
 	onMount(() => {
 		auth.initialize();

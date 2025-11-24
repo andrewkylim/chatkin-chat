@@ -78,18 +78,104 @@ export default {
           apiKey: env.ANTHROPIC_API_KEY,
         });
 
+        // Define tools for structured operations
+        const tools = [
+          {
+            name: 'propose_operations',
+            description: 'Propose create/update/delete operations to user for confirmation. Use this when the user asks you to create, update, or delete tasks, notes, or projects.',
+            input_schema: {
+              type: 'object' as const,
+              properties: {
+                summary: {
+                  type: 'string' as const,
+                  description: 'Brief summary of what you will do (e.g., "I\'ll create 3 tasks for your workout plan")'
+                },
+                operations: {
+                  type: 'array' as const,
+                  items: {
+                    type: 'object' as const,
+                    properties: {
+                      operation: {
+                        type: 'string' as const,
+                        enum: ['create', 'update', 'delete'],
+                        description: 'The type of operation'
+                      },
+                      type: {
+                        type: 'string' as const,
+                        enum: ['task', 'note', 'project'],
+                        description: 'The type of item'
+                      },
+                      id: {
+                        type: 'string' as const,
+                        description: 'Item ID (required for update/delete, from workspace context)'
+                      },
+                      data: {
+                        type: 'object' as const,
+                        description: 'Item data (for create operations)'
+                      },
+                      changes: {
+                        type: 'object' as const,
+                        description: 'Fields to update (for update operations)'
+                      },
+                      reason: {
+                        type: 'string' as const,
+                        description: 'Reason for deletion (for delete operations)'
+                      }
+                    },
+                    required: ['operation', 'type']
+                  }
+                }
+              },
+              required: ['summary', 'operations']
+            }
+          },
+          {
+            name: 'ask_questions',
+            description: 'Ask structured multiple choice questions to gather information from the user.',
+            input_schema: {
+              type: 'object' as const,
+              properties: {
+                questions: {
+                  type: 'array' as const,
+                  items: {
+                    type: 'object' as const,
+                    properties: {
+                      question: {
+                        type: 'string' as const,
+                        description: 'The question to ask'
+                      },
+                      options: {
+                        type: 'array' as const,
+                        items: { type: 'string' as const },
+                        description: 'Multiple choice options (user can also select "Other" to provide custom answer)'
+                      }
+                    },
+                    required: ['question', 'options']
+                  }
+                }
+              },
+              required: ['questions']
+            }
+          }
+        ];
+
         // Build system prompt with context if provided
         let systemPrompt = `You are a helpful AI assistant for Chatkin OS, a productivity suite. You help users manage tasks, notes, and projects.
 
 ${workspaceContext || ''}
 
-## When to Ask Clarifying Questions (Hybrid Approach)
-Ask follow-up questions for critical missing information:
-- If user wants to create a project but the name is unclear: "What would you like to name this project?"
-- If user mentions a deadline but it's ambiguous: "When is this task due? (e.g., today, tomorrow, next Friday)"
-- If user wants high-priority tasks but context is unclear: "Which tasks are most urgent?"
+## Tools Available
 
-For non-critical info, proceed with smart defaults and let users confirm/modify.
+You have access to two tools:
+
+### 1. propose_operations
+Use this tool when users ask you to create, update, or delete items. This implements a two-step workflow:
+- You propose operations with a summary
+- User reviews and confirms
+- System executes the operations
+
+### 2. ask_questions
+Use this tool when you need information from the user. Ask structured multiple choice questions.
 
 ## Character Limits (STRICT)
 - Task titles: 50 characters max
@@ -100,50 +186,38 @@ For non-critical info, proceed with smart defaults and let users confirm/modify.
 
 If a title/name would exceed the limit, shorten it intelligently and suggest the full version in the description.
 
-## Creating Items with JSON
-When ready to propose tasks/notes/projects, respond with ONLY a JSON array in this exact format:
-[
-  {"type": "project", "name": "Project Name", "description": "Brief description", "color": "📁"},
-  {"type": "task", "title": "Task title", "description": "Description", "priority": "low|medium|high", "due_date": "YYYY-MM-DD"},
-  {"type": "note", "title": "Note title", "content": "Detailed note content"}
-]
+## Two-Step Workflow
+When users request operations:
+1. Use the propose_operations tool with a clear summary
+2. System shows user a preview modal
+3. User confirms or cancels
+4. System executes approved operations
 
-Supported action types:
+## Item Types and Fields
 - **project**: name (required, max 50 chars), description (optional, max 200 chars), color (optional emoji)
-- **task**: title (required, max 50 chars), description (optional), priority (low/medium/high), due_date (optional, ISO format YYYY-MM-DD)
-- **note**: title (required, max 50 chars), content (required, detailed 200-500 words)
+- **task**: title (required, max 50 chars), description (optional), priority (low/medium/high), status (todo/in_progress/completed), due_date (optional, ISO format YYYY-MM-DD)
+- **note**: title (required, max 50 chars), content (required, detailed 200-500 words with KEY POINTS section)
 
 ## Due Date Handling
-When users mention time references, convert to ISO date format (YYYY-MM-DD):
+Convert time references to ISO date format (YYYY-MM-DD):
 - "today" → calculate today's date
 - "tomorrow" → tomorrow's date
 - "next Friday" → calculate next Friday's date
 - "in 2 weeks" → calculate date 2 weeks from now
-- If no deadline mentioned, omit due_date field
 
-## Return JSON array when:
-- User asks to "create", "plan", "organize", or "start" something
-- User wants a todo list, action items, or project setup
-- User wants to capture information, research, or ideas
-- User is ready after clarifying questions
+## Finding Items to Update/Delete
+Reference items by their IDs shown in the Workspace Context (e.g., "- Task title [id: uuid-here]")
 
-## Return conversational text when:
-- Asking clarifying questions
-- User asks questions about existing items
-- User wants advice or information
-- User is having a casual conversation
-
-IMPORTANT: When proposing items, respond with ONLY the JSON array. No text before or after.
-
-For notes, create DETAILED content with:
+## Note Content Format
+Create detailed notes with:
 1. "KEY POINTS:" section with 3-5 bullet points
 2. Detailed information in clear sections
 3. Examples and context (200-500 words)
-4. Use \\n for line breaks in JSON
+4. Use \\n for line breaks
 
 Example: "KEY POINTS:\\n• Point 1\\n• Point 2\\n\\n**Section**\\nDetails here..."
 
-Be conversational and helpful. Ask questions when needed, but don't over-ask - use smart defaults!`;
+Be conversational and helpful. Use smart defaults when appropriate!`;
 
         if (context?.projectId) {
           systemPrompt += '\n\nYou are currently assisting with a specific project. All tasks/notes you create should be relevant to this project context.';
@@ -196,34 +270,53 @@ Be conversational and helpful. Ask questions when needed, but don't over-ask - u
           content: message
         });
 
-        // Create non-streaming response
+        // Create non-streaming response with tools
         const response = await anthropic.messages.create({
           model: 'claude-3-5-haiku-20241022',
           max_tokens: 4096,
           system: systemPrompt,
           messages: apiMessages,
+          tools: tools,
         });
 
-        const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';
+        // Check if AI wants to use a tool
+        if (response.stop_reason === 'tool_use') {
+          const toolUseBlock = response.content.find((block: any) => block.type === 'tool_use');
 
-        // Try to parse as JSON array for actions
-        try {
-          const actions = JSON.parse(aiMessage.trim());
+          if (toolUseBlock) {
+            // Get any text response that came before the tool use
+            const textBlock = response.content.find((block: any) => block.type === 'text');
+            const textMessage = textBlock && textBlock.type === 'text' ? textBlock.text : '';
 
-          if (Array.isArray(actions) && actions.length > 0) {
-            // Valid actions array - return structured response
-            return new Response(JSON.stringify({
-              type: 'actions',
-              actions: actions
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+            if (toolUseBlock.type === 'tool_use' && toolUseBlock.name === 'propose_operations') {
+              // AI wants to propose operations
+              const input = toolUseBlock.input as any;
+              return new Response(JSON.stringify({
+                type: 'actions',
+                message: textMessage, // Any explanation text
+                summary: input.summary,
+                actions: input.operations
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+
+            if (toolUseBlock.type === 'tool_use' && toolUseBlock.name === 'ask_questions') {
+              // AI wants to ask questions
+              const input = toolUseBlock.input as any;
+              return new Response(JSON.stringify({
+                type: 'questions',
+                message: textMessage, // Any context text
+                questions: input.questions
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
           }
-        } catch (e) {
-          // Not JSON - treat as conversational message
         }
 
-        // Return conversational message
+        // No tool use - return conversational message
+        const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';
         return new Response(JSON.stringify({
           type: 'message',
           message: aiMessage
