@@ -1601,6 +1601,7 @@
 			right: 0;
 			bottom: 50px; /* Above bottom nav */
 			background: var(--bg-secondary);
+			overflow-x: hidden;
 		}
 
 		.mobile-header {
@@ -1655,10 +1656,45 @@
 		.mobile-tasks {
 			flex: 1;
 			overflow-y: auto;
+			overflow-x: hidden;
 			-webkit-overflow-scrolling: touch;
 			padding: 20px;
 			padding-bottom: 120px;
 			background: var(--bg-secondary);
+		}
+
+		/* Mobile task item adjustments */
+		.task-item {
+			gap: 10px;
+			padding: 10px;
+		}
+
+		.task-content {
+			gap: 12px;
+			min-width: 0;
+		}
+
+		.task-main {
+			padding-right: 8px;
+			min-width: 0;
+		}
+
+		.task-title {
+			font-size: 0.875rem;
+		}
+
+		.task-meta {
+			gap: 6px;
+		}
+
+		.priority {
+			font-size: 0.6875rem;
+			padding: 2px 6px;
+		}
+
+		.task-time {
+			font-size: 0.75rem;
+			white-space: nowrap;
 		}
 
 		.form-row {

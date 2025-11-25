@@ -41,9 +41,11 @@
 		display: flex;
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
-		height: 50px;
+		height: calc(50px + env(safe-area-inset-bottom));
 		padding-bottom: env(safe-area-inset-bottom);
 		z-index: 100;
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
 	}
 
 	.nav-item {

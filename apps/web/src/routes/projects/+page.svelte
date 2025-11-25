@@ -283,7 +283,6 @@
 							placeholder="e.g., Wedding Planning"
 							maxlength="50"
 							required
-							autofocus
 						/>
 					</div>
 					<div class="form-group">
