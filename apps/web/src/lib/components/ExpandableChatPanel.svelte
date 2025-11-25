@@ -294,8 +294,10 @@
 		padding: 12px 16px;
 		padding-bottom: max(12px, env(safe-area-inset-bottom));
 		background: var(--bg-secondary);
-		height: 60px;
+		height: calc(60px + env(safe-area-inset-bottom));
 		box-sizing: border-box;
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
 	}
 
 	.expand-btn {

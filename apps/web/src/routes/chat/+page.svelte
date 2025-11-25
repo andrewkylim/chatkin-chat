@@ -832,8 +832,10 @@
 		padding-bottom: max(12px, env(safe-area-inset-bottom));
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
-		height: 60px;
+		height: calc(60px + env(safe-area-inset-bottom));
 		box-sizing: border-box;
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
 	}
 
 	/* Header */
@@ -1172,11 +1174,13 @@
 		padding-bottom: max(16px, env(safe-area-inset-bottom));
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
-		height: 76px;
+		height: calc(76px + env(safe-area-inset-bottom));
 		display: flex;
 		align-items: center;
 		gap: 12px;
 		box-sizing: border-box;
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
 	}
 
 	.message-input {

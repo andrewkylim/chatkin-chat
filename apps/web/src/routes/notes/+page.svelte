@@ -1075,6 +1075,10 @@
 		border-top: 1px solid var(--border-color);
 		display: flex;
 		gap: 12px;
+		min-height: calc(76px + env(safe-area-inset-bottom));
+		box-sizing: border-box;
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
 	}
 
 	.message-input {
