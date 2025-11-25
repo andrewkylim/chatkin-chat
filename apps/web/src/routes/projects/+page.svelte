@@ -171,7 +171,6 @@
 				<img src="/projects.png" alt="Projects" class="empty-icon" />
 				<h2>No projects yet</h2>
 				<p>Create your first project to get started</p>
-				<button class="primary-btn" on:click={() => showNewProjectModal = true}>Create Project</button>
 			</div>
 		{:else}
 			<div class="projects-grid">
@@ -600,7 +599,7 @@
 	.empty-icon {
 		width: 100px;
 		height: 100px;
-		margin-bottom: 24px;
+		margin-bottom: 12px;
 	}
 
 	.empty-state h2 {

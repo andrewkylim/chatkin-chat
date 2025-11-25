@@ -415,7 +415,6 @@
 					<img src="/notes.png" alt="Notes" class="empty-icon" />
 					<h2>No notes yet</h2>
 					<p>Create your first note to get started</p>
-					<button class="primary-btn" on:click={() => showNewNoteModal = true}>Create Note</button>
 				</div>
 			{:else}
 				<div class="notes-list">
@@ -537,7 +536,6 @@
 					<img src="/notes.png" alt="Notes" class="empty-icon" />
 					<h2>No notes yet</h2>
 					<p>Create your first note to get started</p>
-					<button class="primary-btn" on:click={() => showNewNoteModal = true}>Create Note</button>
 				</div>
 			{:else}
 				{#each notes as note (note.id)}
@@ -1165,7 +1163,7 @@
 	.empty-icon {
 		width: 100px;
 		height: 100px;
-		margin-bottom: 24px;
+		margin-bottom: 12px;
 	}
 
 	.empty-state h2 {

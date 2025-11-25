@@ -456,7 +456,6 @@
 					<img src="/tasks.png" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
-					<button class="primary-btn" on:click={() => showNewTaskModal = true}>Create Task</button>
 				</div>
 			{:else}
 				<div class="tasks-list">
@@ -677,7 +676,6 @@
 					<img src="/tasks.png" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
-					<button class="primary-btn" on:click={() => showNewTaskModal = true}>Create Task</button>
 				</div>
 			{:else}
 				{#if !showCompletedTasks}
@@ -1389,7 +1387,7 @@
 	.empty-icon {
 		width: 100px;
 		height: 100px;
-		margin-bottom: 24px;
+		margin-bottom: 12px;
 	}
 
 	.empty-state h2 {
