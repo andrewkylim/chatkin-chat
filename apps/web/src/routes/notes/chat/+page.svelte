@@ -1,0 +1,1055 @@
+<script lang="ts">
+	import AppLayout from '$lib/components/AppLayout.svelte';
+	import FileUpload from '$lib/components/FileUpload.svelte';
+	import OperationPreview from '$lib/components/OperationPreview.svelte';
+	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
+	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
+	import { onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { PUBLIC_WORKER_URL } from '$env/static/public';
+	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
+	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
+	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
+	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
+	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
+	import type { Conversation, Message as DBMessage } from '@chatkin/types';
+	import { notificationCounts } from '$lib/stores/notifications';
+
+	interface Message {
+		role: 'user' | 'ai';
+		content: string;
+		files?: Array<{ name: string; url: string; type: string }>;
+		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		awaitingConfirmation?: boolean;
+		isTyping?: boolean;
+	}
+
+	interface AIAction {
+		type: 'task' | 'note' | 'project';
+		title?: string;  // for tasks/notes
+		name?: string;   // for projects
+		description?: string;
+		content?: string;
+		priority?: 'low' | 'medium' | 'high';
+		due_date?: string;
+		color?: string;
+	}
+
+	interface Operation {
+		operation: 'create' | 'update' | 'delete';
+		type: 'task' | 'note' | 'project';
+		id?: string;
+		data?: any;
+		changes?: any;
+		reason?: string;
+	}
+
+	interface AIQuestion {
+		question: string;
+		options: string[];
+	}
+
+	interface AIResponse {
+		message: string;
+		actions?: AIAction[];
+	}
+
+	let messages: Message[] = [];
+	let inputMessage = '';
+	let isStreaming = false;
+	let desktopMessagesContainer: HTMLDivElement;
+	let mobileChatLayout: MobileChatLayout;
+	let conversation: Conversation | null = null;
+	let workspaceContextString = '';
+	let isLoadingConversation = true;
+	let showOperationPreview = false;
+	let pendingOperations: Operation[] = [];
+	let showQuestionDialog = false;
+	let pendingQuestions: AIQuestion[] = [];
+	let messagesReady = false;
+
+	async function scrollToBottom() {
+		// Wait for DOM to update, then scroll immediately (for new messages during session)
+		await tick();
+		if (desktopMessagesContainer) {
+			desktopMessagesContainer.scrollTop = desktopMessagesContainer.scrollHeight;
+		}
+		if (mobileChatLayout) {
+			mobileChatLayout.scrollToBottom();
+		}
+	}
+
+	async function sendMessage(message?: string) {
+		const userMessage = message || inputMessage.trim();
+		if (!userMessage || isStreaming || !conversation) return;
+
+		inputMessage = '';
+
+		// Save user message to database
+		try {
+			await addMessage(conversation.id, 'user', userMessage);
+		} catch (error) {
+			console.error('Error saving user message:', error);
+		}
+
+		// Add user message to UI
+		messages = [...messages, { role: 'user', content: userMessage }];
+		scrollToBottom();
+
+		// Add placeholder for AI response
+		const aiMessageIndex = messages.length;
+		messages = [...messages, { role: 'ai', content: '' }];
+		isStreaming = true;
+
+		// Show loading message
+		messages[aiMessageIndex] = {
+			role: 'ai',
+			content: '',
+			isTyping: true
+		};
+		messages = messages;
+		scrollToBottom();
+
+		try {
+			// Build conversation history for context (filter out empty messages)
+			// Only send last 50 messages, BUT exclude the current message since we're sending it separately
+			const allMessages = messages.filter(m => m.content && m.content.trim() && !m.isTyping);
+			const recentMessages = allMessages.slice(-50);
+			// Remove the last message (current user message) to avoid duplicates
+			const historyWithoutCurrent = recentMessages.slice(0, -1);
+
+			const conversationHistory = historyWithoutCurrent.map(m => ({
+				role: m.role,
+				content: m.content
+			}));
+
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					message: userMessage,
+					conversationHistory: conversationHistory,
+					conversationSummary: conversation.conversation_summary,
+					workspaceContext: workspaceContextString,
+					context: {
+						scope: 'notes'
+					}
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+
+			// Handle structured response from worker
+			if (data.type === 'actions' && Array.isArray(data.actions)) {
+				// Check if this is the new operations format
+				const isOperationsFormat = data.actions.some((a: any) => a.operation !== undefined);
+
+				if (isOperationsFormat) {
+					// New operations format with create/update/delete
+					const operations = data.actions as Operation[];
+
+					// Count operations by type
+					const createCount = operations.filter(op => op.operation === 'create').length;
+					const updateCount = operations.filter(op => op.operation === 'update').length;
+					const deleteCount = operations.filter(op => op.operation === 'delete').length;
+
+					// Build preview message
+					const parts = [];
+					if (createCount > 0) parts.push(`create ${createCount} item${createCount > 1 ? 's' : ''}`);
+					if (updateCount > 0) parts.push(`update ${updateCount} item${updateCount > 1 ? 's' : ''}`);
+					if (deleteCount > 0) parts.push(`delete ${deleteCount} item${deleteCount > 1 ? 's' : ''}`);
+
+					const previewMessage = `I'll ${parts.join(', ')} for you. Please review:`;
+
+					// Save AI response
+					try {
+						await addMessage(conversation!.id, 'assistant', previewMessage, { operations });
+					} catch (error) {
+						console.error('Error saving AI message:', error);
+					}
+
+					// Show conversational message
+					messages[aiMessageIndex] = {
+						role: 'ai',
+						content: previewMessage
+					};
+					messages = messages;
+
+					// Show operation preview modal
+					pendingOperations = operations;
+					showOperationPreview = true;
+				} else {
+					// Old actions format (backward compatibility)
+					// Count proposed items
+					const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
+					const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
+					const noteCount = data.actions.filter((a: AIAction) => a.type === 'note').length;
+
+					// Build preview message
+					const parts = [];
+					if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
+					if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+
+					const previewMessage = `I'll create ${parts.join(', ')} for you:`;
+
+					// Save AI response with proposed actions
+					try {
+						await addMessage(conversation!.id, 'assistant', previewMessage, { proposedActions: data.actions });
+					} catch (error) {
+						console.error('Error saving AI message:', error);
+					}
+
+					// Show proposed actions with confirmation buttons
+					messages[aiMessageIndex] = {
+						role: 'ai',
+						content: previewMessage,
+						proposedActions: data.actions,
+						awaitingConfirmation: true
+					};
+					messages = messages;
+					scrollToBottom();
+				}
+			} else if (data.type === 'questions' && Array.isArray(data.questions)) {
+				// AI is asking structured questions
+				// Remove the typing indicator
+				messages = messages.slice(0, -1);
+
+				// Show question dialog
+				pendingQuestions = data.questions;
+				showQuestionDialog = true;
+			} else if (data.type === 'message') {
+				// Save conversational AI response
+				try {
+					await addMessage(conversation!.id, 'assistant', data.message);
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
+				// Conversational response
+				messages[aiMessageIndex] = {
+					role: 'ai',
+					content: data.message
+				};
+				messages = messages;
+			}
+		} catch (error) {
+			console.error('Error sending message:', error);
+			messages[aiMessageIndex] = {
+				role: 'ai',
+				content: 'Sorry, I encountered an error processing your request. Please try again.'
+			};
+			messages = messages;
+		} finally {
+			isStreaming = false;
+			scrollToBottom();
+		}
+	}
+
+	async function confirmActions(messageIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.proposedActions || !message.awaitingConfirmation) return;
+
+		// Update message to show creating status
+		messages[messageIndex] = {
+			...message,
+			content: 'Creating items...',
+			awaitingConfirmation: false
+		};
+		messages = messages;
+
+		// Create all proposed items
+		let projectCount = 0, taskCount = 0, noteCount = 0;
+
+		for (const action of message.proposedActions) {
+			try {
+				if (action.type === 'project') {
+					await createProject({
+						name: action.name || 'Untitled Project',
+						description: action.description || null,
+						color: action.color || '📁'
+					});
+					projectCount++;
+					notificationCounts.incrementCount('projects');
+				} else if (action.type === 'task') {
+					await createTask({
+						title: action.title || 'Untitled Task',
+						description: action.description || null,
+						priority: action.priority || 'medium',
+						status: 'todo',
+						project_id: null,
+						due_date: action.due_date || null
+					});
+					taskCount++;
+					notificationCounts.incrementCount('tasks');
+				} else if (action.type === 'note') {
+					await createNote({
+						title: action.title || 'Untitled Note',
+						content: action.content || '',
+						project_id: null
+					});
+					noteCount++;
+					notificationCounts.incrementCount('notes');
+				}
+			} catch (error) {
+				console.error(`Error creating ${action.type}:`, error);
+			}
+		}
+
+		// Show success message
+		const parts = [];
+		if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
+		if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+		if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
+
+		messages[messageIndex] = {
+			...message,
+			content: `Created ${parts.join(', ')} for you!`,
+			awaitingConfirmation: false,
+			proposedActions: undefined
+		};
+		messages = messages;
+	}
+
+	function cancelActions(messageIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.awaitingConfirmation) return;
+
+		// Update message to show cancellation
+		messages[messageIndex] = {
+			...message,
+			content: 'Okay, I won\'t create those items.',
+			awaitingConfirmation: false,
+			proposedActions: undefined
+		};
+		messages = messages;
+	}
+
+	async function executeOperations(operations: Operation[]) {
+		showOperationPreview = false;
+
+		// Add status message
+		messages = [...messages, {
+			role: 'ai',
+			content: 'Executing operations...',
+			isTyping: true
+		}];
+		const statusIndex = messages.length - 1;
+
+		let successCount = 0;
+		let errorCount = 0;
+		const results: string[] = [];
+
+		for (const op of operations) {
+			try {
+				if (op.operation === 'create') {
+					if (op.type === 'task') {
+						await createTask({
+							...op.data,
+							project_id: op.data.project_id || null
+						});
+						notificationCounts.incrementCount('tasks');
+						results.push(`✓ Created task: ${op.data.title}`);
+					} else if (op.type === 'note') {
+						await createNote({
+							...op.data,
+							project_id: op.data.project_id || null
+						});
+						notificationCounts.incrementCount('notes');
+						results.push(`✓ Created note: ${op.data.title}`);
+					} else if (op.type === 'project') {
+						await createProject(op.data);
+						notificationCounts.incrementCount('projects');
+						results.push(`✓ Created project: ${op.data.name}`);
+					}
+					successCount++;
+				} else if (op.operation === 'update') {
+					if (!op.id) throw new Error('Missing ID for update operation');
+
+					if (op.type === 'task') {
+						await updateTask(op.id, op.changes);
+						results.push(`✓ Updated task`);
+					} else if (op.type === 'note') {
+						await updateNote(op.id, op.changes);
+						results.push(`✓ Updated note`);
+					} else if (op.type === 'project') {
+						await updateProject(op.id, op.changes);
+						results.push(`✓ Updated project`);
+					}
+					successCount++;
+				} else if (op.operation === 'delete') {
+					if (!op.id) throw new Error('Missing ID for delete operation');
+
+					if (op.type === 'task') {
+						await deleteTask(op.id);
+						results.push(`✓ Deleted task`);
+					} else if (op.type === 'note') {
+						await deleteNote(op.id);
+						results.push(`✓ Deleted note`);
+					} else if (op.type === 'project') {
+						await deleteProject(op.id);
+						results.push(`✓ Deleted project`);
+					}
+					successCount++;
+				}
+			} catch (error) {
+				console.error(`Error executing ${op.operation} ${op.type}:`, error);
+				results.push(`✗ Failed to ${op.operation} ${op.type}`);
+				errorCount++;
+			}
+		}
+
+		// Reload workspace context
+		try {
+			const context = await loadWorkspaceContext();
+			workspaceContextString = formatWorkspaceContextForAI(context);
+		} catch (error) {
+			console.error('Error reloading workspace context:', error);
+		}
+
+		// Update status message with results
+		const successMsg = successCount > 0 ? `${successCount} operation${successCount > 1 ? 's' : ''} completed` : '';
+		const errorMsg = errorCount > 0 ? `${errorCount} failed` : '';
+		const parts = [successMsg, errorMsg].filter(Boolean);
+
+		messages[statusIndex] = {
+			role: 'ai',
+			content: `${parts.join(', ')}!\n\n${results.join('\n')}`
+		};
+		messages = messages;
+		scrollToBottom();
+	}
+
+	function handleOperationConfirm(operations: Operation[]) {
+		executeOperations(operations);
+	}
+
+	function handleOperationCancel() {
+		showOperationPreview = false;
+
+		// Add cancellation message
+		messages = [...messages, {
+			role: 'ai',
+			content: 'Okay, I won\'t make those changes.'
+		}];
+		scrollToBottom();
+	}
+
+	function handleQuestionSubmit(answers: Record<string, string>) {
+		showQuestionDialog = false;
+
+		// Format answers as a message
+		const answersText = Object.entries(answers)
+			.map(([question, answer]) => `${question}\n→ ${answer}`)
+			.join('\n\n');
+
+		// Send answers back to AI
+		sendMessage(answersText);
+	}
+
+	function handleQuestionCancel() {
+		showQuestionDialog = false;
+
+		// Add cancellation message
+		messages = [...messages, {
+			role: 'ai',
+			content: 'No problem! Let me know if you need anything else.'
+		}];
+		scrollToBottom();
+	}
+
+	onMount(async () => {
+		// Set current section to notes for notification highlighting
+		notificationCounts.setCurrentSection('notes');
+
+		// Load conversation and context
+		try {
+			// Get or create conversation for notes scope
+			conversation = await getOrCreateConversation('notes');
+
+			// Load recent messages from database
+			const dbMessages = await getRecentMessages(conversation.id, 50);
+
+			// Convert DB messages to UI messages
+			if (dbMessages.length > 0) {
+				messages = dbMessages.map(msg => ({
+					role: msg.role === 'assistant' ? 'ai' : 'user',
+					content: msg.content,
+					proposedActions: msg.metadata?.proposedActions
+				}));
+			} else {
+				// Show welcome message if no history
+				messages = [{
+					role: 'ai',
+					content: '📝 Hi! I can help you manage your notes. What would you like to work on?'
+				}];
+			}
+
+			// Load workspace context
+			const workspaceContext = await loadWorkspaceContext();
+			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
+
+			isLoadingConversation = false;
+			await scrollToBottom();
+			messagesReady = true;
+		} catch (error) {
+			console.error('Error loading conversation:', error);
+			isLoadingConversation = false;
+			// Show welcome message as fallback
+			messages = [{
+				role: 'ai',
+				content: '📝 Hi! I can help you manage your notes. What would you like to work on?'
+			}];
+			await scrollToBottom();
+			messagesReady = true;
+		}
+	});
+</script>
+
+<AppLayout hideBottomNav={true}>
+<div class="chat-page">
+	<!-- Desktop: Full-screen chat -->
+	<div class="desktop-chat">
+		<header class="chat-header">
+			<div class="header-content">
+				<button class="back-btn" on:click={() => goto('/notes')} title="Back to Notes">
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 5L7 10l5 5"/>
+					</svg>
+				</button>
+				<h1>Notes AI</h1>
+				<div class="header-spacer"></div>
+			</div>
+		</header>
+
+		{#if !messagesReady}
+			<div class="chat-loading-overlay">
+				<div class="spinner"></div>
+				<p>Loading conversation...</p>
+			</div>
+		{/if}
+
+		<div class="messages" bind:this={desktopMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
+			{#each messages as message, index (message)}
+				<div class="message {message.role}">
+					<div class="message-bubble">
+						{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
+							<p>{message.content}</p>
+
+							{#if message.proposedActions && message.awaitingConfirmation}
+								<!-- Action Preview List -->
+								<div class="actions-preview">
+									{#each message.proposedActions as action}
+										<div class="action-item">
+											{#if action.type === 'project'}
+												<span class="action-icon">📁</span>
+												<div class="action-details">
+													<strong>{action.name}</strong>
+													{#if action.description}
+														<span class="action-desc">{action.description}</span>
+													{/if}
+												</div>
+											{:else if action.type === 'task'}
+												<span class="action-icon">✓</span>
+												<div class="action-details">
+													<strong>{action.title}</strong>
+													{#if action.description}
+														<span class="action-desc">{action.description}</span>
+													{/if}
+													{#if action.due_date}
+														<span class="action-meta">Due: {action.due_date}</span>
+													{/if}
+													{#if action.priority}
+														<span class="action-meta priority-{action.priority}">{action.priority}</span>
+													{/if}
+												</div>
+											{:else if action.type === 'note'}
+												<span class="action-icon">📝</span>
+												<div class="action-details">
+													<strong>{action.title}</strong>
+													{#if action.content}
+														<span class="action-desc">{action.content.substring(0, 100)}{action.content.length > 100 ? '...' : ''}</span>
+													{/if}
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+
+								<!-- Confirmation Buttons -->
+								<div class="confirmation-buttons">
+									<button class="confirm-btn" on:click={() => confirmActions(index)}>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M4 8l2 2 6-6"/>
+										</svg>
+										Confirm
+									</button>
+									<button class="cancel-btn" on:click={() => cancelActions(index)}>
+										Cancel
+									</button>
+								</div>
+							{/if}
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+
+		<form class="input-container" on:submit|preventDefault={() => sendMessage()}>
+			<FileUpload
+				accept="image/*,application/pdf,.doc,.docx,.txt"
+				maxSizeMB={10}
+				onUploadComplete={(file) => {
+					console.log('File uploaded:', file);
+				}}
+			/>
+			<input
+				type="text"
+				bind:value={inputMessage}
+				placeholder="Ask me about your notes..."
+				class="message-input"
+				disabled={isStreaming}
+			/>
+			<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M5 15L15 5"/>
+					<path d="M9 5h6v6"/>
+				</svg>
+			</button>
+		</form>
+	</div>
+
+	<!-- Mobile: Header + full-screen chat -->
+	<MobileChatLayout
+		bind:this={mobileChatLayout}
+		{messages}
+		bind:inputMessage
+		{isStreaming}
+		{messagesReady}
+		onSubmit={() => sendMessage()}
+	/>
+</div>
+</AppLayout>
+
+<!-- Operation Preview Modal -->
+{#if showOperationPreview}
+	<OperationPreview
+		operations={pendingOperations}
+		onConfirm={handleOperationConfirm}
+		onCancel={handleOperationCancel}
+	/>
+{/if}
+
+<!-- Question Dialog -->
+{#if showQuestionDialog}
+	<AIQuestionDialog
+		questions={pendingQuestions}
+		onSubmit={handleQuestionSubmit}
+		onCancel={handleQuestionCancel}
+	/>
+{/if}
+
+<style>
+	/* ONLY for chat page: Lock viewport to prevent elastic scroll on mobile */
+	:global(html),
+	:global(body) {
+		overflow: hidden;
+		overscroll-behavior: none;
+	}
+
+	.chat-page {
+		min-height: 100vh;
+		background: var(--bg-primary);
+	}
+
+	/* Desktop: Full-screen chat */
+	.desktop-chat {
+		position: absolute;
+		top: 0;
+		left: 240px;
+		right: 0;
+		bottom: 0;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		background: var(--bg-primary);
+	}
+
+	@media (max-width: 1023px) {
+		.desktop-chat {
+			display: none;
+		}
+
+		.chat-page {
+			padding-bottom: 0;
+		}
+	}
+
+	/* Header */
+	.chat-header {
+		flex-shrink: 0;
+		padding: 16px 20px;
+		background: var(--bg-secondary);
+		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
+	}
+
+	.header-content {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.back-btn {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.back-btn:hover {
+		background: var(--bg-primary);
+		transform: translateY(-1px);
+	}
+
+	.back-btn:active {
+		transform: translateY(0);
+	}
+
+	.chat-header h1 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		flex: 1;
+	}
+
+	.header-spacer {
+		width: 36px;
+	}
+
+	/* Messages */
+	.messages {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		padding: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.chat-loading-overlay {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		background: var(--bg-primary);
+		padding-top: 120px;
+	}
+
+	.chat-loading-overlay p {
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		margin: 0;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	.message {
+		display: flex;
+	}
+
+	.message.user {
+		justify-content: flex-end;
+	}
+
+	.message.ai {
+		justify-content: flex-start;
+	}
+
+	.message-bubble {
+		max-width: 85%;
+		padding: 12px 16px;
+		border-radius: 12px;
+		font-size: 0.9375rem;
+		line-height: 1.5;
+	}
+
+	.message-bubble p {
+		margin: 0;
+	}
+
+	.message.user .message-bubble {
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		text-align: left;
+	}
+
+	.message.ai .message-bubble {
+		background: var(--bg-primary);
+		border: 1px solid var(--border-color);
+		text-align: left;
+		max-width: 95%;
+	}
+
+	/* Actions Preview */
+	.actions-preview {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.action-item {
+		display: flex;
+		gap: 10px;
+		padding: 8px;
+		background: var(--bg-secondary);
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-color);
+	}
+
+	.action-icon {
+		font-size: 18px;
+		flex-shrink: 0;
+	}
+
+	.action-details {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.action-details strong {
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+	}
+
+	.action-desc {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
+
+	.action-meta {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		padding: 2px 6px;
+		background: var(--bg-tertiary);
+		border-radius: 4px;
+		display: inline-block;
+		width: fit-content;
+		margin-right: 6px;
+	}
+
+	.action-meta.priority-high {
+		background: rgba(211, 47, 47, 0.1);
+		color: var(--danger);
+	}
+
+	.action-meta.priority-medium {
+		background: rgba(199, 124, 92, 0.1);
+		color: var(--accent-primary);
+	}
+
+	.action-meta.priority-low {
+		background: rgba(115, 115, 115, 0.1);
+		color: var(--text-secondary);
+	}
+
+	/* Confirmation Buttons */
+	.confirmation-buttons {
+		display: flex;
+		gap: 8px;
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+	}
+
+	.confirm-btn,
+	.cancel-btn {
+		flex: 1;
+		padding: 8px 16px;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+	}
+
+	.confirm-btn {
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+	}
+
+	.confirm-btn:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.confirm-btn:active {
+		transform: translateY(0);
+	}
+
+	.cancel-btn {
+		background: transparent;
+		color: var(--text-secondary);
+		border: 1px solid var(--border-color);
+	}
+
+	.cancel-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	/* Typing Indicator */
+	.typing-indicator {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 8px 4px;
+	}
+
+	.typing-indicator span {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background-color: var(--text-secondary);
+		animation: typing 1.2s ease-in-out infinite;
+	}
+
+	.typing-indicator span:nth-child(1) {
+		animation-delay: 0s;
+	}
+
+	.typing-indicator span:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.typing-indicator span:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
+	@keyframes typing {
+		0%, 80%, 100% {
+			transform: scale(1);
+			opacity: 0.5;
+		}
+		40% {
+			transform: scale(1.3);
+			opacity: 1;
+		}
+	}
+
+	/* Input Container */
+	.input-container {
+		flex-shrink: 0;
+		padding: 16px;
+		padding-bottom: max(16px, env(safe-area-inset-bottom));
+		background: var(--bg-secondary);
+		border-top: 1px solid var(--border-color);
+		height: calc(76px + env(safe-area-inset-bottom));
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		box-sizing: border-box;
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
+	}
+
+	.message-input {
+		flex: 1;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		padding: 12px 16px;
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		font-family: 'Inter', sans-serif;
+	}
+
+	.message-input:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	.send-btn {
+		width: 44px;
+		height: 44px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.send-btn:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.send-btn:active {
+		transform: translateY(0);
+	}
+
+	.send-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.message-input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+</style>

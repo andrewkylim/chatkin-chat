@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
+	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
@@ -50,6 +50,7 @@
 	let inputMessage = '';
 	let isStreaming = false;
 	let messagesContainer: HTMLDivElement;
+	let mobileChatLayout: MobileChatLayout;
 	let showMenu = false;
 	let showDeleteConfirm = false;
 	let showEditModal = false;
@@ -153,6 +154,9 @@
 		await tick();
 		if (messagesContainer) {
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
+		if (mobileChatLayout) {
+			mobileChatLayout.scrollToBottom();
 		}
 	}
 
@@ -502,7 +506,7 @@
 	$: completedTasks = tasks.filter(t => t.status === 'completed');
 </script>
 
-<AppLayout>
+<AppLayout hideBottomNav={true}>
 <div class="project-chat-page">
 	<div class="project-container">
 		<!-- Project Content Section (Tasks & Notes) -->
@@ -987,15 +991,14 @@
 		</div>
 	</div>
 
-	<!-- Expandable Chat Panel (Mobile Only) -->
-	<ExpandableChatPanel
-		messages={messages}
-		onSendMessage={sendMessage}
-		placeholder="Ask about this project..."
-		isStreaming={isStreaming}
-		context="project"
-		showFileUpload={true}
-		messagesReady={messagesReady}
+	<!-- Mobile Chat Layout (Mobile Only) -->
+	<MobileChatLayout
+		bind:this={mobileChatLayout}
+		{messages}
+		bind:inputMessage
+		{isStreaming}
+		{messagesReady}
+		onSubmit={() => sendMessage()}
 	/>
 
 	<!-- Edit Project Modal -->
@@ -1045,6 +1048,13 @@
 </AppLayout>
 
 <style>
+	/* ONLY for chat page: Lock viewport to prevent elastic scroll on mobile */
+	:global(html),
+	:global(body) {
+		overflow: hidden;
+		overscroll-behavior: none;
+	}
+
 	.project-chat-page {
 		min-height: 100vh;
 		background: var(--bg-primary);

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import ExpandableChatPanel from '$lib/components/ExpandableChatPanel.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import { getNotes, createNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
 	import { createTask } from '$lib/db/tasks';
@@ -24,6 +23,7 @@
 	let projectsMap: Record<string, any> = {};
 	let loading = true;
 	let showNewNoteModal = false;
+	let showFabMenu = false;
 	let newNoteTitle = '';
 	let newNoteContent = '';
 	let newNoteProjectId: string | null = null;
@@ -689,22 +689,32 @@
 		</div>
 	{/if}
 
-	<!-- Floating Action Button (Mobile Only) -->
-	<button class="fab" on:click={() => showNewNoteModal = true} aria-label="Create new note">
-		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-			<path d="M12 5v14M5 12h14"/>
-		</svg>
-	</button>
+	<!-- Floating Action Button with Menu (Mobile Only) -->
+	<div class="fab-container">
+		{#if showFabMenu}
+			<div class="fab-menu">
+				<button class="fab-menu-item" on:click={() => { showNewNoteModal = true; showFabMenu = false; }}>
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M4 6h12M4 10h12M4 14h8"/>
+					</svg>
+					<span>Manual Creation</span>
+				</button>
+				<button class="fab-menu-item" on:click={() => goto('/notes/chat')}>
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M7 9h6M7 13h4"/>
+						<path d="M17 6v8a2 2 0 01-2 2H7l-4 4V6a2 2 0 012-2h10a2 2 0 012 2z"/>
+					</svg>
+					<span>AI Assistant</span>
+				</button>
+			</div>
+		{/if}
+		<button class="fab" on:click={() => showFabMenu = !showFabMenu} aria-label="Create options">
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+				<path d="M12 5v14M5 12h14"/>
+			</svg>
+		</button>
+	</div>
 
-	<!-- Expandable Chat Panel (Mobile Only) -->
-	<ExpandableChatPanel
-		messages={chatMessages}
-		onSendMessage={sendChatMessage}
-		placeholder="Ask about notes..."
-		isStreaming={isChatStreaming}
-		context="notes"
-		messagesReady={messagesReady}
-	/>
 </div>
 </AppLayout>
 
@@ -1388,15 +1398,20 @@
 			margin: 0;
 		}
 
-		.fab {
+		.fab-container {
 			display: none;
 		}
 
 		@media (max-width: 1023px) {
-			.fab {
+			.fab-container {
+				display: block;
 				position: fixed;
 				bottom: 140px;
 				left: 27px;
+				z-index: 50;
+			}
+
+			.fab {
 				width: 56px;
 				height: 56px;
 				border-radius: 50%;
@@ -1409,12 +1424,69 @@
 				cursor: pointer;
 				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 				transition: transform 0.3s ease;
-				z-index: 50;
 				opacity: 0.7;
 			}
 
 			.fab:active {
 				transform: scale(0.95);
+			}
+
+			.fab-menu {
+				position: absolute;
+				bottom: calc(100% + 12px);
+				left: 0;
+				background: var(--bg-secondary);
+				border: 1px solid var(--border-color);
+				border-radius: var(--radius-md);
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+				min-width: 200px;
+				overflow: hidden;
+				animation: slideUp 0.2s ease;
+			}
+
+			@keyframes slideUp {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			.fab-menu-item {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				padding: 14px 16px;
+				width: 100%;
+				background: transparent;
+				border: none;
+				border-bottom: 1px solid var(--border-color);
+				cursor: pointer;
+				transition: background 0.2s ease;
+				color: var(--text-primary);
+				font-size: 0.9375rem;
+				font-weight: 500;
+				text-align: left;
+			}
+
+			.fab-menu-item:last-child {
+				border-bottom: none;
+			}
+
+			.fab-menu-item:hover {
+				background: var(--bg-tertiary);
+			}
+
+			.fab-menu-item:active {
+				transform: scale(0.98);
+			}
+
+			.fab-menu-item svg {
+				flex-shrink: 0;
+				color: var(--text-secondary);
 			}
 		}
 
