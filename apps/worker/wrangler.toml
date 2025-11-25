@@ -9,6 +9,10 @@ routes = [
   { pattern = "chatkin.ai/api/*", zone_name = "chatkin.ai" }
 ]
 
+[[env.production.r2_buckets]]
+binding = "CHATKIN_BUCKET"
+bucket_name = "chatkin-files"
+
 [[r2_buckets]]
 binding = "CHATKIN_BUCKET"
 bucket_name = "chatkin-files"
