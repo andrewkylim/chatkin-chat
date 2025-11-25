@@ -52,7 +52,12 @@
 <div class="mobile-chat-layout">
 	<!-- Header: flex-shrink: 0 (NOT position: fixed) -->
 	<header class="chat-header">
-		<h1>Chat</h1>
+		<div class="header-left">
+			<button class="logo-button">
+				<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
+			</button>
+			<h1>Chat</h1>
+		</div>
 		<MobileUserMenu />
 	</header>
 
@@ -154,6 +159,32 @@
 		align-items: center;
 		justify-content: space-between;
 		box-sizing: border-box;
+	}
+
+	.header-left {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.logo-button {
+		display: flex;
+		align-items: center;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+	}
+
+	.chat-logo {
+		width: 52px;
+		height: 52px;
+		border-radius: var(--radius-sm);
+		transition: all 0.15s ease;
+	}
+
+	.logo-button:active .chat-logo {
+		transform: translateY(4px) scale(0.95);
 	}
 
 	.chat-header h1 {

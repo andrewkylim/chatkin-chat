@@ -85,7 +85,7 @@
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m2 0v9.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V4"/>
 					</svg>
-					Delete
+					<span class="btn-text">Delete</span>
 				</button>
 				<div style="flex: 1;"></div>
 				<button type="button" class="secondary-btn" on:click={onClose}>
@@ -95,7 +95,7 @@
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
 					</svg>
-					Edit
+					<span class="btn-text">Edit</span>
 				</button>
 			</div>
 		</div>
@@ -261,5 +261,18 @@
 
 	.delete-btn:hover {
 		background: rgba(239, 68, 68, 0.1);
+	}
+
+	/* Mobile: Hide button text, show only icons */
+	@media (max-width: 640px) {
+		.delete-btn .btn-text,
+		.primary-btn .btn-text {
+			display: none;
+		}
+
+		.delete-btn,
+		.primary-btn {
+			padding: 10px 12px;
+		}
 	}
 </style>

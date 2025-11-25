@@ -156,7 +156,12 @@
 
 	<!-- Mobile Header -->
 	<header class="mobile-header">
-		<h1>Projects</h1>
+		<div class="mobile-header-left">
+			<button class="mobile-logo-button">
+				<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+			</button>
+			<h1>Projects</h1>
+		</div>
 		<MobileUserMenu />
 	</header>
 
@@ -848,6 +853,32 @@
 			position: sticky;
 			top: 0;
 			z-index: 10;
+		}
+
+		.mobile-header-left {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+
+		.mobile-logo-button {
+			display: flex;
+			align-items: center;
+			background: none;
+			border: none;
+			padding: 0;
+			cursor: pointer;
+		}
+
+		.mobile-logo {
+			width: 52px;
+			height: 52px;
+			border-radius: var(--radius-sm);
+			transition: all 0.15s ease;
+		}
+
+		.mobile-logo-button:active .mobile-logo {
+			transform: translateY(4px) scale(0.95);
 		}
 
 		.mobile-header h1 {

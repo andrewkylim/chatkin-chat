@@ -803,17 +803,22 @@
 	<!-- Mobile Layout -->
 	<div class="mobile-content">
 		<header class="mobile-header">
-			<a href="/projects" class="back-btn">
-				<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M14 2l-8 8 8 8"/>
-				</svg>
-			</a>
-			{#if project}
-				<div class="project-info-mobile">
-					<div class="project-icon-small">{project.color || '📁'}</div>
-					<h1>{truncateTitle(project.name, 30)}</h1>
-				</div>
-			{/if}
+			<div class="mobile-header-left">
+				<button class="mobile-logo-button">
+					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+				</button>
+				<a href="/projects" class="back-btn">
+					<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2l-8 8 8 8"/>
+					</svg>
+				</a>
+				{#if project}
+					<div class="project-info-mobile">
+						<div class="project-icon-small">{project.color || '📁'}</div>
+						<h1>{truncateTitle(project.name, 30)}</h1>
+					</div>
+				{/if}
+			</div>
 			<div class="mobile-header-actions">
 				<div class="menu-container">
 					<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
@@ -1899,6 +1904,35 @@
 			justify-content: space-between;
 			align-items: center;
 			gap: 12px;
+		}
+
+		.mobile-header-left {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex: 1;
+			min-width: 0;
+		}
+
+		.mobile-logo-button {
+			display: flex;
+			align-items: center;
+			background: none;
+			border: none;
+			padding: 0;
+			cursor: pointer;
+			flex-shrink: 0;
+		}
+
+		.mobile-logo {
+			width: 52px;
+			height: 52px;
+			border-radius: var(--radius-sm);
+			transition: all 0.15s ease;
+		}
+
+		.mobile-logo-button:active .mobile-logo {
+			transform: translateY(4px) scale(0.95);
 		}
 
 		.mobile-header-actions {
