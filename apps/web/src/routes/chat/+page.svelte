@@ -5,7 +5,7 @@
 	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
@@ -466,6 +466,14 @@
 	}
 
 	onMount(async () => {
+		// Lock viewport to prevent elastic scroll on mobile
+		if (typeof document !== 'undefined') {
+			document.documentElement.style.overflow = 'hidden';
+			document.body.style.overflow = 'hidden';
+			document.documentElement.style.overscrollBehavior = 'none';
+			document.body.style.overscrollBehavior = 'none';
+		}
+
 		// Set current section to null (global chat is not a specific section)
 		notificationCounts.setCurrentSection(null);
 
@@ -524,6 +532,16 @@
 		return () => {
 			document.removeEventListener('click', handleClickOutside);
 		};
+	});
+
+	onDestroy(() => {
+		// Restore default overflow behavior
+		if (typeof document !== 'undefined') {
+			document.documentElement.style.overflow = '';
+			document.body.style.overflow = '';
+			document.documentElement.style.overscrollBehavior = '';
+			document.body.style.overscrollBehavior = '';
+		}
 	});
 </script>
 
@@ -707,12 +725,6 @@
 {/if}
 
 <style>
-	/* ONLY for chat page: Lock viewport to prevent elastic scroll on mobile */
-	:global(html),
-	:global(body) {
-		overflow: hidden;
-		overscroll-behavior: none;
-	}
 
 	.chat-page {
 		min-height: 100vh;

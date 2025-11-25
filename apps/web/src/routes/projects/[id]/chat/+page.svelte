@@ -8,7 +8,7 @@
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { getProject, deleteProject, getProjects } from '$lib/db/projects';
 	import { getTasks, toggleTaskComplete, updateTask, deleteTask } from '$lib/db/tasks';
@@ -66,6 +66,14 @@
 	let showCompletedTasks = false;
 
 	onMount(async () => {
+		// Lock viewport to prevent elastic scroll on mobile
+		if (typeof document !== 'undefined') {
+			document.documentElement.style.overflow = 'hidden';
+			document.body.style.overflow = 'hidden';
+			document.documentElement.style.overscrollBehavior = 'none';
+			document.body.style.overscrollBehavior = 'none';
+		}
+
 		await loadData();
 
 		// Load conversation and context
@@ -132,6 +140,16 @@
 		return () => {
 			document.removeEventListener('click', handleClickOutside);
 		};
+	});
+
+	onDestroy(() => {
+		// Restore default overflow behavior
+		if (typeof document !== 'undefined') {
+			document.documentElement.style.overflow = '';
+			document.body.style.overflow = '';
+			document.documentElement.style.overscrollBehavior = '';
+			document.body.style.overscrollBehavior = '';
+		}
 	});
 
 	async function loadData() {
@@ -1048,12 +1066,6 @@
 </AppLayout>
 
 <style>
-	/* ONLY for chat page: Lock viewport to prevent elastic scroll on mobile */
-	:global(html),
-	:global(body) {
-		overflow: hidden;
-		overscroll-behavior: none;
-	}
 
 	.project-chat-page {
 		min-height: 100vh;

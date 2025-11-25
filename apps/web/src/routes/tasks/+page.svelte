@@ -939,7 +939,8 @@
 
 <style>
 	.tasks-page {
-		min-height: 100vh;
+		height: 100vh;
+		overflow: hidden;
 		background: var(--bg-primary);
 	}
 
@@ -1646,9 +1647,10 @@
 			.fab-container {
 				display: block;
 				position: fixed;
-				bottom: 140px;
+				bottom: 80px;
 				left: 27px;
 				z-index: 50;
+				margin-bottom: env(safe-area-inset-bottom);
 			}
 
 			.fab {
