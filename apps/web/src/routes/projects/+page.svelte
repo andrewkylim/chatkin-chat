@@ -858,6 +858,10 @@
 			margin: 0;
 		}
 
+		.page-content {
+			padding-bottom: 100px;
+		}
+
 		.fab {
 			position: fixed;
 			bottom: 80px;

@@ -61,13 +61,13 @@
 	}
 
 	.user-avatar {
-		width: 44px;
-		height: 44px;
+		width: 40px;
+		height: 40px;
 		border-radius: 50%;
 		background: var(--accent-primary);
 		color: white;
 		border: none;
-		font-size: 1rem;
+		font-size: 0.9rem;
 		font-weight: 600;
 		display: flex;
 		align-items: center;
