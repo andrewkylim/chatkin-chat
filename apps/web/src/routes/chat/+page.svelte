@@ -4,6 +4,7 @@
 	import OperationPreview from '$lib/components/OperationPreview.svelte';
 	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
+	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
 	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
@@ -57,7 +58,7 @@
 	let inputMessage = '';
 	let isStreaming = false;
 	let desktopMessagesContainer: HTMLDivElement;
-	let mobileMessagesContainer: HTMLDivElement;
+	let mobileChatLayout: MobileChatLayout;
 	let showCreateMenu = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
@@ -74,8 +75,8 @@
 		if (desktopMessagesContainer) {
 			desktopMessagesContainer.scrollTop = desktopMessagesContainer.scrollHeight;
 		}
-		if (mobileMessagesContainer) {
-			mobileMessagesContainer.scrollTop = mobileMessagesContainer.scrollHeight;
+		if (mobileChatLayout) {
+			mobileChatLayout.scrollToBottom();
 		}
 	}
 
@@ -526,7 +527,7 @@
 	});
 </script>
 
-<AppLayout>
+<AppLayout hideBottomNav={true}>
 <div class="chat-page">
 	<!-- Desktop: Full-screen chat -->
 	<div class="desktop-chat">
@@ -676,55 +677,14 @@
 	</div>
 
 	<!-- Mobile: Header + full-screen chat -->
-	<div class="mobile-content">
-		<header class="mobile-header">
-			<h1>Chat</h1>
-			<MobileUserMenu />
-		</header>
-
-		<!-- Full-screen messages area for mobile -->
-		{#if !messagesReady}
-			<div class="chat-loading-overlay">
-				<div class="spinner"></div>
-				<p>Loading conversation...</p>
-			</div>
-		{/if}
-
-		<div class="mobile-messages" bind:this={mobileMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
-			{#each messages as message, index (message)}
-				<div class="message {message.role}">
-					<div class="message-bubble">
-						{#if message.isTyping}
-							<div class="typing-indicator">
-								<span></span>
-								<span></span>
-								<span></span>
-							</div>
-						{:else}
-							<p>{message.content}</p>
-						{/if}
-					</div>
-				</div>
-			{/each}
-		</div>
-
-		<!-- Mobile input bar -->
-		<form class="mobile-input-container" on:submit|preventDefault={() => sendMessage()}>
-			<input
-				type="text"
-				bind:value={inputMessage}
-				placeholder="Ask me anything..."
-				class="message-input"
-				disabled={isStreaming}
-			/>
-			<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M5 15L15 5"/>
-					<path d="M9 5h6v6"/>
-				</svg>
-			</button>
-		</form>
-	</div>
+	<MobileChatLayout
+		bind:this={mobileChatLayout}
+		{messages}
+		bind:inputMessage
+		{isStreaming}
+		{messagesReady}
+		onSubmit={() => sendMessage()}
+	/>
 </div>
 </AppLayout>
 
@@ -747,6 +707,13 @@
 {/if}
 
 <style>
+	/* ONLY for chat page: Lock viewport to prevent elastic scroll on mobile */
+	:global(html),
+	:global(body) {
+		overflow: hidden;
+		overscroll-behavior: none;
+	}
+
 	.chat-page {
 		min-height: 100vh;
 		background: var(--bg-primary);
@@ -775,67 +742,9 @@
 			display: none;
 		}
 
-		.mobile-content {
-			display: flex;
-			flex-direction: column;
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 50px; /* Above bottom nav */
-			background: var(--bg-primary);
-		}
-
 		.chat-page {
 			padding-bottom: 0;
 		}
-	}
-
-	/* Mobile Header */
-	.mobile-header {
-		flex-shrink: 0;
-		padding: 16px 20px;
-		background: var(--bg-secondary);
-		border-bottom: 1px solid var(--border-color);
-		height: 64px;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		box-sizing: border-box;
-	}
-
-	.mobile-header h1 {
-		font-size: 1.5rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		margin: 0;
-	}
-
-	/* Mobile Messages */
-	.mobile-messages {
-		flex: 1;
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch;
-		padding: 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	/* Mobile Input Container */
-	.mobile-input-container {
-		flex-shrink: 0;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 12px 16px;
-		padding-bottom: max(12px, env(safe-area-inset-bottom));
-		background: var(--bg-secondary);
-		border-top: 1px solid var(--border-color);
-		height: calc(60px + env(safe-area-inset-bottom));
-		box-sizing: border-box;
-		transform: translate3d(0, 0, 0);
-		-webkit-transform: translate3d(0, 0, 0);
 	}
 
 	/* Header */

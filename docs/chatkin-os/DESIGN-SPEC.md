@@ -65,53 +65,103 @@ Mobile keyboard covering chat input, viewport jumping, scroll issues
 ```
 ☝️ `interactive-widget=resizes-content` is critical - tells mobile browsers to resize viewport when keyboard appears
 
-#### 2. Full-Height Container
+#### 2. Global HTML/Body Setup (app.css)
 ```css
+/* DO NOT add overflow: hidden here - breaks non-chat pages! */
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden;
+  /* Let each page control its own overflow */
 }
+```
 
-#app {
-  position: absolute;
+#### 3. Chat Page Scoped Styles (CRITICAL - Prevents iOS Elastic Scroll)
+```svelte
+<!-- routes/chat/+page.svelte -->
+<style>
+  /* ONLY for chat page: Lock viewport to prevent elastic scroll/dragging on mobile */
+  :global(html),
+  :global(body) {
+    overflow: hidden;           /* Prevent document-level scroll */
+    overscroll-behavior: none;  /* iOS 16+ fix for elastic bounce */
+  }
+
+  .chat-page {
+    min-height: 100vh;
+    background: var(--bg-primary);
+  }
+</style>
+```
+
+☝️ **Why `:global()`?** This applies `overflow: hidden` ONLY when the chat page is rendered, preventing it from breaking other pages.
+
+#### 4. Mobile Chat Layout Component (MobileChatLayout.svelte)
+```css
+/* Full-screen container - WhatsApp pattern */
+.mobile-chat-layout {
+  position: absolute;           /* NOT fixed - avoids iOS keyboard issues */
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   display: flex;
   flex-direction: column;
-}
-```
-
-#### 3. Chat Layout Structure
-```css
-.chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  background: var(--bg-primary);
+  overflow: hidden;
+  overscroll-behavior: none;    /* Extra protection against elastic scroll */
 }
 
+/* Header: flex-shrink: 0 (NOT position: fixed!) */
 .chat-header {
-  flex-shrink: 0;           /* Fixed height header */
+  flex-shrink: 0;               /* Stays at top, in flex flow */
   padding: 16px 20px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  height: 64px;
+  box-sizing: border-box;
 }
 
-.messages {
-  flex: 1;                  /* Grows to fill space */
-  overflow-y: auto;         /* Scrolls independently */
+/* Messages Area: flex: 1 (fills remaining space) */
+.messages-area {
+  flex: 1;                      /* Grows to fill space */
+  overflow-y: auto;             /* Scrolls independently */
   -webkit-overflow-scrolling: touch;  /* Smooth iOS scrolling */
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: translate3d(0, 0, 0);    /* GPU acceleration */
+  touch-action: pan-y;          /* Only allow vertical scrolling */
+  overscroll-behavior: contain; /* Contain scroll to this element */
 }
 
-.input-container {
-  flex-shrink: 0;           /* Fixed height input */
-  padding: 16px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom)); /* iPhone notch */
-  background: var(--bg-tertiary);
+/* Input Bar: flex-shrink: 0 (NOT position: fixed!) */
+.input-bar {
+  flex-shrink: 0;               /* Stays at bottom, in flex flow */
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
+  box-sizing: border-box;
+}
+
+.message-input {
+  flex: 1;
+  border: 1px solid var(--border-color);
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  touch-action: manipulation;   /* Faster tap response on mobile */
+}
+
+/* Bottom Nav: flex-shrink: 0 (NOT position: fixed!) */
+.bottom-nav {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  height: calc(50px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 ```
 
@@ -222,6 +272,66 @@ input:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
 }
 ```
+
+---
+
+## 🔑 WHY THIS MOBILE CHAT PATTERN WORKS
+
+### The iOS Safari Elastic Scroll Problem
+
+**Problem:** On iOS Safari, if html/body are scrollable, the user can drag the entire page up/down with an elastic "rubber band" effect, even when there's no content to scroll. This makes the chat layout feel unstable and unprofessional.
+
+**Solution:** Lock the document-level scroll with `overflow: hidden` and `overscroll-behavior: none`, but ONLY on chat pages using `:global()` scoping.
+
+### Why We Use `position: absolute` Instead of `position: fixed`
+
+**THREE critical reasons:**
+
+1. **iOS Keyboard Behavior**
+   When an input is focused on iOS Safari, `position: fixed` elements are converted to `position: absolute`, causing unexpected layout jumps.
+
+2. **Safari Toolbar Collapsing**
+   iOS Safari has a collapsing address bar. `position: fixed` calculates position based on the visual viewport, which changes as the toolbar appears/disappears, causing the layout to "jump".
+
+3. **Safe Area Insets**
+   iPhones with notches use `env(safe-area-inset-bottom)`. Fixed positioning doesn't always respect these safe areas correctly, while the flexbox approach maintains consistent spacing.
+
+### Why We Use `flex-shrink: 0` Instead of `position: fixed` for Header/Input/Nav
+
+**The flexbox approach:**
+- Keeps all elements in the flex flow (no z-index conflicts)
+- Respects safe area insets naturally
+- No layout jumps when keyboard appears
+- Each section knows its height requirements
+- Messages area flexibly fills remaining space
+
+**What `position: fixed` would cause:**
+- Z-index conflicts blocking touch events
+- Elements don't resize with viewport changes
+- Safe area insets require manual calculation
+- Layout jumps when iOS Safari toolbar collapses
+
+### The Complete Flow
+
+1. **`:global()` scope** locks html/body overflow ONLY on chat pages
+2. **`position: absolute`** container fills viewport without fixed positioning issues
+3. **`flex-shrink: 0`** keeps header/input/nav in flex flow
+4. **`flex: 1`** messages area fills remaining space
+5. **`overflow-y: auto`** on messages enables scrolling INSIDE the container
+6. **`overscroll-behavior: contain`** prevents scroll from bubbling to document
+7. **`touch-action: pan-y`** optimizes touch scrolling on messages
+8. **`touch-action: manipulation`** speeds up taps on inputs
+
+### Testing Checklist
+
+✅ Chat page has no elastic bounce/dragging
+✅ Homepage and other pages scroll normally
+✅ Messages scroll smoothly within their container
+✅ Keyboard doesn't cause layout jumps
+✅ Header stays at top (doesn't move)
+✅ Input/nav stay at bottom (don't move)
+✅ Safe area insets work on iPhone notches
+✅ No z-index conflicts blocking touch
 
 ---
 

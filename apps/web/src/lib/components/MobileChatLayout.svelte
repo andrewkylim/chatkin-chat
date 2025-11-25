@@ -1,0 +1,418 @@
+<script lang="ts">
+	import { onMount, tick } from 'svelte';
+	import { page } from '$app/stores';
+	import { notificationCounts } from '$lib/stores/notifications';
+	import MobileUserMenu from './MobileUserMenu.svelte';
+
+	interface Message {
+		role: 'user' | 'ai';
+		content: string;
+		isTyping?: boolean;
+	}
+
+	let {
+		messages = [],
+		inputMessage = $bindable(''),
+		isStreaming = false,
+		messagesReady = false,
+		onSubmit
+	}: {
+		messages: Message[];
+		inputMessage: string;
+		isStreaming: boolean;
+		messagesReady: boolean;
+		onSubmit: () => void;
+	} = $props();
+
+	let messagesContainer: HTMLDivElement;
+	const currentPath = $derived($page.url.pathname);
+
+	export function scrollToBottom() {
+		if (messagesContainer) {
+			messagesContainer.scrollTop = messagesContainer.scrollHeight;
+		}
+	}
+
+	// Auto-scroll when messages change (after ready)
+	$effect(() => {
+		if (messages.length > 0 && messagesReady) {
+			tick().then(() => scrollToBottom());
+		}
+	});
+
+	// Scroll to bottom on mount
+	onMount(() => {
+		if (messagesReady) {
+			scrollToBottom();
+		}
+	});
+</script>
+
+<!-- Full-screen flex container following DESIGN-SPEC pattern -->
+<div class="mobile-chat-layout">
+	<!-- Header: flex-shrink: 0 (NOT position: fixed) -->
+	<header class="chat-header">
+		<h1>Chat</h1>
+		<MobileUserMenu />
+	</header>
+
+	<!-- Messages: flex: 1, overflow-y: auto -->
+	<div class="messages-area" bind:this={messagesContainer}>
+		{#if !messagesReady}
+			<div class="loading-content">
+				<div class="spinner"></div>
+				<p>Loading conversation...</p>
+			</div>
+		{:else}
+			{#each messages as message (message)}
+				<div class="message {message.role}">
+					<div class="message-bubble">
+						{#if message.isTyping}
+							<div class="typing-indicator">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+						{:else}
+							<p>{message.content}</p>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		{/if}
+	</div>
+
+	<!-- Input Bar: flex-shrink: 0 (NOT position: fixed) -->
+	<form class="input-bar" on:submit|preventDefault={onSubmit}>
+		<input
+			type="text"
+			bind:value={inputMessage}
+			placeholder="Ask me anything..."
+			class="message-input"
+			disabled={isStreaming}
+		/>
+		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
+			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M5 15L15 5"/>
+				<path d="M9 5h6v6"/>
+			</svg>
+		</button>
+	</form>
+
+	<!-- Bottom Navigation: flex-shrink: 0 (NOT position: fixed) -->
+	<nav class="bottom-nav">
+		<a href="/chat" class="nav-item" class:active={currentPath === '/chat'}>
+			<span>Chat</span>
+		</a>
+
+		<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
+			<span>Projects</span>
+			{#if $notificationCounts.projects > 0}
+				<span class="notification-dot"></span>
+			{/if}
+		</a>
+
+		<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
+			<span>Tasks</span>
+			{#if $notificationCounts.tasks > 0}
+				<span class="notification-dot"></span>
+			{/if}
+		</a>
+
+		<a href="/notes" class="nav-item" class:active={currentPath === '/notes'}>
+			<span>Notes</span>
+			{#if $notificationCounts.notes > 0}
+				<span class="notification-dot"></span>
+			{/if}
+		</a>
+	</nav>
+</div>
+
+<style>
+	/* Full-screen container - DESIGN-SPEC WhatsApp pattern */
+	.mobile-chat-layout {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		display: flex;
+		flex-direction: column;
+		background: var(--bg-primary);
+		overflow: hidden;
+		overscroll-behavior: none; /* Prevent elastic scroll at container level */
+	}
+
+	/* Header Section - flex-shrink: 0 (DESIGN-SPEC pattern) */
+	.chat-header {
+		flex-shrink: 0;
+		padding: 16px 20px;
+		background: var(--bg-secondary);
+		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		box-sizing: border-box;
+	}
+
+	.chat-header h1 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		margin: 0;
+	}
+
+	/* Messages Area - flex: 1 (DESIGN-SPEC pattern) */
+	.messages-area {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		padding: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		/* GPU acceleration */
+		transform: translate3d(0, 0, 0);
+		-webkit-transform: translate3d(0, 0, 0);
+		/* Touch optimization */
+		touch-action: pan-y;
+		overscroll-behavior: contain; /* Contain scroll to this element */
+	}
+
+	/* Loading Spinner */
+	.loading-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		flex: 1;
+	}
+
+	.loading-content p {
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		margin: 0;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
+	/* Message Styles */
+	.message {
+		display: flex;
+	}
+
+	.message.user {
+		justify-content: flex-end;
+	}
+
+	.message.ai {
+		justify-content: flex-start;
+	}
+
+	.message-bubble {
+		max-width: 85%;
+		padding: 10px 14px;
+		border-radius: 12px;
+		font-size: 0.9375rem;
+		line-height: 1.5;
+	}
+
+	.message-bubble p {
+		margin: 0;
+	}
+
+	.message.user .message-bubble {
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+	}
+
+	.message.ai .message-bubble {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+	}
+
+	/* Typing Indicator */
+	.typing-indicator {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 4px;
+	}
+
+	.typing-indicator span {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background-color: var(--text-secondary);
+		animation: typing 1.2s ease-in-out infinite;
+	}
+
+	.typing-indicator span:nth-child(1) {
+		animation-delay: 0s;
+	}
+
+	.typing-indicator span:nth-child(2) {
+		animation-delay: 0.15s;
+	}
+
+	.typing-indicator span:nth-child(3) {
+		animation-delay: 0.3s;
+	}
+
+	@keyframes typing {
+		0%, 80%, 100% {
+			transform: scale(1);
+			opacity: 0.5;
+		}
+		40% {
+			transform: scale(1.3);
+			opacity: 1;
+		}
+	}
+
+	/* Input Bar - flex-shrink: 0 (DESIGN-SPEC pattern) */
+	.input-bar {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		background: var(--bg-secondary);
+		border-top: 1px solid var(--border-color);
+		height: 60px;
+		box-sizing: border-box;
+	}
+
+	.message-input {
+		flex: 1;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		padding: 10px 14px;
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		font-family: 'Inter', sans-serif;
+		height: 40px;
+		/* Touch optimization */
+		touch-action: manipulation;
+	}
+
+	.message-input:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	.message-input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	.send-btn {
+		width: 40px;
+		height: 40px;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.send-btn:hover {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.send-btn:active {
+		transform: translateY(0);
+	}
+
+	.send-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		transform: none;
+	}
+
+	/* Bottom Navigation - flex-shrink: 0 (DESIGN-SPEC pattern) */
+	.bottom-nav {
+		flex-shrink: 0;
+		display: flex;
+		background: var(--bg-secondary);
+		border-top: 1px solid var(--border-color);
+		height: calc(50px + env(safe-area-inset-bottom));
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+	.nav-item {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-decoration: none;
+		color: var(--text-secondary);
+		transition: all 0.2s ease;
+		position: relative;
+		/* Faster tap response */
+		touch-action: manipulation;
+	}
+
+	.nav-item:active {
+		transform: scale(0.95);
+	}
+
+	.nav-item.active {
+		color: var(--accent-primary);
+	}
+
+	.nav-item.active::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 50%;
+		height: 3px;
+		background: var(--accent-primary);
+		border-radius: 0 0 3px 3px;
+	}
+
+	.nav-item > span:first-child {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+
+	.notification-dot {
+		width: 8px;
+		height: 8px;
+		background: var(--accent-primary);
+		border-radius: 50%;
+		margin-left: 6px;
+		flex-shrink: 0;
+	}
+
+	/* Hide on desktop */
+	@media (min-width: 1024px) {
+		.mobile-chat-layout {
+			display: none;
+		}
+	}
+</style>
