@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { auth } from '$lib/stores/auth';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { onMount } from 'svelte';
@@ -13,6 +14,11 @@
 
 	function toggleUserMenu() {
 		showUserMenu = !showUserMenu;
+	}
+
+	async function handleSignOut() {
+		await auth.signOut();
+		goto('/');
 	}
 
 	// Close menu when clicking outside
@@ -96,7 +102,7 @@
 					</svg>
 					Settings
 				</a>
-				<button class="menu-item" on:click={() => { auth.signOut(); }}>
+				<button class="menu-item" on:click={handleSignOut}>
 					<svg class="item-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
 						<path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M11 11l3-3-3-3M14 8H6"/>
 					</svg>
@@ -143,8 +149,8 @@
 	}
 
 	.logo-icon {
-		width: 40px;
-		height: 40px;
+		width: 46px;
+		height: 46px;
 		border-radius: 8px;
 		transition: all 0.1s ease;
 	}

@@ -12,9 +12,8 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { getProject, deleteProject, getProjects } from '$lib/db/projects';
 	import { getTasks, toggleTaskComplete, updateTask, deleteTask } from '$lib/db/tasks';
-	import { getNotes } from '$lib/db/notes';
+	import { getNotes, createNote, updateNote, deleteNote } from '$lib/db/notes';
 	import { createTask } from '$lib/db/tasks';
-	import { createNote } from '$lib/db/notes';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
@@ -425,42 +424,72 @@
 				// Update loading message
 				messages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating tasks and notes...',
+					content: 'Processing...',
 					isTyping: false
 				};
 				messages = messages;
 				scrollToBottom();
 
-				// Create tasks and notes
-				const createdActions = [];
-				let taskCount = 0;
-				let noteCount = 0;
+				// Process all operations
+				const processedActions = [];
+				let taskCreateCount = 0;
+				let taskUpdateCount = 0;
+				let taskDeleteCount = 0;
+				let noteCreateCount = 0;
+				let noteUpdateCount = 0;
+				let noteDeleteCount = 0;
 
 				for (const action of data.actions) {
 					try {
 						if (action.type === 'task') {
-							await createTask({
-								title: action.title,
-								description: action.description,
-								priority: action.priority || 'medium',
-								status: 'todo',
-								project_id: projectId
-							});
-							createdActions.push(action);
-							taskCount++;
-							console.log('Created task:', action.title);
+							if (action.operation === 'create') {
+								const taskData = action.data;
+								await createTask({
+									title: taskData.title,
+									description: taskData.description,
+									priority: taskData.priority || 'medium',
+									status: 'todo',
+									project_id: projectId,
+									due_date: taskData.due_date || null
+								});
+								processedActions.push(action);
+								taskCreateCount++;
+							} else if (action.operation === 'update' && action.id) {
+								await updateTask(action.id, action.changes);
+								processedActions.push(action);
+								taskUpdateCount++;
+							} else if (action.operation === 'delete' && action.id) {
+								await deleteTask(action.id);
+								processedActions.push(action);
+								taskDeleteCount++;
+							}
 						} else if (action.type === 'note') {
-							await createNote({
-								title: action.title,
-								content: action.content,
-								project_id: projectId
-							});
-							createdActions.push(action);
-							noteCount++;
-							console.log('Created note:', action.title);
+							if (action.operation === 'create') {
+								const noteData = action.data;
+								await createNote({
+									title: noteData.title,
+									content: noteData.content,
+									project_id: projectId
+								});
+								processedActions.push(action);
+								noteCreateCount++;
+							} else if (action.operation === 'update' && action.id) {
+								// Filter out 'content' field - notes use block-based architecture
+								const { content, ...validChanges } = action.changes;
+								if (content) {
+									console.warn('Ignoring content field in note update - use note_blocks instead');
+								}
+								await updateNote(action.id, validChanges);
+								processedActions.push(action);
+								noteUpdateCount++;
+							} else if (action.operation === 'delete' && action.id) {
+								await deleteNote(action.id);
+								processedActions.push(action);
+								noteDeleteCount++;
+							}
 						}
-					} catch (createError) {
-						console.error(`Error creating ${action.type}:`, createError);
+					} catch (error) {
+						console.error(`Error processing ${action.operation} ${action.type}:`, error);
 					}
 				}
 
@@ -468,11 +497,14 @@
 				await loadData();
 
 				// Show custom confirmation message
-				let confirmMessage = 'Created ';
 				const parts = [];
-				if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
-				if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
-				confirmMessage += parts.join(' and ') + ' for you.';
+				if (taskCreateCount > 0) parts.push(`Created ${taskCreateCount} task${taskCreateCount > 1 ? 's' : ''}`);
+				if (taskUpdateCount > 0) parts.push(`Updated ${taskUpdateCount} task${taskUpdateCount > 1 ? 's' : ''}`);
+				if (taskDeleteCount > 0) parts.push(`Deleted ${taskDeleteCount} task${taskDeleteCount > 1 ? 's' : ''}`);
+				if (noteCreateCount > 0) parts.push(`Created ${noteCreateCount} note${noteCreateCount > 1 ? 's' : ''}`);
+				if (noteUpdateCount > 0) parts.push(`Updated ${noteUpdateCount} note${noteUpdateCount > 1 ? 's' : ''}`);
+				if (noteDeleteCount > 0) parts.push(`Deleted ${noteDeleteCount} note${noteDeleteCount > 1 ? 's' : ''}`);
+				const confirmMessage = parts.length > 0 ? parts.join(', ') + '.' : 'No changes made.';
 
 				// Save AI response to database
 				try {
@@ -484,7 +516,7 @@
 				messages[aiMessageIndex] = {
 					role: 'ai',
 					content: confirmMessage,
-					actions: createdActions,
+					actions: processedActions,
 					isTyping: false
 				};
 				messages = messages;

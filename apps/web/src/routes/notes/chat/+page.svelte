@@ -376,7 +376,12 @@
 						await updateTask(op.id, op.changes);
 						results.push(`✓ Updated task`);
 					} else if (op.type === 'note') {
-						await updateNote(op.id, op.changes);
+						// Filter out 'content' field - notes use block-based architecture
+						const { content, ...validChanges } = op.changes;
+						if (content) {
+							console.warn('Ignoring content field in note update - use note_blocks instead');
+						}
+						await updateNote(op.id, validChanges);
 						results.push(`✓ Updated note`);
 					} else if (op.type === 'project') {
 						await updateProject(op.id, op.changes);

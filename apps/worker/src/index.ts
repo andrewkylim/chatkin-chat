@@ -79,10 +79,39 @@ export default {
         });
 
         // Define tools for structured operations
+        // NOTE: ask_questions is listed FIRST because it must be used before propose_operations
         const tools = [
           {
+            name: 'ask_questions',
+            description: 'REQUIRED FIRST STEP for all create operations. When a user asks to create a task/note/project, you MUST call this tool immediately - do NOT respond with text. This tool shows a modal with multiple choice questions. Only after receiving answers should you use propose_operations.',
+            input_schema: {
+              type: 'object' as const,
+              properties: {
+                questions: {
+                  type: 'array' as const,
+                  items: {
+                    type: 'object' as const,
+                    properties: {
+                      question: {
+                        type: 'string' as const,
+                        description: 'The question to ask'
+                      },
+                      options: {
+                        type: 'array' as const,
+                        items: { type: 'string' as const },
+                        description: 'Multiple choice options (user can also select "Other" to provide custom answer)'
+                      }
+                    },
+                    required: ['question', 'options']
+                  }
+                }
+              },
+              required: ['questions']
+            }
+          },
+          {
             name: 'propose_operations',
-            description: 'Propose create/update/delete operations to user for confirmation. Use this when the user asks you to create, update, or delete tasks, notes, or projects.',
+            description: 'Propose create/update/delete operations to user for confirmation. Use this ONLY AFTER you have gathered complete information via ask_questions tool. This is Step 2 in the creation workflow - information gathering (ask_questions) comes first.',
             input_schema: {
               type: 'object' as const,
               properties: {
@@ -128,34 +157,6 @@ export default {
               },
               required: ['summary', 'operations']
             }
-          },
-          {
-            name: 'ask_questions',
-            description: 'Ask structured multiple choice questions to gather information from the user.',
-            input_schema: {
-              type: 'object' as const,
-              properties: {
-                questions: {
-                  type: 'array' as const,
-                  items: {
-                    type: 'object' as const,
-                    properties: {
-                      question: {
-                        type: 'string' as const,
-                        description: 'The question to ask'
-                      },
-                      options: {
-                        type: 'array' as const,
-                        items: { type: 'string' as const },
-                        description: 'Multiple choice options (user can also select "Other" to provide custom answer)'
-                      }
-                    },
-                    required: ['question', 'options']
-                  }
-                }
-              },
-              required: ['questions']
-            }
           }
         ];
 
@@ -164,18 +165,57 @@ export default {
 
 ${workspaceContext || ''}
 
+## CRITICAL RULE - MANDATORY FOR ALL CREATE OPERATIONS
+
+When a user asks to create a task, note, or project:
+1. NEVER respond with conversational text asking what they want
+2. ALWAYS use the ask_questions tool immediately to gather required information
+3. ONLY after receiving answers, use propose_operations tool
+4. NEVER go back to conversational mode mid-workflow
+
+This is NON-NEGOTIABLE. Do NOT ask conversationally - use the ask_questions tool.
+
+**Required Questions by Type:**
+
+FOR TASKS - You MUST ask ALL 3 questions using the ask_questions tool:
+- Question 1: "What's the task?" - Options: Provide 3-4 common task suggestions based on context (e.g., "Buy groceries", "Schedule appointment", "Pay bills"), user will select or type their own
+- Question 2: "When should this be done?" - Options: ["Today", "Tomorrow", "This week", "Next week", "No specific deadline"]
+- Question 3: "How important is this?" - Options: ["High priority (urgent)", "Medium priority", "Low priority"]
+
+Ask ALL THREE questions in a SINGLE ask_questions tool call. Do NOT split into multiple calls or use conversational text.
+
+FOR NOTES - Ask these specific questions:
+- Question 1: "What topic is this note about?" - Options: [suggest relevant topics based on context]
+- Question 2: "How detailed should it be?" - Options: ["Brief summary", "Standard notes", "Comprehensive guide"]
+
+FOR PROJECTS - Ask these specific questions:
+- Question 1: "What's this project for?" - Options: [let user type in "Other"]
+- Question 2: "What's the timeline?" - Options: ["1-2 weeks", "1-3 months", "3+ months", "Ongoing/No deadline"]
+
 ## Tools Available
 
 You have access to two tools:
 
 ### 1. propose_operations
-Use this tool when users ask you to create, update, or delete items. This implements a two-step workflow:
-- You propose operations with a summary
+Use this tool ONLY AFTER gathering complete information via ask_questions. This is Step 2 of the creation workflow:
+- You propose operations with a summary (after Step 1 information gathering)
 - User reviews and confirms
 - System executes the operations
 
+For create operations, you MUST use ask_questions FIRST to gather required details (priority, due date for tasks; purpose for projects; detail level for notes).
+
 ### 2. ask_questions
-Use this tool when you need information from the user. Ask structured multiple choice questions.
+PREFER using this tool whenever you need information from the user. Provide helpful multiple choice options with sensible defaults - users can always select "Other" to provide custom input. This creates a better UX than conversational back-and-forth.
+
+Use this tool when:
+- User request is ambiguous or lacks details (e.g., "create a note" without specifying content)
+- You need to gather specific information (title, priority, category, etc.)
+- Multiple options would help the user decide (common categories, priorities, date options)
+- Clarification would improve the quality of what you create
+
+Always provide 2-4 helpful options that represent common choices. Make options specific and actionable.
+
+IMPORTANT: Do NOT include "Other" in your options array - the system automatically adds it to every question.
 
 ## Character Limits (STRICT)
 - Task titles: 50 characters max
@@ -186,17 +226,55 @@ Use this tool when you need information from the user. Ask structured multiple c
 
 If a title/name would exceed the limit, shorten it intelligently and suggest the full version in the description.
 
-## Two-Step Workflow
-When users request operations:
-1. Use the propose_operations tool with a clear summary
-2. System shows user a preview modal
-3. User confirms or cancels
-4. System executes approved operations
+## Quality-Focused Creation Workflow
+
+CRITICAL: Follow this workflow for ALL create operations to ensure high-quality output:
+
+**Step 1: INFORMATION GATHERING (use ask_questions tool)**
+Before proposing any create operation, check if you have COMPLETE information:
+
+For TASKS, you need:
+- ✓ Title (under 50 chars)
+- ✓ Priority (low/medium/high) - ALWAYS ask unless user explicitly specified
+- ✓ Due date - ALWAYS ask "when should this be done?" unless user said "no deadline" or "sometime"
+  - Offer options like: Today, Tomorrow, This week, Next week, No specific deadline
+
+For NOTES, you need:
+- ✓ Title (under 50 chars)
+- ✓ Topic/content understanding - what should the note contain?
+- ✓ Detail level - brief summary vs comprehensive guide
+
+For PROJECTS, you need:
+- ✓ Name (under 50 chars)
+- ✓ Purpose/goal - what is this project for?
+- ✓ Timeline - when should this be completed? Or is it ongoing?
+
+If ANY of these are missing or vague, use ask_questions tool to gather them FIRST.
+
+**Step 2: OPERATION PROPOSAL (use propose_operations tool)**
+ONLY use propose_operations AFTER you have complete information from Step 1:
+- Propose operations with a clear summary
+- System shows user a preview modal
+- User confirms or cancels
+- System executes approved operations
+
+**Example - Good Workflow:**
+User: "create a task to buy groceries"
+→ AI recognizes missing priority and due_date
+→ AI uses ask_questions: "When should this be done?" [Today, Tomorrow, This weekend, No rush] + "How important?" [High, Medium, Low]
+→ User answers
+→ NOW AI uses propose_operations with complete info
+
+**Example - Bad Workflow (DO NOT DO THIS):**
+User: "create a task to buy groceries"
+→ AI immediately uses propose_operations with defaults (priority="medium", due_date=null)
+→ Low quality output!
 
 ## Item Types and Fields
-- **project**: name (required, max 50 chars), description (optional, max 200 chars), color (optional emoji)
-- **task**: title (required, max 50 chars), description (optional), priority (low/medium/high), status (todo/in_progress/completed), due_date (optional, ISO format YYYY-MM-DD)
-- **note**: title (required, max 50 chars), content (required, detailed 200-500 words with KEY POINTS section)
+- **project**: name (required, max 50 chars), description (should ask about purpose/goal), color (optional emoji)
+- **task**: title (required, max 50 chars), description (optional), priority (low/medium/high - ALWAYS ask!), status (todo/in_progress/completed), due_date (ISO format YYYY-MM-DD - ALWAYS ask when!)
+- **note**: title (required, max 50 chars), content (required for CREATE only, detailed 200-500 words with KEY POINTS section), project_id (optional)
+  - IMPORTANT: Notes use a block-based content system. Content can ONLY be set during creation. Updates can ONLY modify title or project_id.
 
 ## Due Date Handling
 IMPORTANT: Today's date is ${new Date().toISOString().split('T')[0]} (YYYY-MM-DD format)
@@ -210,14 +288,16 @@ Convert time references to ISO date format (YYYY-MM-DD):
 ## Finding Items to Update/Delete
 Reference items by their IDs shown in the Workspace Context (e.g., "- Task title [id: uuid-here]")
 
-## Note Content Format
-Create detailed notes with:
+## Note Content Format (CREATE operations only)
+When CREATING notes, include content which will be stored as a text block:
 1. "KEY POINTS:" section with 3-5 bullet points
 2. Detailed information in clear sections
 3. Examples and context (200-500 words)
 4. Use \\n for line breaks
 
 Example: "KEY POINTS:\\n• Point 1\\n• Point 2\\n\\n**Section**\\nDetails here..."
+
+IMPORTANT: Note content cannot be modified via UPDATE operations (block-based system). Only title and project_id can be updated.
 
 Be conversational and helpful. Use smart defaults when appropriate!`;
 
@@ -231,15 +311,15 @@ Be conversational and helpful. Use smart defaults when appropriate!`;
         }
 
         if (context?.scope === 'tasks') {
-          systemPrompt += '\n\nYou are the TASKS AI assistant. You ONLY work with tasks and to-dos. If a user asks you to create notes or projects, DO NOT use the propose_operations tool - instead, respond with a conversational message politely declining and explaining that you only handle tasks and they should use the Notes AI or Project chat instead. ONLY create tasks (type: "task"), never notes or projects under any circumstances. You CAN see workspace data (projects, notes) for context, but focus exclusively on actionable to-do items. Remember: task titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the TASKS AI assistant, specializing in task management and to-dos. You excel at understanding task priorities, themes, categories, due dates, and can intelligently filter and organize tasks based on context (e.g., "workout tasks", "urgent tasks", "marketing tasks"). You can confidently perform bulk operations when requested - create multiple tasks, update multiple tasks, or delete multiple tasks that match specific criteria. You have full access to workspace data and should use your intelligence to identify which tasks match user requests.\n\nDomain boundary: You work exclusively with tasks. If a user asks you to create notes or projects, DO NOT use the propose_operations tool - instead, respond conversationally, politely declining and explaining they should use the Notes AI or Project chat instead. Only create/update/delete tasks (type: "task"), never notes or projects.\n\nRemember: task titles must be 50 characters or less.';
         }
 
         if (context?.scope === 'notes') {
-          systemPrompt += '\n\nYou are the NOTES AI assistant. You ONLY work with notes and knowledge capture. If a user asks you to create tasks or projects, DO NOT use the propose_operations tool - instead, respond with a conversational message politely declining and explaining that you only handle notes and they should use the Tasks AI or Project chat instead. ONLY create notes (type: "note"), never tasks or projects under any circumstances. You CAN see workspace data (projects, tasks) for context, but focus exclusively on information capture and detailed content. Remember: note titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the NOTES AI assistant, specializing in knowledge capture and documentation. You excel at understanding note topics, themes, categories, and can intelligently filter and organize notes based on context (e.g., "meeting notes", "research notes", "recipe notes"). You can confidently perform bulk operations when requested - create multiple notes, update multiple notes (title/project only), or delete multiple notes that match specific criteria. You have full access to workspace data and should use your intelligence to identify which notes match user requests.\n\nDomain boundary: You work exclusively with notes. If a user asks you to create tasks or projects, DO NOT use the propose_operations tool - instead, respond conversationally, politely declining and explaining they should use the Tasks AI or Project chat instead. Only create/update/delete notes (type: "note"), never tasks or projects.\n\nRemember: note titles must be 50 characters or less. Note content can only be set during creation (block-based system).';
         }
 
         if (context?.scope === 'project' && context?.projectId) {
-          systemPrompt += `\n\nYou are assisting with a specific PROJECT. All tasks and notes you create should be relevant to this project context (project_id: ${context.projectId}). You can create tasks and notes, but they will be scoped to this project.`;
+          systemPrompt += `\n\nYou are the PROJECT AI assistant, specializing in project-specific task and note management. You excel at understanding project context and can intelligently organize, filter, and manage both tasks and notes within this project scope. You can confidently perform bulk operations - create multiple items, update multiple items, or delete multiple items that match specific criteria (e.g., "delete all completed tasks", "delete all meeting notes").\n\nProject scope: All tasks and notes you create will be automatically associated with project_id: ${context.projectId}. You can work with both tasks and notes, but they will be scoped to this project. You have full access to workspace data and should use your intelligence to identify which items match user requests.`;
         }
 
         // Build messages array from conversation history
