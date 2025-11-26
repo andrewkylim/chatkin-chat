@@ -57,7 +57,7 @@
 		<div class="features-container">
 			<h2 class="section-title">Everything you need, one conversation away</h2>
 			<div class="features-grid">
-				<div class="feature-card" role="button" tabindex="0">
+				<div class="feature-card" role="presentation" onclick={() => {}}>
 					<div class="app-icon">
 						<img src="/chat.png" alt="Chat" />
 					</div>
@@ -70,7 +70,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card" role="button" tabindex="0">
+				<div class="feature-card" role="presentation" onclick={() => {}}>
 					<div class="app-icon">
 						<img src="/projects.png" alt="Projects" />
 					</div>
@@ -83,7 +83,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card" role="button" tabindex="0">
+				<div class="feature-card" role="presentation" onclick={() => {}}>
 					<div class="app-icon">
 						<img src="/tasks.png" alt="Tasks" />
 					</div>
@@ -96,7 +96,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card" role="button" tabindex="0">
+				<div class="feature-card" role="presentation" onclick={() => {}}>
 					<div class="app-icon">
 						<img src="/notes.png" alt="Notes" />
 					</div>
@@ -304,28 +304,9 @@
 		display: flex;
 		align-items: center;
 		gap: 16px;
-		transition: all 0.2s ease;
 		min-height: 100px;
 		-webkit-tap-highlight-color: transparent;
-		cursor: pointer;
 		user-select: none;
-	}
-
-	.feature-card:active {
-		transform: scale(0.98);
-	}
-
-	.feature-card:focus {
-		outline: none;
-		border-color: var(--accent-primary);
-	}
-
-	@media (hover: hover) {
-		.feature-card:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-			border-color: var(--accent-primary);
-		}
 	}
 
 	.app-icon {
@@ -342,7 +323,7 @@
 	}
 
 	.feature-card:active .app-icon {
-		transform: translateY(3px) scale(0.95);
+		transform: translateY(4px) scale(0.95);
 	}
 
 	.app-content {

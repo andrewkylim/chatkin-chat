@@ -15,13 +15,17 @@
 		inputMessage = $bindable(''),
 		isStreaming = false,
 		messagesReady = false,
-		onSubmit
+		onSubmit,
+		title = 'Chat',
+		backUrl = null
 	}: {
 		messages: Message[];
 		inputMessage: string;
 		isStreaming: boolean;
 		messagesReady: boolean;
 		onSubmit: () => void;
+		title?: string;
+		backUrl?: string | null;
 	} = $props();
 
 	let messagesContainer: HTMLDivElement;
@@ -53,10 +57,18 @@
 	<!-- Header: flex-shrink: 0 (NOT position: fixed) -->
 	<header class="chat-header">
 		<div class="header-left">
-			<button class="logo-button">
-				<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
-			</button>
-			<h1>Chat</h1>
+			{#if backUrl}
+				<a href={backUrl} class="back-btn" title="Back">
+					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 5L7 10l5 5"/>
+					</svg>
+				</a>
+			{:else}
+				<button class="logo-button">
+					<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
+				</button>
+			{/if}
+			<h1>{title}</h1>
 		</div>
 		<MobileUserMenu />
 	</header>
@@ -96,7 +108,7 @@
 			class="message-input"
 			disabled={isStreaming}
 		/>
-		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
+		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()} aria-label="Send message">
 			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M5 15L15 5"/>
 				<path d="M9 5h6v6"/>
@@ -185,6 +197,25 @@
 
 	.logo-button:active .chat-logo {
 		transform: translateY(4px) scale(0.95);
+	}
+
+	.back-btn {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-decoration: none;
+	}
+
+	.back-btn:active {
+		transform: scale(0.95);
 	}
 
 	.chat-header h1 {

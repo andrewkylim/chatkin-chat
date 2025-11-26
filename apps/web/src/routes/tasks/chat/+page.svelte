@@ -473,8 +473,9 @@
 			document.body.style.overscrollBehavior = 'none';
 		}
 
-		// Set current section to tasks for notification highlighting
-		notificationCounts.setCurrentSection('tasks');
+		// Don't set current section - we want to show notifications even when on chat page
+		// since we can't see the tasks list from here
+		notificationCounts.setCurrentSection(null);
 
 		// Load conversation and context
 		try {
@@ -657,6 +658,8 @@
 		{isStreaming}
 		{messagesReady}
 		onSubmit={() => sendMessage()}
+		title="Tasks AI"
+		backUrl="/tasks"
 	/>
 </div>
 </AppLayout>

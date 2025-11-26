@@ -915,18 +915,18 @@
 		{#if showFabMenu}
 			<div class="fab-menu">
 				<button class="fab-menu-item" on:click={() => { showNewTaskModal = true; showFabMenu = false; }}>
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M4 8l2 2 6-6"/>
-						<rect x="2" y="2" width="12" height="12" rx="2"/>
+					<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M15 3l2 2-9 9-4 1 1-4 9-9z"/>
 					</svg>
-					<span>Manual Creation</span>
+					<span>Quick Add</span>
 				</button>
 				<button class="fab-menu-item" on:click={() => goto('/tasks/chat')}>
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M7 9h6M7 13h4"/>
-						<path d="M17 6v8a2 2 0 01-2 2H7l-4 4V6a2 2 0 012-2h10a2 2 0 012 2z"/>
+					<svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
+						<path d="M10 2l1.5 3.5L15 7l-3.5 1.5L10 12l-1.5-3.5L5 7l3.5-1.5L10 2z"/>
+						<path d="M5 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
+						<path d="M15 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
 					</svg>
-					<span>AI Assistant</span>
+					<span>Create with AI</span>
 				</button>
 			</div>
 		{/if}
@@ -1710,7 +1710,7 @@
 				border: 1px solid var(--border-color);
 				border-radius: var(--radius-md);
 				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-				min-width: 200px;
+				min-width: 180px;
 				overflow: hidden;
 				animation: slideUp 0.2s ease;
 			}
