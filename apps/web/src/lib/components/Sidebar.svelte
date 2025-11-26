@@ -1,15 +1,31 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth';
-	import { goto } from '$app/navigation';
 	import { notificationCounts } from '$lib/stores/notifications';
+	import { onMount } from 'svelte';
+
+	let showUserMenu = false;
+	let userButton: HTMLDivElement;
 
 	$: currentPath = $page.url.pathname;
+	$: userName = $auth.user?.user_metadata?.name || $auth.user?.email || 'User';
+	$: userInitial = userName.charAt(0).toUpperCase();
 
-	async function handleSignOut() {
-		await auth.signOut();
-		goto('/');
+	function toggleUserMenu() {
+		showUserMenu = !showUserMenu;
 	}
+
+	// Close menu when clicking outside
+	onMount(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (showUserMenu && userButton && !userButton.contains(event.target as Node)) {
+				showUserMenu = false;
+			}
+		}
+
+		document.addEventListener('click', handleClickOutside);
+		return () => document.removeEventListener('click', handleClickOutside);
+	});
 </script>
 
 <aside class="sidebar">
@@ -58,23 +74,36 @@
 	</nav>
 
 	<div class="sidebar-footer">
-		<button class="user-profile" on:click={handleSignOut} title="Sign out">
-			<div class="user-avatar">
+		<div class="user-profile" bind:this={userButton} on:click={toggleUserMenu}>
+			<div class="user-avatar" class:has-image={$auth.user?.user_metadata?.avatar_url}>
 				{#if $auth.user?.user_metadata?.avatar_url}
 					<img src={$auth.user.user_metadata.avatar_url} alt="User" />
 				{:else}
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-						<path d="M10 10c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-					</svg>
+					<span class="user-initial">{userInitial}</span>
 				{/if}
 			</div>
 			<div class="user-info">
-				<span class="user-name">{$auth.user?.user_metadata?.name || $auth.user?.email || 'User'}</span>
+				<span class="user-name">{userName}</span>
 			</div>
-			<svg class="signout-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6"/>
-			</svg>
-		</button>
+		</div>
+
+		{#if showUserMenu}
+			<div class="user-dropdown-menu">
+				<a href="/settings" class="menu-item">
+					<svg class="item-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+						<path d="M13.4 8c0-.3 0-.5-.1-.7l1.2-1c.1-.1.1-.3 0-.4l-1.2-2c-.1-.1-.3-.2-.4-.1l-1.4.6c-.4-.3-.8-.5-1.3-.7l-.3-1.5c0-.2-.2-.3-.4-.3h-2.4c-.2 0-.3.1-.4.3l-.3 1.5c-.5.2-.9.4-1.3.7l-1.4-.6c-.2-.1-.3 0-.4.1l-1.2 2c-.1.1-.1.3 0 .4l1.2 1c-.1.2-.1.4-.1.7 0 .3 0 .5.1.7l-1.2 1c-.1.1-.1.3 0 .4l1.2 2c.1.1.3.2.4.1l1.4-.6c.4.3.8.5 1.3.7l.3 1.5c0 .2.2.3.4.3h2.4c.2 0 .3-.1.4-.3l.3-1.5c.5-.2.9-.4 1.3-.7l1.4.6c.2.1.3 0 .4-.1l1.2-2c.1-.1.1-.3 0-.4l-1.2-1c.1-.2.1-.4.1-.7z"/>
+					</svg>
+					Settings
+				</a>
+				<button class="menu-item" on:click={() => { auth.signOut(); }}>
+					<svg class="item-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M11 11l3-3-3-3M14 8H6"/>
+					</svg>
+					Log Out
+				</button>
+			</div>
+		{/if}
 	</div>
 </aside>
 
@@ -190,6 +219,7 @@
 		display: flex;
 		align-items: center;
 		box-sizing: border-box;
+		position: relative;
 	}
 
 	.user-profile {
@@ -199,11 +229,10 @@
 		gap: 12px;
 		padding: 6px 8px;
 		background: transparent;
-		border: none;
 		border-radius: var(--radius-md);
-		cursor: pointer;
 		transition: all 0.2s ease;
 		color: var(--text-primary);
+		cursor: pointer;
 	}
 
 	.user-profile:hover {
@@ -214,18 +243,29 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 50%;
-		background: var(--bg-tertiary);
+		background: var(--accent-primary);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: var(--text-secondary);
+		color: white;
 		overflow: hidden;
+		flex-shrink: 0;
+	}
+
+	.user-avatar.has-image {
+		background: var(--bg-tertiary);
 	}
 
 	.user-avatar img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+	}
+
+	.user-initial {
+		font-size: 0.875rem;
+		font-weight: 600;
+		text-transform: uppercase;
 	}
 
 	.user-info {
@@ -241,21 +281,58 @@
 		white-space: nowrap;
 	}
 
-	.signout-icon {
-		opacity: 0;
-		transition: opacity 0.2s ease;
-	}
-
-	.user-profile:hover .signout-icon {
-		opacity: 0.7;
-	}
-
 	.notification-dot {
 		width: 8px;
 		height: 8px;
 		background: var(--accent-primary);
 		border-radius: 50%;
 		margin-left: 4px;
+		flex-shrink: 0;
+	}
+
+	.user-dropdown-menu {
+		position: absolute;
+		bottom: calc(100% - 8px);
+		left: 16px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		overflow: hidden;
+		z-index: 100;
+		min-width: 140px;
+		width: max-content;
+	}
+
+	.menu-item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 14px;
+		width: 100%;
+		background: none;
+		border: none;
+		color: var(--text-primary);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.15s ease;
+		text-align: left;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.menu-item:hover {
+		background: var(--bg-tertiary);
+		color: var(--accent-primary);
+	}
+
+	.item-icon {
+		width: 16px;
+		height: 16px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		flex-shrink: 0;
 	}
 

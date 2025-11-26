@@ -45,9 +45,16 @@
 
 	{#if showMenu}
 		<div class="dropdown-menu">
+			<a href="/settings" class="menu-item">
+				<svg class="menu-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+					<path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+					<path d="M13.4 8c0-.3 0-.5-.1-.7l1.2-1c.1-.1.1-.3 0-.4l-1.2-2c-.1-.1-.3-.2-.4-.1l-1.4.6c-.4-.3-.8-.5-1.3-.7l-.3-1.5c0-.2-.2-.3-.4-.3h-2.4c-.2 0-.3.1-.4.3l-.3 1.5c-.5.2-.9.4-1.3.7l-1.4-.6c-.2-.1-.3 0-.4.1l-1.2 2c-.1.1-.1.3 0 .4l1.2 1c-.1.2-.1.4-.1.7 0 .3 0 .5.1.7l-1.2 1c-.1.1-.1.3 0 .4l1.2 2c.1.1.3.2.4.1l1.4-.6c.4.3.8.5 1.3.7l.3 1.5c0 .2.2.3.4.3h2.4c.2 0 .3-.1.4-.3l.3-1.5c.5-.2.9-.4 1.3-.7l1.4.6c.2.1.3 0 .4-.1l1.2-2c.1-.1.1-.3 0-.4l-1.2-1c.1-.2.1-.4.1-.7z"/>
+				</svg>
+				Settings
+			</a>
 			<button class="menu-item" on:click={handleSignOut}>
-				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6"/>
+				<svg class="menu-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+					<path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M11 11l3-3-3-3M14 8H6"/>
 				</svg>
 				Log Out
 			</button>
@@ -76,6 +83,10 @@
 		transition: all 0.2s ease;
 	}
 
+	.user-avatar:hover {
+		background: var(--accent-hover);
+	}
+
 	.user-avatar:active {
 		transform: scale(0.95);
 	}
@@ -87,33 +98,46 @@
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		min-width: 160px;
-		z-index: 100;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 140px;
+		width: max-content;
+		z-index: 1000;
 		overflow: hidden;
 	}
 
 	.menu-item {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 12px 16px;
+		gap: 10px;
+		padding: 10px 14px;
 		width: 100%;
 		background: none;
 		border: none;
 		color: var(--text-primary);
-		font-size: 0.9375rem;
+		font-size: 0.875rem;
 		font-weight: 500;
 		cursor: pointer;
-		transition: all 0.2s ease;
+		transition: all 0.15s ease;
 		text-align: left;
+		text-decoration: none;
+		white-space: nowrap;
 	}
 
 	.menu-item:hover {
 		background: var(--bg-tertiary);
+		color: var(--accent-primary);
 	}
 
-	.menu-item svg {
+	.menu-item:active {
+		transform: scale(0.98);
+	}
+
+	.menu-icon {
+		width: 16px;
+		height: 16px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		flex-shrink: 0;
 	}
 </style>

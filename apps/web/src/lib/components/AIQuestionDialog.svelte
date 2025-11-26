@@ -59,7 +59,7 @@
 				<div class="question-block">
 					<h3>{question.question}</h3>
 					<div class="options-grid">
-						{#each [...question.options, 'Other'] as option}
+						{#each [...question.options.filter(opt => opt !== 'Other'), 'Other'] as option}
 							<button
 								class="option-button"
 								class:selected={answers[questionIndex] === option || (option === 'Other' && showCustomInput[questionIndex])}
@@ -170,39 +170,40 @@
 	}
 
 	.options-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
 	}
 
 	.option-button {
-		padding: 12px 16px;
-		border: 2px solid #e5e7eb;
+		padding: 14px 16px;
+		border: 1px solid #e5e7eb;
 		border-radius: 8px;
 		background: white;
 		color: #374151;
-		font-size: 0.9rem;
-		font-weight: 500;
+		font-size: 0.95rem;
+		font-weight: 400;
 		cursor: pointer;
-		transition: all 0.2s;
-		text-align: center;
+		transition: all 0.15s;
+		text-align: left;
+		width: 100%;
 	}
 
 	.option-button:hover {
-		border-color: #3b82f6;
-		background: #eff6ff;
+		border-color: var(--accent-primary);
+		background: rgba(199, 124, 92, 0.1);
 	}
 
 	.option-button.selected {
-		border-color: #3b82f6;
-		background: #3b82f6;
+		border-color: var(--accent-primary);
+		background: var(--accent-primary);
 		color: white;
 	}
 
 	.custom-input {
 		width: 100%;
 		padding: 12px;
-		border: 2px solid #3b82f6;
+		border: 2px solid var(--accent-primary);
 		border-radius: 8px;
 		font-size: 0.95rem;
 		margin-top: 12px;
@@ -229,12 +230,13 @@
 	}
 
 	.button-primary {
-		background: #3b82f6;
+		background: var(--accent-primary);
 		color: white;
 	}
 
 	.button-primary:hover:not(:disabled) {
-		background: #2563eb;
+		background: var(--accent-hover);
+		transform: translateY(-1px);
 	}
 
 	.button-primary:disabled {
