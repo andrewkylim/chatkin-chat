@@ -696,7 +696,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<button class="mobile-logo-button">
-					<img src="/tasks.webp" alt="Tasks" class="mobile-logo" />
+					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
 				</button>
 				<h1>Tasks</h1>
 			</div>
@@ -1684,8 +1684,8 @@
 		}
 
 		.mobile-logo {
-			width: 52px;
-			height: 52px;
+			width: 62px;
+			height: 62px;
 			border-radius: var(--radius-sm);
 			transition: all 0.15s ease;
 		}

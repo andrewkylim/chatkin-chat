@@ -65,7 +65,7 @@
 				</a>
 			{:else}
 				<button class="logo-button">
-					<img src="/chat.webp" alt="Chat" class="chat-logo" />
+					<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
 				</button>
 			{/if}
 			<h1>{title}</h1>
@@ -189,8 +189,8 @@
 	}
 
 	.chat-logo {
-		width: 52px;
-		height: 52px;
+		width: 62px;
+		height: 62px;
 		border-radius: var(--radius-sm);
 		transition: all 0.15s ease;
 	}
