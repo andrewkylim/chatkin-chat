@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
+
+	// Get version from environment variable set during build
+	const version = dev ? 'dev' : (import.meta.env.VITE_APP_VERSION || 'unknown');
 </script>
 
 <div class="landing">
@@ -115,6 +119,8 @@
 	<footer class="footer">
 		<div class="footer-container">
 			<p class="text-muted">&copy; 2025 Chatkin. Built with care.</p>
+			<a href="mailto:support@chatkin.ai?subject=yo%20can%20you%20fix%20this%20please" class="support-link">support@chatkin.ai</a>
+			<p class="version">v{version}</p>
 		</div>
 	</footer>
 </div>
@@ -375,11 +381,33 @@
 	.footer-container {
 		max-width: 1200px;
 		margin: 0 auto;
-		text-align: center;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 16px;
+		padding: 0 20px;
 	}
 
 	.footer .text-muted {
 		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.support-link {
+		color: var(--accent-primary);
+		text-decoration: none;
+		transition: opacity 0.2s ease;
+	}
+
+	.support-link:hover {
+		opacity: 0.8;
+		text-decoration: underline;
+	}
+
+	.version {
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		margin: 0;
 	}
 
 	/* Responsive */
@@ -390,6 +418,12 @@
 
 		.btn-text-mobile {
 			display: inline;
+		}
+
+		.footer-container {
+			flex-direction: column;
+			gap: 8px;
+			text-align: center;
 		}
 	}
 
