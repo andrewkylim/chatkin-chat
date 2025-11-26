@@ -307,33 +307,38 @@
 	.menu-item {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 10px 14px;
+		gap: 12px;
+		padding: 14px 16px;
 		width: 100%;
 		background: none;
 		border: none;
+		border-bottom: 1px solid var(--border-color);
 		color: var(--text-primary);
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
 		font-weight: 500;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: background 0.2s ease;
 		text-align: left;
 		text-decoration: none;
 		white-space: nowrap;
 	}
 
+	.menu-item:last-child {
+		border-bottom: none;
+	}
+
 	.menu-item:hover {
 		background: var(--bg-tertiary);
-		color: var(--accent-primary);
 	}
 
 	.item-icon {
-		width: 16px;
-		height: 16px;
+		width: 22px;
+		height: 22px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
+		color: var(--text-secondary);
 	}
 
 	/* Hide on mobile */
