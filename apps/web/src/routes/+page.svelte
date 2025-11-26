@@ -61,7 +61,7 @@
 		<div class="features-container">
 			<h2 class="section-title">Everything you need, one conversation away</h2>
 			<div class="features-grid">
-				<div class="feature-card" role="presentation" onclick={() => {}}>
+				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
 						<img src="/chat.png" alt="Chat" />
 					</div>
@@ -74,7 +74,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card" role="presentation" onclick={() => {}}>
+				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
 						<img src="/projects.png" alt="Projects" />
 					</div>
@@ -87,7 +87,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card" role="presentation" onclick={() => {}}>
+				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
 						<img src="/tasks.png" alt="Tasks" />
 					</div>
@@ -100,7 +100,7 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
-				<div class="feature-card" role="presentation" onclick={() => {}}>
+				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
 						<img src="/notes.png" alt="Notes" />
 					</div>
@@ -119,8 +119,10 @@
 	<footer class="footer">
 		<div class="footer-container">
 			<p class="text-muted">&copy; 2025 Chatkin. Built with care.</p>
-			<a href="mailto:support@chatkin.ai?subject=yo%20can%20you%20fix%20this%20please" class="support-link">support@chatkin.ai</a>
-			<p class="version">v{version}</p>
+			<div class="footer-right">
+				<a href="mailto:support@chatkin.ai?subject=yo%20can%20you%20fix%20this%20please" class="support-link">support@chatkin.ai</a>
+				<p class="version">v{version}</p>
+			</div>
 		</div>
 	</footer>
 </div>
@@ -384,8 +386,13 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		gap: 16px;
 		padding: 0 20px;
+	}
+
+	.footer-right {
+		display: flex;
+		align-items: center;
+		gap: 16px;
 	}
 
 	.footer .text-muted {
@@ -424,6 +431,11 @@
 			flex-direction: column;
 			gap: 8px;
 			text-align: center;
+		}
+
+		.footer-right {
+			flex-direction: column;
+			gap: 8px;
 		}
 	}
 
