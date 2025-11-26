@@ -369,37 +369,42 @@
 				// Update loading message
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating tasks...',
+					content: 'Processing...',
 					isTyping: false
 				};
 				chatMessages = chatMessages;
 				scrollChatToBottom();
 
-				// Create only tasks (filter out any notes)
-				let taskCount = 0;
+				// Process all operations
+				let createCount = 0;
+				let updateCount = 0;
+				let deleteCount = 0;
 
 				for (const action of data.actions) {
 					try {
-						// Check if it's the new operations format
-						const isNewFormat = action.operation === 'create' && action.data;
-						const taskData = isNewFormat ? action.data : action;
-
 						if (action.type === 'task') {
-							const dueDate = taskData.due_date || null;
-							console.log('Creating task with due_date:', dueDate, 'Raw:', taskData.due_date);
-							await createTask({
-								title: taskData.title,
-								description: taskData.description,
-								priority: taskData.priority || 'medium',
-								status: 'todo',
-								project_id: null,
-								due_date: dueDate
-							});
-							taskCount++;
-							console.log('Created task:', taskData.title, 'Due:', dueDate);
+							if (action.operation === 'create') {
+								const taskData = action.data;
+								const dueDate = taskData.due_date || null;
+								await createTask({
+									title: taskData.title,
+									description: taskData.description,
+									priority: taskData.priority || 'medium',
+									status: 'todo',
+									project_id: null,
+									due_date: dueDate
+								});
+								createCount++;
+							} else if (action.operation === 'update' && action.id) {
+								await updateTask(action.id, action.changes);
+								updateCount++;
+							} else if (action.operation === 'delete' && action.id) {
+								await deleteTask(action.id);
+								deleteCount++;
+							}
 						}
-					} catch (createError) {
-						console.error(`Error creating task:`, createError);
+					} catch (error) {
+						console.error(`Error processing ${action.operation} task:`, error);
 					}
 				}
 
@@ -407,7 +412,11 @@
 				await loadData();
 
 				// Show custom confirmation message
-				const confirmMessage = `Created ${taskCount} task${taskCount > 1 ? 's' : ''} for you.`;
+				const parts = [];
+				if (createCount > 0) parts.push(`Created ${createCount} task${createCount > 1 ? 's' : ''}`);
+				if (updateCount > 0) parts.push(`Updated ${updateCount} task${updateCount > 1 ? 's' : ''}`);
+				if (deleteCount > 0) parts.push(`Deleted ${deleteCount} task${deleteCount > 1 ? 's' : ''}`);
+				const confirmMessage = parts.length > 0 ? parts.join(', ') + '.' : 'No changes made.';
 
 				// Save AI response to database
 				try {
@@ -477,7 +486,7 @@
 				</div>
 			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
 				<div class="empty-state">
-					<img src="/tasks.png" alt="Tasks" class="empty-icon" />
+					<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
 				</div>
@@ -630,7 +639,7 @@
 			<div class="chat-header">
 				<div class="header-content">
 					<div class="chat-title">
-						<img src="/tasks.png" alt="Tasks AI" class="ai-icon" />
+						<img src="/tasks.webp" alt="Tasks AI" class="ai-icon" />
 						<div>
 							<h2>Tasks AI</h2>
 							<p class="ai-subtitle">Your task management assistant</p>
@@ -687,7 +696,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<button class="mobile-logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+					<img src="/tasks.webp" alt="Tasks" class="mobile-logo" />
 				</button>
 				<h1>Tasks</h1>
 			</div>
@@ -702,7 +711,7 @@
 				</div>
 			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
 				<div class="empty-state">
-					<img src="/tasks.png" alt="Tasks" class="empty-icon" />
+					<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
 				</div>

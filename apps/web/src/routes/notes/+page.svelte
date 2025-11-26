@@ -303,32 +303,43 @@
 				// Update loading message
 				chatMessages[aiMessageIndex] = {
 					role: 'ai',
-					content: 'Creating notes...',
+					content: 'Processing...',
 					isTyping: false
 				};
 				chatMessages = chatMessages;
 				scrollChatToBottom();
 
-				// Create only notes (filter out any tasks)
-				let noteCount = 0;
+				// Process all operations
+				let createCount = 0;
+				let updateCount = 0;
+				let deleteCount = 0;
 
 				for (const action of data.actions) {
 					try {
-						// Check if it's the new operations format
-						const isNewFormat = action.operation === 'create' && action.data;
-						const noteData = isNewFormat ? action.data : action;
-
 						if (action.type === 'note') {
-							await createNote({
-								title: noteData.title,
-								content: noteData.content,
-								project_id: null
-							});
-							noteCount++;
-							console.log('Created note:', noteData.title);
+							if (action.operation === 'create') {
+								const noteData = action.data;
+								await createNote({
+									title: noteData.title,
+									content: noteData.content,
+									project_id: null
+								});
+								createCount++;
+							} else if (action.operation === 'update' && action.id) {
+								// Filter out 'content' field - notes use block-based architecture
+								const { content, ...validChanges } = action.changes;
+								if (content) {
+									console.warn('Ignoring content field in note update - use note_blocks instead');
+								}
+								await updateNote(action.id, validChanges);
+								updateCount++;
+							} else if (action.operation === 'delete' && action.id) {
+								await deleteNote(action.id);
+								deleteCount++;
+							}
 						}
-					} catch (createError) {
-						console.error(`Error creating note:`, createError);
+					} catch (error) {
+						console.error(`Error processing ${action.operation} note:`, error);
 					}
 				}
 
@@ -336,7 +347,11 @@
 				await loadData();
 
 				// Show custom confirmation message
-				const confirmMessage = `Created ${noteCount} note${noteCount > 1 ? 's' : ''} for you.`;
+				const parts = [];
+				if (createCount > 0) parts.push(`Created ${createCount} note${createCount > 1 ? 's' : ''}`);
+				if (updateCount > 0) parts.push(`Updated ${updateCount} note${updateCount > 1 ? 's' : ''}`);
+				if (deleteCount > 0) parts.push(`Deleted ${deleteCount} note${deleteCount > 1 ? 's' : ''}`);
+				const confirmMessage = parts.length > 0 ? parts.join(', ') + '.' : 'No changes made.';
 
 				// Save AI response to database
 				try {
@@ -412,7 +427,7 @@
 				</div>
 			{:else if notes.length === 0}
 				<div class="empty-state">
-					<img src="/notes.png" alt="Notes" class="empty-icon" />
+					<img src="/notes.webp" alt="Notes" class="empty-icon" />
 					<h2>No notes yet</h2>
 					<p>Create your first note to get started</p>
 				</div>
@@ -466,7 +481,7 @@
 			<div class="chat-header">
 				<div class="header-content">
 					<div class="chat-title">
-						<img src="/notes.png" alt="Notes AI" class="ai-icon" />
+						<img src="/notes.webp" alt="Notes AI" class="ai-icon" />
 						<div>
 							<h2>Notes AI</h2>
 							<p class="ai-subtitle">Your note-taking assistant</p>
@@ -523,7 +538,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<button class="mobile-logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+					<img src="/notes.webp" alt="Notes" class="mobile-logo" />
 				</button>
 				<h1>Notes</h1>
 			</div>
@@ -538,7 +553,7 @@
 				</div>
 			{:else if notes.length === 0}
 				<div class="empty-state">
-					<img src="/notes.png" alt="Notes" class="empty-icon" />
+					<img src="/notes.webp" alt="Notes" class="empty-icon" />
 					<h2>No notes yet</h2>
 					<p>Create your first note to get started</p>
 				</div>

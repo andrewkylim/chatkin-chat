@@ -63,7 +63,7 @@
 			<div class="features-grid">
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/chat.png" alt="Chat" />
+						<img src="/chat.webp" alt="Chat" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Chat</h3>
@@ -76,7 +76,7 @@
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/projects.png" alt="Projects" />
+						<img src="/projects.webp" alt="Projects" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Projects</h3>
@@ -89,7 +89,7 @@
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/tasks.png" alt="Tasks" />
+						<img src="/tasks.webp" alt="Tasks" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Tasks</h3>
@@ -102,7 +102,7 @@
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/notes.png" alt="Notes" />
+						<img src="/notes.webp" alt="Notes" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Notes</h3>

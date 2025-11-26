@@ -65,7 +65,7 @@
 				</a>
 			{:else}
 				<button class="logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
+					<img src="/chat.webp" alt="Chat" class="chat-logo" />
 				</button>
 			{/if}
 			<h1>{title}</h1>

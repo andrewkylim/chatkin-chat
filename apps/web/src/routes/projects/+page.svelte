@@ -158,7 +158,7 @@
 	<header class="mobile-header">
 		<div class="mobile-header-left">
 			<button class="mobile-logo-button">
-				<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+				<img src="/projects.webp" alt="Projects" class="mobile-logo" />
 			</button>
 			<h1>Projects</h1>
 		</div>
@@ -173,7 +173,7 @@
 			</div>
 		{:else if projects.length === 0}
 			<div class="empty-state">
-				<img src="/projects.png" alt="Projects" class="empty-icon" />
+				<img src="/projects.webp" alt="Projects" class="empty-icon" />
 				<h2>No projects yet</h2>
 				<p>Create your first project to get started</p>
 			</div>

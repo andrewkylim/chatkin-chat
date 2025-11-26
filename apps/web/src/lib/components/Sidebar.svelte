@@ -38,7 +38,7 @@
 
 	<nav class="sidebar-nav">
 		<a href="/chat" class="nav-item" class:active={currentPath === '/chat'}>
-			<img src="/chat.png" alt="" class="nav-icon" />
+			<img src="/chat.webp" alt="" class="nav-icon" />
 			<span>Chat</span>
 		</a>
 
@@ -48,7 +48,7 @@
 			</div>
 
 			<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-				<img src="/projects.png" alt="" class="nav-icon" />
+				<img src="/projects.webp" alt="" class="nav-icon" />
 				<span>Projects</span>
 				{#if $notificationCounts.projects > 0}
 					<span class="notification-dot"></span>
@@ -56,7 +56,7 @@
 			</a>
 
 			<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
-				<img src="/tasks.png" alt="" class="nav-icon" />
+				<img src="/tasks.webp" alt="" class="nav-icon" />
 				<span>Tasks</span>
 				{#if $notificationCounts.tasks > 0}
 					<span class="notification-dot"></span>
@@ -64,7 +64,7 @@
 			</a>
 
 			<a href="/notes" class="nav-item" class:active={currentPath === '/notes'}>
-				<img src="/notes.png" alt="" class="nav-icon" />
+				<img src="/notes.webp" alt="" class="nav-icon" />
 				<span>Notes</span>
 				{#if $notificationCounts.notes > 0}
 					<span class="notification-dot"></span>
