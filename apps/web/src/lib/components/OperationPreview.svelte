@@ -78,7 +78,7 @@
 <div class="modal-overlay" on:click={onCancel} on:keydown={(e) => e.key === 'Escape' && onCancel()}>
 	<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation>
 		<div class="modal-header">
-			<h2>Review Operations</h2>
+			<h2>Review AI Suggestions</h2>
 			<button class="close-button" on:click={onCancel}>×</button>
 		</div>
 
@@ -125,8 +125,8 @@
 	}
 
 	.modal-content {
-		background: white;
-		border-radius: 12px;
+		background: var(--bg-secondary);
+		border-radius: var(--radius-lg);
 		max-width: 600px;
 		width: 90%;
 		max-height: 80vh;
@@ -140,7 +140,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 20px 24px;
-		border-bottom: 1px solid #e5e7eb;
+		border-bottom: 1px solid var(--border-color);
 	}
 
 	.modal-header h2 {
@@ -166,7 +166,7 @@
 	}
 
 	.close-button:hover {
-		background: #f3f4f6;
+		background: var(--bg-tertiary);
 	}
 
 	.operations-list {
@@ -179,21 +179,21 @@
 		display: flex;
 		gap: 12px;
 		padding: 12px;
-		border: 2px solid #e5e7eb;
-		border-radius: 8px;
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
 		margin-bottom: 12px;
 		cursor: pointer;
 		transition: all 0.2s;
 	}
 
 	.operation-item:hover {
-		border-color: #3b82f6;
-		background: #f9fafb;
+		border-color: var(--accent-primary);
+		background: var(--bg-tertiary);
 	}
 
 	.operation-item.selected {
-		border-color: #3b82f6;
-		background: #eff6ff;
+		border-color: var(--accent-primary);
+		background: rgba(199, 124, 92, 0.1);
 	}
 
 	.operation-checkbox {
@@ -206,6 +206,7 @@
 		width: 18px;
 		height: 18px;
 		cursor: pointer;
+		accent-color: var(--accent-primary);
 	}
 
 	.operation-icon {
@@ -216,11 +217,11 @@
 	}
 
 	.text-green-600 {
-		color: #16a34a;
+		color: var(--accent-success);
 	}
 
 	.text-blue-600 {
-		color: #2563eb;
+		color: var(--accent-primary);
 	}
 
 	.text-red-600 {
@@ -246,13 +247,13 @@
 		gap: 12px;
 		justify-content: flex-end;
 		padding: 16px 24px;
-		border-top: 1px solid #e5e7eb;
+		border-top: 1px solid var(--border-color);
 	}
 
 	.button-primary,
 	.button-secondary {
 		padding: 10px 20px;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		font-weight: 500;
 		cursor: pointer;
 		transition: all 0.2s;
@@ -261,25 +262,32 @@
 	}
 
 	.button-primary {
-		background: #3b82f6;
+		background: var(--accent-primary);
 		color: white;
 	}
 
 	.button-primary:hover:not(:disabled) {
-		background: #2563eb;
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.button-primary:active:not(:disabled) {
+		transform: translateY(0);
 	}
 
 	.button-primary:disabled {
 		background: #9ca3af;
 		cursor: not-allowed;
+		opacity: 0.6;
 	}
 
 	.button-secondary {
-		background: #f3f4f6;
-		color: #374151;
+		background: transparent;
+		border: 1px solid var(--border-color);
+		color: var(--text-primary);
 	}
 
 	.button-secondary:hover {
-		background: #e5e7eb;
+		background: var(--bg-tertiary);
 	}
 </style>

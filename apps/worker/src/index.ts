@@ -231,11 +231,11 @@ Be conversational and helpful. Use smart defaults when appropriate!`;
         }
 
         if (context?.scope === 'tasks') {
-          systemPrompt += '\n\nYou are the TASKS AI assistant. You ONLY work with tasks and to-dos. If a user asks you to create notes or projects, politely decline and tell them you only handle tasks - they should use the Notes AI or Project chat instead. ONLY create tasks (type: "task"), never notes or projects under any circumstances. You CAN see workspace data (projects, notes) for context, but focus exclusively on actionable to-do items. Remember: task titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the TASKS AI assistant. You ONLY work with tasks and to-dos. If a user asks you to create notes or projects, DO NOT use the propose_operations tool - instead, respond with a conversational message politely declining and explaining that you only handle tasks and they should use the Notes AI or Project chat instead. ONLY create tasks (type: "task"), never notes or projects under any circumstances. You CAN see workspace data (projects, notes) for context, but focus exclusively on actionable to-do items. Remember: task titles must be 50 characters or less.';
         }
 
         if (context?.scope === 'notes') {
-          systemPrompt += '\n\nYou are the NOTES AI assistant. You ONLY work with notes and knowledge capture. If a user asks you to create tasks or projects, politely decline and tell them you only handle notes - they should use the Tasks AI or Project chat instead. ONLY create notes (type: "note"), never tasks or projects under any circumstances. You CAN see workspace data (projects, tasks) for context, but focus exclusively on information capture and detailed content. Remember: note titles must be 50 characters or less.';
+          systemPrompt += '\n\nYou are the NOTES AI assistant. You ONLY work with notes and knowledge capture. If a user asks you to create tasks or projects, DO NOT use the propose_operations tool - instead, respond with a conversational message politely declining and explaining that you only handle notes and they should use the Tasks AI or Project chat instead. ONLY create notes (type: "note"), never tasks or projects under any circumstances. You CAN see workspace data (projects, tasks) for context, but focus exclusively on information capture and detailed content. Remember: note titles must be 50 characters or less.';
         }
 
         if (context?.scope === 'project' && context?.projectId) {

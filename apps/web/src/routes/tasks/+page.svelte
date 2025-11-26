@@ -253,10 +253,34 @@
 		return taskDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 	}
 
-	$: todayTasks = tasks.filter(t => t.status !== 'completed' && isToday(t.due_date));
-	$: thisWeekTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && isThisWeek(t.due_date));
-	$: laterTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && !isThisWeek(t.due_date));
-	$: completedTasks = tasks.filter(t => t.status === 'completed');
+	$: todayTasks = tasks
+		.filter(t => t.status !== 'completed' && isToday(t.due_date))
+		.sort((a, b) => {
+			if (!a.due_date) return 1;
+			if (!b.due_date) return -1;
+			return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+		});
+	$: thisWeekTasks = tasks
+		.filter(t => t.status !== 'completed' && !isToday(t.due_date) && isThisWeek(t.due_date))
+		.sort((a, b) => {
+			if (!a.due_date) return 1;
+			if (!b.due_date) return -1;
+			return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+		});
+	$: laterTasks = tasks
+		.filter(t => t.status !== 'completed' && !isToday(t.due_date) && !isThisWeek(t.due_date))
+		.sort((a, b) => {
+			if (!a.due_date) return 1;
+			if (!b.due_date) return -1;
+			return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+		});
+	$: completedTasks = tasks
+		.filter(t => t.status === 'completed')
+		.sort((a, b) => {
+			if (!a.updated_at) return 1;
+			if (!b.updated_at) return -1;
+			return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+		});
 	$: completedTodayCount = completedTasks.filter(t => {
 		if (!t.updated_at) return false;
 		const completedDate = new Date(t.updated_at);
