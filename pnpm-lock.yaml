@@ -111,6 +111,9 @@ importers:
       vitest:
         specifier: ^4.0.14
         version: 4.0.14(@opentelemetry/api@1.9.0)(@types/node@20.19.25)(@vitest/ui@4.0.14)(happy-dom@20.0.10)
+      wrangler:
+        specifier: ^3.90.0
+        version: 3.114.15(@cloudflare/workers-types@4.20251121.0)
 
   apps/worker:
     dependencies:
