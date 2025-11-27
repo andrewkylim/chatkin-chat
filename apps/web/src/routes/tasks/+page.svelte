@@ -7,7 +7,7 @@
 	import { getProjects } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation } from '@chatkin/types';
+	import type { Conversation, Task, Project } from '@chatkin/types';
 	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { notificationCounts } from '$lib/stores/notifications';
@@ -19,8 +19,8 @@
 		isTyping?: boolean;
 	}
 
-	let tasks: any[] = [];
-	let projects: any[] = [];
+	let tasks: Task[] = [];
+	let projects: Project[] = [];
 	let loading = true;
 	let showNewTaskModal = false;
 	let showFabMenu = false;
@@ -33,11 +33,11 @@
 
 	// Task detail modal state
 	let showTaskDetailModal = false;
-	let selectedTask: any = null;
+	let selectedTask: Task | null = null;
 
 	// Edit modal state
 	let showEditTaskModal = false;
-	let editingTask: any = null;
+	let editingTask: Task | null = null;
 
 	// Chat state
 	let chatMessages: ChatMessage[] = [];
@@ -126,7 +126,7 @@
 			await createTask({
 				title: newTaskTitle,
 				description: newTaskDescription || null,
-				priority: newTaskPriority as any,
+				priority: newTaskPriority as 'low' | 'medium' | 'high',
 				due_date: newTaskDueDate || null,
 				project_id: newTaskProjectId,
 				status: 'todo'
@@ -157,7 +157,7 @@
 		}
 	}
 
-	function openTaskDetail(task: any) {
+	function openTaskDetail(task: Task) {
 		selectedTask = task;
 		showTaskDetailModal = true;
 	}
@@ -181,7 +181,7 @@
 		}
 	}
 
-	async function handleUpdateTask(updatedTask: any) {
+	async function handleUpdateTask(updatedTask: Partial<Task>) {
 		if (!editingTask) return;
 
 		try {
@@ -295,7 +295,7 @@
 		chatInput = '';
 
 		// Build conversation history BEFORE adding new message (last 50 messages)
-		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !(m as any).isTyping);
+		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !m.isTyping);
 		const recentMessages = allMessages.slice(-50);
 
 		const conversationHistory = recentMessages.map(m => ({
