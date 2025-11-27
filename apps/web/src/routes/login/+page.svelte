@@ -33,7 +33,6 @@
 		loading = true;
 		error = '';
 
-	import { handleError } from '$lib/utils/error-handler';
 		logger.debug('Starting Google login');
 
 		const { data, error: signInError } = await supabase.auth.signInWithOAuth({
@@ -43,7 +42,6 @@
 			}
 		});
 
-	import { handleError } from '$lib/utils/error-handler';
 		logger.debug('Google login response', { data, signInError });
 
 		if (signInError) {
