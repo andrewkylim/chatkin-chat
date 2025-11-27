@@ -5,17 +5,24 @@
 	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
 	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
+	import type { Project } from '@chatkin/types';
 
-	let projects: any[] = [];
-	let projectStats: Record<string, any> = {};
+	interface ProjectStats {
+		totalTasks: number;
+		completedTasks: number;
+		activeNotes: number;
+	}
+
+	let projects: Project[] = [];
+	let projectStats: Record<string, ProjectStats> = {};
 	let loading = true;
 	let showNewProjectModal = false;
 	let newProjectName = '';
 	let newProjectDescription = '';
 	let selectedEmoji = '📁';
 	let showAllEmojis = false;
-	let deleteConfirmProject: any = null;
-	let editProject: any = null;
+	let deleteConfirmProject: Project | null = null;
+	let editProject: Project | null = null;
 	let showEditModal = false;
 	let openMenuId: string | null = null;
 
@@ -94,7 +101,7 @@
 		return past.toLocaleDateString();
 	}
 
-	function getProjectEmoji(project: any) {
+	function getProjectEmoji(project: Project) {
 		return project.color || '📁';
 	}
 
@@ -121,7 +128,7 @@
 		}
 	}
 
-	function startEditProject(project: any) {
+	function startEditProject(project: Project) {
 		editProject = project;
 		showEditModal = true;
 	}
