@@ -1,5 +1,5 @@
 import { supabase } from '$lib/supabase';
-import type { Project } from '@chatkin/types';
+import type { Project, Task } from '@chatkin/types';
 
 type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
 type ProjectUpdate = Partial<Omit<Project, 'id' | 'user_id' | 'created_at'>>;
