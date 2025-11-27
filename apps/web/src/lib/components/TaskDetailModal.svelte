@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { Task, Project } from '@chatkin/types';
+
 	export let show = false;
-	export let task: any = null;
-	export let projects: any[] = [];
+	export let task: Task | null = null;
+	export let projects: Project[] = [];
 	export let onClose: () => void;
 	export let onEdit: () => void;
 	export let onDelete: () => void;

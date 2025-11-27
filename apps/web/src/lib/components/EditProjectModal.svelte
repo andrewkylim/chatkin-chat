@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { updateProject } from '$lib/db/projects';
+	import type { Project } from '@chatkin/types';
 
 	export let show = false;
-	export let project: any = null;
+	export let project: Project | null = null;
 	export let onClose: () => void;
 	export let onUpdate: () => void;
 

@@ -1,9 +1,11 @@
 <script lang="ts">
+	import type { Task, Project } from '@chatkin/types';
+
 	export let show = false;
-	export let task: any = null;
-	export let projects: any[] = [];
+	export let task: Task | null = null;
+	export let projects: Project[] = [];
 	export let onClose: () => void;
-	export let onSave: (updatedTask: any) => void;
+	export let onSave: (updatedTask: Partial<Task>) => void;
 	export let onDelete: () => void;
 
 	let editTaskTitle = '';
