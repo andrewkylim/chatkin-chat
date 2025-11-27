@@ -9,7 +9,7 @@
 	let error = '';
 	let loading = false;
 
-	logger.debug('Signup page script loaded', { supabase });
+	logger.debug('Signup page script loaded');
 
 	async function handleEmailSignup(e: Event) {
 		e.preventDefault();

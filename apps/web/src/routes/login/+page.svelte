@@ -8,7 +8,7 @@
 	let error = '';
 	let loading = false;
 
-	logger.debug('Login page script loaded', { supabase });
+	logger.debug('Login page script loaded');
 
 	async function handleEmailLogin(e: Event) {
 		e.preventDefault();
