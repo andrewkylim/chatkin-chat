@@ -59,9 +59,9 @@
 </script>
 
 {#if show}
-	<div class="modal-overlay" role="button" tabindex="0" on:click={handleClose} on:keydown={(e) => e.key === 'Escape' && handleClose()}>
-		<div class="modal" role="dialog" tabindex="-1" on:click|stopPropagation on:keydown|stopPropagation>
-			<h2>Edit Project</h2>
+	<div class="modal-overlay" on:click={handleClose} on:keydown={(e) => e.key === 'Escape' && handleClose()}>
+		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" on:click|stopPropagation on:keydown|stopPropagation>
+			<h2 id="modal-title">Edit Project</h2>
 			<form on:submit|preventDefault={handleUpdateProject}>
 				<div class="form-group">
 					<label>Project Icon</label>
@@ -73,6 +73,8 @@
 									class="emoji-btn"
 									class:selected={editSelectedEmoji === emoji}
 									on:click={() => editSelectedEmoji = emoji}
+									aria-label="Select {emoji} icon"
+									aria-pressed={editSelectedEmoji === emoji}
 								>
 									{emoji}
 								</button>
@@ -82,14 +84,15 @@
 								class="emoji-more-btn"
 								class:active={editShowAllEmojis}
 								on:click={() => editShowAllEmojis = !editShowAllEmojis}
-								title={editShowAllEmojis ? "Show less" : "More emojis"}
+								aria-label={editShowAllEmojis ? "Show less emojis" : "Show more emojis"}
+								aria-expanded={editShowAllEmojis}
 							>
 								{#if editShowAllEmojis}
-									<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+									<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 										<path d="M5 15l5-5 5 5"/>
 									</svg>
 								{:else}
-									<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+									<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
 										<circle cx="4" cy="10" r="1.5"/>
 										<circle cx="10" cy="10" r="1.5"/>
 										<circle cx="16" cy="10" r="1.5"/>

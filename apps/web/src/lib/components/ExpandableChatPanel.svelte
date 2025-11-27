@@ -99,13 +99,13 @@
 
 	<!-- Input Bar (always visible) -->
 	<form class="input-bar" on:submit|preventDefault={handleSubmit}>
-		<button type="button" class="expand-btn" on:click={toggleExpand} title={isExpanded ? 'Minimize chat' : 'Expand chat'}>
+		<button type="button" class="expand-btn" on:click={toggleExpand} aria-label={isExpanded ? 'Minimize chat' : 'Expand chat'}>
 			{#if isExpanded}
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 					<path d="M5 8l5 5 5-5"/>
 				</svg>
 			{:else}
-				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 					<path d="M5 12l5-5 5 5"/>
 				</svg>
 			{/if}
@@ -117,6 +117,7 @@
 			placeholder={placeholder}
 			class="message-input"
 			disabled={isStreaming}
+			aria-label="Message input"
 			on:focus={() => {
 				if (!isExpanded) {
 					isExpanded = true;
@@ -127,8 +128,8 @@
 			}}
 		/>
 
-		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
-			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()} aria-label="Send message">
+			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M5 15L15 5"/>
 				<path d="M9 5h6v6"/>
 			</svg>

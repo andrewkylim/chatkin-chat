@@ -105,9 +105,9 @@
 		class="upload-btn"
 		on:click={triggerFileSelect}
 		disabled={uploading}
-		title="Upload file"
+		aria-label="Upload file"
 	>
-		<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+		<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 			<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
 			<path d="M7 7l3-3 3 3"/>
 			<path d="M10 4v10"/>
