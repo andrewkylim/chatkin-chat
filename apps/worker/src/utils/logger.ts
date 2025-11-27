@@ -18,10 +18,12 @@ class Logger {
   debug(message: string, context?: LogContext): void {
     // Debug logs only in development
     // In production, these are suppressed to reduce noise
+    // eslint-disable-next-line no-console
     console.log(this.formatMessage('debug', message, context));
   }
 
   info(message: string, context?: LogContext): void {
+    // eslint-disable-next-line no-console
     console.log(this.formatMessage('info', message, context));
   }
 
