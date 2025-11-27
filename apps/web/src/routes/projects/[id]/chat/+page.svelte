@@ -17,6 +17,7 @@
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
+	import { logger } from '$lib/utils/logger';
 
 	interface AIQuestion {
 		question: string;
@@ -831,7 +832,7 @@
 					accept="image/*,application/pdf,.doc,.docx,.txt"
 					maxSizeMB={10}
 					onUploadComplete={(file) => {
-						console.log('File uploaded:', file);
+						logger.debug('File uploaded', { file });
 					}}
 				/>
 				<input

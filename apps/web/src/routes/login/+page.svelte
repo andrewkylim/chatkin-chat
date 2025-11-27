@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
+	import { logger } from '$lib/utils/logger';
 
 	let email = '';
 	let password = '';
 	let error = '';
 	let loading = false;
 
-	console.log('Login page script loaded', { supabase });
+	logger.debug('Login page script loaded', { supabase });
 
 	async function handleEmailLogin(e: Event) {
 		e.preventDefault();
@@ -31,7 +32,7 @@
 		loading = true;
 		error = '';
 
-		console.log('Starting Google login...');
+		logger.debug('Starting Google login');
 
 		const { data, error: signInError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
@@ -40,7 +41,7 @@
 			}
 		});
 
-		console.log('Google login response:', { data, signInError });
+		logger.debug('Google login response', { data, signInError });
 
 		if (signInError) {
 			error = signInError.message;

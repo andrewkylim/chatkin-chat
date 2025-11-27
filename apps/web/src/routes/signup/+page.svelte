@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
+	import { logger } from '$lib/utils/logger';
 
 	let name = '';
 	let email = '';
@@ -8,7 +9,7 @@
 	let error = '';
 	let loading = false;
 
-	console.log('Signup page script loaded', { supabase });
+	logger.debug('Signup page script loaded', { supabase });
 
 	async function handleEmailSignup(e: Event) {
 		e.preventDefault();
@@ -37,7 +38,7 @@
 		loading = true;
 		error = '';
 
-		console.log('Starting Google signup...');
+		logger.debug('Starting Google signup');
 
 		const { data, error: signInError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
@@ -46,7 +47,7 @@
 			}
 		});
 
-		console.log('Google signup response:', { data, signInError });
+		logger.debug('Google signup response', { data, signInError });
 
 		if (signInError) {
 			error = signInError.message;
