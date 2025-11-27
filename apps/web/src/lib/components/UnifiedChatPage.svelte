@@ -19,6 +19,10 @@
 	export let pageTitle: string = 'Chat';
 	export let welcomeMessage: string = "Hi! I'm your AI assistant. What would you like to do?";
 
+	// Optional callbacks for parent components
+	export let onOperationsComplete: ((operations: Operation[]) => Promise<void>) | undefined = undefined;
+	export let onDataChange: (() => Promise<void>) | undefined = undefined;
+
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
@@ -449,6 +453,24 @@
 			workspaceContextString = formatWorkspaceContextForAI(context);
 		} catch (error) {
 			logger.error('Error reloading workspace context', error);
+		}
+
+		// Trigger parent callbacks after operations complete
+		if (successCount > 0) {
+			try {
+				// Call operation-specific callback
+				if (onOperationsComplete) {
+					await onOperationsComplete(operations);
+				}
+
+				// Call general data refresh callback
+				if (onDataChange) {
+					await onDataChange();
+				}
+			} catch (callbackError) {
+				logger.error('Parent callback failed', callbackError);
+				// Don't fail the entire operation if parent callback fails
+			}
 		}
 
 		// Update status message with results
