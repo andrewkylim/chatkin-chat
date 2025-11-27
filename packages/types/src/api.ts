@@ -31,11 +31,11 @@ export interface ChatResponse {
 export interface GenerateRequest {
   type: 'project' | 'tasks' | 'notes';
   prompt: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export interface GenerateResponse {
-  structured: Record<string, any>;
+  structured: Record<string, unknown>;
   explanation: string;
 }
 
@@ -57,5 +57,5 @@ export interface UploadResponse {
 export interface ErrorResponse {
   error: string;
   message?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }

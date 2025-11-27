@@ -40,7 +40,7 @@ export interface NoteBlock {
   id: string;
   note_id: string;
   type: 'text' | 'table' | 'file' | 'code';
-  content: Record<string, any>; // JSONB
+  content: Record<string, unknown>; // JSONB
   position: number;
   created_at: string;
 }
@@ -63,7 +63,7 @@ export interface Message {
   conversation_id: string;
   role: 'user' | 'assistant';
   content: string;
-  metadata: Record<string, any> | null; // JSONB - tool calls, structured outputs
+  metadata: Record<string, unknown> | null; // JSONB - tool calls, structured outputs
   created_at: string;
 }
 
