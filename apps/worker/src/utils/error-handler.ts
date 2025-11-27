@@ -4,6 +4,7 @@
 
 import { logger } from './logger';
 import type { CorsHeaders } from '../types';
+import { captureException } from './sentry';
 
 export class WorkerError extends Error {
   constructor(
@@ -24,6 +25,11 @@ export function handleError(
   logger.error(context, error);
 
   if (error instanceof WorkerError) {
+    // Report 5xx errors to Sentry
+    if (error.statusCode >= 500) {
+      captureException(error, { context, statusCode: error.statusCode });
+    }
+
     return new Response(
       JSON.stringify({
         error: error.message,
@@ -38,6 +44,9 @@ export function handleError(
       }
     );
   }
+
+  // Report all unknown errors to Sentry
+  captureException(error, { context });
 
   // Generic error response
   return new Response(

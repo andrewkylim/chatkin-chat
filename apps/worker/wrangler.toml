@@ -22,3 +22,4 @@ preview_bucket_name = "chatkin-files-dev"
 # ANTHROPIC_API_KEY
 # SUPABASE_URL
 # SUPABASE_ANON_KEY
+# SENTRY_DSN (optional)

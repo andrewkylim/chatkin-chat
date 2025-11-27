@@ -10,6 +10,7 @@ export interface Env {
   SUPABASE_ANON_KEY: string;
   CHATKIN_BUCKET: R2Bucket; // R2Bucket type from Cloudflare Workers
   ALLOWED_ORIGINS?: string; // Comma-separated list of allowed origins
+  SENTRY_DSN?: string; // Sentry error tracking DSN
 }
 
 export interface CorsHeaders {
