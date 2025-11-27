@@ -5,7 +5,7 @@
 	import { getProjects } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation } from '@chatkin/types';
+	import type { Conversation, Note, Project, NoteBlock } from '@chatkin/types';
 	import { onMount, tick } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -17,9 +17,13 @@
 		isTyping?: boolean;
 	}
 
-	let notes: any[] = [];
-	let projects: any[] = [];
-	let projectsMap: Record<string, any> = {};
+	interface NoteWithBlocks extends Note {
+		note_blocks: NoteBlock[];
+	}
+
+	let notes: NoteWithBlocks[] = [];
+	let projects: Project[] = [];
+	let projectsMap: Record<string, Project> = {};
 	let loading = true;
 	let showNewNoteModal = false;
 	let showFabMenu = false;
@@ -100,7 +104,7 @@
 			projectsMap = projects.reduce((acc, p) => {
 				acc[p.id] = p;
 				return acc;
-			}, {} as Record<string, any>);
+			}, {} as Record<string, Project>);
 		} catch (error) {
 			console.error('Error loading data:', error);
 		} finally {
@@ -156,18 +160,18 @@
 		}
 	}
 
-	function getContentPreview(note: any): string {
+	function getContentPreview(note: NoteWithBlocks): string {
 		if (!note.note_blocks || note.note_blocks.length === 0) return 'No content yet...';
 
 		// Get first text block
-		const firstTextBlock = note.note_blocks.find((block: any) => block.type === 'text');
+		const firstTextBlock = note.note_blocks.find((block: NoteBlock) => block.type === 'text');
 		if (!firstTextBlock || !firstTextBlock.content?.text) return 'No content yet...';
 
 		const text = firstTextBlock.content.text;
 		return text.length > 200 ? text.substring(0, 200) + '...' : text;
 	}
 
-	function getWordCount(note: any): number {
+	function getWordCount(note: NoteWithBlocks): number {
 		if (!note.note_blocks || note.note_blocks.length === 0) return 0;
 
 		// Combine all text blocks
@@ -195,10 +199,10 @@
 		}
 	}
 
-	function startEditNote(note: any) {
+	function startEditNote(note: NoteWithBlocks) {
 		editNoteId = note.id;
 		editNoteTitle = note.title;
-		const firstTextBlock = note.note_blocks?.find((b: any) => b.type === 'text');
+		const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
 		editNoteContent = firstTextBlock?.content?.text || '';
 		editBlockId = firstTextBlock?.id || '';
 	}
@@ -237,7 +241,7 @@
 		chatInput = '';
 
 		// Build conversation history BEFORE adding new message (last 50 messages)
-		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !(m as any).isTyping);
+		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !m.isTyping);
 		const recentMessages = allMessages.slice(-50);
 
 		const conversationHistory = recentMessages.map(m => ({
