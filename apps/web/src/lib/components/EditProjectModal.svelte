@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { updateProject } from '$lib/db/projects';
+	import { handleError } from '$lib/utils/error-handler';
 	import type { Project } from '@chatkin/types';
 
 	export let show = false;
@@ -44,7 +45,7 @@
 			onUpdate();
 			onClose();
 		} catch (error) {
-			console.error('Error updating project:', error);
+			handleError(error, { operation: 'Update project', component: 'EditProjectModal' });
 			alert('Failed to update project');
 		}
 	}

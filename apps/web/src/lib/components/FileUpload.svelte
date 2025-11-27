@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createFile } from '$lib/db/files';
+	import { handleError } from '$lib/utils/error-handler';
 
 	interface UploadedFile {
 		name: string;
@@ -79,7 +80,7 @@
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Upload failed';
-			console.error('Upload error:', err);
+			handleError(err, { operation: 'File upload', component: 'FileUpload' });
 		} finally {
 			uploading = false;
 		}

@@ -18,6 +18,7 @@
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation, Project, Task, Note } from '@chatkin/types';
 	import { logger } from '$lib/utils/logger';
+	import { handleError } from '$lib/utils/error-handler';
 
 	interface AIQuestion {
 		question: string;
@@ -113,7 +114,7 @@
 				await scrollToBottom();
 			messagesReady = true;
 		} catch (convError) {
-			console.error('Error loading conversation:', convError);
+			handleError(convError, { operation: 'Load conversation', component: 'ProjectChatPage' });
 				// Show welcome message as fallback
 			messages = [
 				{
@@ -166,7 +167,7 @@
 				getProjects()
 			]);
 		} catch (error) {
-			console.error('Error loading data:', error);
+			handleError(error, { operation: 'Load project data', component: 'ProjectChatPage' });
 		} finally {
 			loading = false;
 		}
@@ -187,7 +188,7 @@
 			await deleteProject(projectId);
 			goto('/projects');
 		} catch (error) {
-			console.error('Error deleting project:', error);
+			handleError(error, { operation: 'Delete project', component: 'ProjectChatPage' });
 			alert('Failed to delete project');
 		}
 	}
@@ -213,7 +214,7 @@
 			await toggleTaskComplete(taskId, completed);
 			await loadData();
 		} catch (error) {
-			console.error('Error toggling task:', error);
+			handleError(error, { operation: 'Toggle task', component: 'ProjectChatPage' });
 		}
 	}
 
@@ -278,7 +279,7 @@
 			showEditTaskModal = false;
 			await loadData();
 		} catch (error) {
-			console.error('Error updating task:', error);
+			handleError(error, { operation: 'Update task', component: 'ProjectChatPage' });
 			alert('Failed to update task');
 		}
 	}
@@ -291,7 +292,7 @@
 			showTaskDetailModal = false;
 			await loadData();
 		} catch (error) {
-			console.error('Error deleting task:', error);
+			handleError(error, { operation: 'Delete task', component: 'ProjectChatPage' });
 			alert('Failed to delete task');
 		}
 	}
@@ -304,7 +305,7 @@
 			showEditTaskModal = false;
 			await loadData();
 		} catch (error) {
-			console.error('Error deleting task:', error);
+			handleError(error, { operation: 'Delete task', component: 'ProjectChatPage' });
 			alert('Failed to delete task');
 		}
 	}
@@ -488,7 +489,7 @@
 							}
 						}
 					} catch (error) {
-						console.error(`Error processing ${action.operation} ${action.type}:`, error);
+						handleError(error, { operation: `Process ${action.operation} ${action.type}`, component: "ProjectChatPage" });
 					}
 				}
 

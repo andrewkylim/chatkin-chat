@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { handleError } from '$lib/utils/error-handler';
 	import { marked } from 'marked';
 	import type { Note, NoteBlock } from '@chatkin/types';
 
@@ -35,7 +36,7 @@
 				note = await getNote(noteId);
 			}
 		} catch (error) {
-			console.error('Error loading note:', error);
+			handleError(error, { operation: 'Load note', component: 'NoteDetailPage' });
 		} finally {
 			loading = false;
 		}
@@ -79,7 +80,7 @@
 			isEditing = false;
 			await loadNote();
 		} catch (error) {
-			console.error('Error updating note:', error);
+			handleError(error, { operation: 'Update note', component: 'NoteDetailPage' });
 			alert('Failed to update note');
 		}
 	}

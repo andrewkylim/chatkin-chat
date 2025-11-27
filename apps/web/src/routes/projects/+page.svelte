@@ -57,7 +57,7 @@
 				projectStats[project.id] = await getProjectStats(project.id);
 			}
 		} catch (error) {
-			console.error('Error loading projects:', error);
+			handleError(error, { operation: 'Load projects', component: 'ProjectsPage' });
 		} finally {
 			loading = false;
 		}
@@ -83,7 +83,7 @@
 			// Reload projects
 			await loadProjects();
 		} catch (error) {
-			console.error('Error creating project:', error);
+			handleError(error, { operation: 'Create project', component: 'ProjectsPage' });
 		}
 	}
 
@@ -123,7 +123,7 @@
 			deleteConfirmProject = null;
 			await loadProjects();
 		} catch (error) {
-			console.error('Error deleting project:', error);
+			handleError(error, { operation: 'Delete project', component: 'ProjectsPage' });
 			alert('Failed to delete project');
 		}
 	}

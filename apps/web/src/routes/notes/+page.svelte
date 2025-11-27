@@ -81,7 +81,7 @@
 				await scrollChatToBottom();
 			messagesReady = true;
 		} catch (error) {
-			console.error('Error loading conversation:', error);
+			handleError(error, { operation: 'Load conversation', component: 'NotesPage' });
 				// Show welcome message as fallback
 			chatMessages = [{
 				role: 'ai',
@@ -128,7 +128,7 @@
 			showNewNoteModal = false;
 			await loadData();
 		} catch (error) {
-			console.error('Error creating note:', error);
+			handleError(error, { operation: 'Create note', component: 'NotesPage' });
 		}
 	}
 
@@ -194,7 +194,7 @@
 			deleteNoteId = null;
 			await loadData();
 		} catch (error) {
-			console.error('Error deleting note:', error);
+			handleError(error, { operation: 'Delete note', component: 'NotesPage' });
 			alert('Failed to delete note');
 		}
 	}
@@ -253,7 +253,7 @@
 		try {
 			await addMessage(conversation.id, 'user', userMessage);
 		} catch (error) {
-			console.error('Error saving user message:', error);
+			handleError(error, { operation: 'Save user message', component: 'NotesPage' });
 		}
 
 		// Add user message
@@ -339,7 +339,7 @@
 							}
 						}
 					} catch (error) {
-						console.error(`Error processing ${action.operation} note:`, error);
+						handleError(error, { operation: `Process ${action.operation} note`, component: "NotesPage" });
 					}
 				}
 
@@ -357,7 +357,7 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', confirmMessage);
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					handleError(error, { operation: 'Save AI message', component: 'NotesPage' });
 				}
 
 				chatMessages[aiMessageIndex] = {
@@ -371,7 +371,7 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', data.message);
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					handleError(error, { operation: 'Save AI message', component: 'NotesPage' });
 				}
 
 				// Conversational response
@@ -383,7 +383,7 @@
 				chatMessages = chatMessages;
 			}
 		} catch (error) {
-			console.error('Error sending message:', error);
+			handleError(error, { operation: 'Send message', component: 'NotesPage' });
 			chatMessages[aiMessageIndex] = {
 				role: 'ai',
 				content: 'Sorry, I encountered an error processing your request. Please try again.',

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { supabase } from '$lib/supabase';
+	import { handleError } from '$lib/utils/error-handler';
 	import { goto } from '$app/navigation';
 	import { logger } from '$lib/utils/logger';
 

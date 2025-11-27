@@ -1,3 +1,5 @@
+import { logger } from '$lib/utils/logger';
+import { handleError } from '$lib/utils/error-handler';
 import { supabase } from '$lib/supabase';
 import type { Note } from '@chatkin/types';
 
@@ -75,7 +77,7 @@ export async function createNote(note: Omit<NoteInsert, 'user_id'> & { content?:
 			});
 
 		if (blockError) {
-			console.error('Error creating note block:', blockError);
+			handleError(blockError, { operation: 'Create note block', component: 'notes-db' });
 			// Don't throw - note was created successfully
 		}
 	}

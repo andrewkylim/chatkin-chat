@@ -12,6 +12,8 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { goto } from '$app/navigation';
+	import { logger } from '$lib/utils/logger';
+	import { handleError } from '$lib/utils/error-handler';
 
 	interface ChatMessage {
 		role: 'user' | 'ai';
@@ -63,7 +65,7 @@
 		try {
 			await deleteOldCompletedTasks();
 		} catch (error) {
-			console.error('Error deleting old completed tasks:', error);
+			handleError(error, { operation: 'Delete old completed tasks', component: 'TasksPage' });
 		}
 
 		await loadData();
@@ -97,7 +99,7 @@
 				await scrollChatToBottom();
 			messagesReady = true;
 		} catch (error) {
-			console.error('Error loading conversation:', error);
+			handleError(error, { operation: 'Load conversation', component: 'TasksPage' });
 				// Show welcome message as fallback
 			chatMessages = [{
 				role: 'ai',
@@ -113,7 +115,7 @@
 		try {
 			[tasks, projects] = await Promise.all([getTasks(), getProjects()]);
 		} catch (error) {
-			console.error('Error loading tasks:', error);
+			handleError(error, { operation: 'Load tasks and projects', component: 'TasksPage' });
 		} finally {
 			loading = false;
 		}
@@ -143,7 +145,7 @@
 			// Reload tasks
 			await loadData();
 		} catch (error) {
-			console.error('Error creating task:', error);
+			handleError(error, { operation: 'Create task', component: 'TasksPage' });
 		}
 	}
 
@@ -153,7 +155,7 @@
 			await toggleTaskComplete(taskId, completed);
 			await loadData();
 		} catch (error) {
-			console.error('Error toggling task:', error);
+			handleError(error, { operation: 'Toggle task completion', component: 'TasksPage' });
 		}
 	}
 
@@ -177,7 +179,7 @@
 			selectedTask = null;
 			await loadData();
 		} catch (error) {
-			console.error('Error deleting task:', error);
+			handleError(error, { operation: 'Delete task', component: 'TasksPage' });
 		}
 	}
 
@@ -189,7 +191,7 @@
 			showEditTaskModal = false;
 			await loadData();
 		} catch (error) {
-			console.error('Error updating task:', error);
+			handleError(error, { operation: 'Update task', component: 'TasksPage' });
 			alert('Failed to update task');
 		}
 	}
@@ -203,7 +205,7 @@
 			editingTask = null;
 			await loadData();
 		} catch (error) {
-			console.error('Error deleting task:', error);
+			handleError(error, { operation: 'Delete task', component: 'TasksPage' });
 		}
 	}
 
@@ -307,7 +309,7 @@
 		try {
 			await addMessage(conversation.id, 'user', userMessage);
 		} catch (error) {
-			console.error('Error saving user message:', error);
+			handleError(error, { operation: 'Save user message', component: 'TasksPage' });
 		}
 
 		// Add user message
@@ -392,7 +394,7 @@
 							}
 						}
 					} catch (error) {
-						console.error(`Error processing ${action.operation} task:`, error);
+						handleError(error, { operation: `Process ${action.operation} task`, component: "TasksPage", metadata: { action } });
 					}
 				}
 
@@ -410,7 +412,7 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', confirmMessage);
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					handleError(error, { operation: 'Save AI message', component: 'TasksPage' });
 				}
 
 				chatMessages[aiMessageIndex] = {
@@ -424,7 +426,7 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', data.message);
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					handleError(error, { operation: 'Save AI message', component: 'TasksPage' });
 				}
 
 				// Conversational response
@@ -436,7 +438,7 @@
 				chatMessages = chatMessages;
 			}
 		} catch (error) {
-			console.error('Error sending message:', error);
+			handleError(error, { operation: 'Send message to AI', component: 'TasksPage' });
 			chatMessages[aiMessageIndex] = {
 				role: 'ai',
 				content: 'Sorry, I encountered an error processing your request. Please try again.',

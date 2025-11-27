@@ -8,6 +8,7 @@
 	let error = '';
 	let loading = false;
 
+	import { handleError } from '$lib/utils/error-handler';
 	logger.debug('Login page script loaded');
 
 	async function handleEmailLogin(e: Event) {
@@ -32,6 +33,7 @@
 		loading = true;
 		error = '';
 
+	import { handleError } from '$lib/utils/error-handler';
 		logger.debug('Starting Google login');
 
 		const { data, error: signInError } = await supabase.auth.signInWithOAuth({
@@ -41,12 +43,13 @@
 			}
 		});
 
+	import { handleError } from '$lib/utils/error-handler';
 		logger.debug('Google login response', { data, signInError });
 
 		if (signInError) {
 			error = signInError.message;
 			loading = false;
-			console.error('Google login error:', signInError);
+			handleError(signInError, { operation: 'Google login', component: 'LoginPage' });
 		}
 	}
 </script>
