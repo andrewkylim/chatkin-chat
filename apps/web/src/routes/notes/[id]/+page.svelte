@@ -5,10 +5,15 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { marked } from 'marked';
+	import type { Note, NoteBlock } from '@chatkin/types';
 
 	$: noteId = $page.params.id;
 
-	let note: any = null;
+	interface NoteWithBlocks extends Note {
+		note_blocks: NoteBlock[];
+	}
+
+	let note: NoteWithBlocks | null = null;
 	let loading = true;
 	let showDeleteConfirm = false;
 	let isEditing = false;
@@ -53,7 +58,7 @@
 	function startEdit() {
 		editTitle = note.title;
 		// Get the first text block's content
-		const firstTextBlock = note.note_blocks?.find((b: any) => b.type === 'text');
+		const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
 		editContent = firstTextBlock?.content?.text || '';
 		editBlockId = firstTextBlock?.id || '';
 		isEditing = true;
@@ -114,9 +119,10 @@
 
 		<div class="note-content">
 			{#if note.note_blocks && note.note_blocks.length > 0}
-				{#each note.note_blocks.sort((a: any, b: any) => a.position - b.position) as block (block.id)}
+				{#each note.note_blocks.sort((a: NoteBlock, b: NoteBlock) => a.position - b.position) as block (block.id)}
 					{#if block.type === 'text'}
 						<div class="text-block markdown-content">
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							{@html renderMarkdown(block.content.text || '')}
 						</div>
 					{:else if block.type === 'code'}
