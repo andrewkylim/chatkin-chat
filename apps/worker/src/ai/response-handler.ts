@@ -8,23 +8,23 @@ export interface AIResponse {
   type: 'message' | 'actions' | 'questions';
   message?: string;
   summary?: string;
-  actions?: any[];
-  questions?: any[];
+  actions?: Array<Record<string, unknown>>;
+  questions?: Array<Record<string, unknown>>;
 }
 
 export function parseAIResponse(response: Message): AIResponse {
   // Check if AI wants to use a tool
   if (response.stop_reason === 'tool_use') {
-    const toolUseBlock = response.content.find((block: any) => block.type === 'tool_use');
+    const toolUseBlock = response.content.find((block: Record<string, unknown>) => block.type === 'tool_use');
 
     if (toolUseBlock) {
       // Get any text response that came before the tool use
-      const textBlock = response.content.find((block: any) => block.type === 'text');
+      const textBlock = response.content.find((block: Record<string, unknown>) => block.type === 'text');
       const textMessage = textBlock && textBlock.type === 'text' ? textBlock.text : '';
 
       if (toolUseBlock.type === 'tool_use' && toolUseBlock.name === 'propose_operations') {
         // AI wants to propose operations
-        const input = toolUseBlock.input as any;
+        const input = toolUseBlock.input as Record<string, unknown>;
         return {
           type: 'actions',
           message: textMessage,
@@ -35,7 +35,7 @@ export function parseAIResponse(response: Message): AIResponse {
 
       if (toolUseBlock.type === 'tool_use' && toolUseBlock.name === 'ask_questions') {
         // AI wants to ask questions
-        const input = toolUseBlock.input as any;
+        const input = toolUseBlock.input as Record<string, unknown>;
         return {
           type: 'questions',
           message: textMessage,
