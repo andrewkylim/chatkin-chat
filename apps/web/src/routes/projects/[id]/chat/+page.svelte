@@ -360,7 +360,7 @@
 		inputMessage = '';
 
 		// Build conversation history BEFORE adding new message (last 50 messages)
-		const allMessages = messages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !(m as any).isTyping);
+		const allMessages = messages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !m.isTyping);
 		const recentMessages = allMessages.slice(-50);
 
 		const conversationHistory = recentMessages.map(m => ({
