@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import MobileUserMenu from './MobileUserMenu.svelte';
+	import { logger } from '$lib/utils/logger';
 
 	interface AIQuestion {
 		question: string;
@@ -12,7 +13,7 @@
 	interface Operation {
 		operation: 'create' | 'update' | 'delete';
 		type: 'task' | 'note' | 'project';
-		data: any;
+		data: Record<string, unknown>;
 		reason?: string;
 	}
 
@@ -23,9 +24,9 @@
 		questions?: AIQuestion[];
 		operations?: Operation[];
 		awaitingResponse?: boolean;
-		userResponse?: any;
+		userResponse?: Record<string, string>;
 		selectedOperations?: Operation[];
-		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: unknown }>;
 		awaitingConfirmation?: boolean;
 		files?: Array<{ name: string; url: string; type: string }>;
 	}
@@ -170,7 +171,7 @@
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={() => {
-										console.log('Mobile Submit clicked!');
+										logger.debug('Mobile Submit clicked');
 										if (!onQuestionSubmit) return;
 										const answers = {};
 										message.questions.forEach((q, qIdx) => {
@@ -185,7 +186,7 @@
 												}
 											}
 										});
-										console.log('Mobile answers:', answers);
+										logger.debug('Mobile answers submitted', { answers });
 										if (Object.keys(answers).length === 0) {
 											alert('Please select an answer for each question');
 											return;
@@ -193,7 +194,7 @@
 										onQuestionSubmit(index, answers);
 									}}>Submit</button>
 									<button class="cancel-btn" type="button" onclick={() => {
-										console.log('Mobile Cancel clicked!');
+										logger.debug('Mobile Cancel clicked');
 										if (onQuestionCancel) onQuestionCancel(index);
 									}}>Cancel</button>
 								</div>
@@ -202,7 +203,7 @@
 							{#if message.operations && message.awaitingResponse}
 								<!-- Inline Operations Preview -->
 								<div class="inline-operations">
-									{#each message.operations as operation, opIndex}
+									{#each message.operations as operation, _opIndex}
 										<div class="operation-item {operation.operation}">
 											<input
 												type="checkbox"
@@ -239,13 +240,13 @@
 								<!-- Confirmation Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={() => {
-										console.log('Mobile Operation Confirm clicked!');
+										logger.debug('Mobile Operation Confirm clicked');
 										if (onOperationConfirm) onOperationConfirm(index);
 									}}>
 										Confirm
 									</button>
 									<button class="cancel-btn" type="button" onclick={() => {
-										console.log('Mobile Operation Cancel clicked!');
+										logger.debug('Mobile Operation Cancel clicked');
 										if (onOperationCancel) onOperationCancel(index);
 									}}>
 										Cancel
