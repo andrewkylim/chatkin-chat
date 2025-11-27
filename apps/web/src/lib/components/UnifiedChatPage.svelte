@@ -66,6 +66,7 @@
 	let showCreateMenu = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
+	let isLoadingConversation = true;
 	let messagesReady = false;
 
 	async function scrollToBottom() {
