@@ -806,7 +806,7 @@
 				{/each}
 			</div>
 
-			<form class="input-container" on:submit|preventDefault={() => sendMessage()}>
+			<form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
 				<FileUpload
 					accept="image/*,application/pdf,.doc,.docx,.txt"
 					maxSizeMB={10}
@@ -1066,7 +1066,7 @@
 	<!-- Delete Confirmation Modal -->
 	{#if showDeleteConfirm}
 		<div class="modal-overlay" onclick={() => showDeleteConfirm = false}>
-			<div class="modal" on:click|stopPropagation>
+			<div class="modal" onclick={(e) => e.stopPropagation()}>
 				<h2>Delete Project?</h2>
 				<p>Are you sure you want to delete "{project?.name || 'this project'}"? This will also delete all tasks and notes in this project. This action cannot be undone.</p>
 				<div class="modal-actions">
