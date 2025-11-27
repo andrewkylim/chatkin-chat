@@ -28,6 +28,6 @@ export function getCorsHeaders(request: Request, env: Env): CorsHeaders {
 export function handlePreflight(corsHeaders: CorsHeaders): Response {
   // Preflight requests are handled by returning early with CORS headers
   return new Response(null, {
-    headers: corsHeaders as unknown as HeadersInit
+    headers: corsHeaders as unknown as Record<string, string>
   });
 }

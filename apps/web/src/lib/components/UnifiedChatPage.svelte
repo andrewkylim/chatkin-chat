@@ -1,7 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -10,7 +9,7 @@
 	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation, Message as DBMessage } from '@chatkin/types';
+	import type { Conversation } from '@chatkin/types';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { logger } from '$lib/utils/logger';
 
@@ -24,13 +23,13 @@
 		role: 'user' | 'ai';
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
-		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		proposedActions?: AIAction[];
 		awaitingConfirmation?: boolean;
 		isTyping?: boolean;
 		questions?: AIQuestion[];
 		operations?: Operation[];
 		awaitingResponse?: boolean;
-		userResponse?: any;
+		userResponse?: Record<string, string>;
 		selectedOperations?: Operation[];
 	}
 
@@ -49,19 +48,14 @@
 		operation: 'create' | 'update' | 'delete';
 		type: 'task' | 'note' | 'project';
 		id?: string;
-		data?: any;
-		changes?: any;
+		data?: Record<string, unknown>;
+		changes?: Record<string, unknown>;
 		reason?: string;
 	}
 
 	interface AIQuestion {
 		question: string;
 		options: string[];
-	}
-
-	interface AIResponse {
-		message: string;
-		actions?: AIAction[];
 	}
 
 	let messages: Message[] = [];
@@ -72,7 +66,6 @@
 	let showCreateMenu = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
-	let isLoadingConversation = true;
 	let messagesReady = false;
 
 	async function scrollToBottom() {
@@ -183,7 +176,7 @@
 					try {
 						await addMessage(conversation!.id, 'assistant', previewMessage, { operations });
 					} catch (error) {
-						console.error('Error saving AI message:', error);
+						logger.error('Error saving AI message', error);
 					}
 
 					// Show operations inline
@@ -199,7 +192,7 @@
 					scrollToBottom();
 				} else {
 					// Old actions format (backward compatibility)
-					console.log('Using old actions format, data.actions:', data.actions);
+					logger.debug('Using old actions format', { actions: data.actions });
 					// Count proposed items
 					const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
 					const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
@@ -212,14 +205,14 @@
 					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 
 					const previewMessage = `I'll create ${parts.join(', ')} for you:`;
-					console.log('Preview message:', previewMessage);
-					console.log('Setting proposedActions:', data.actions);
+					logger.debug('Preview message', { previewMessage });
+					logger.debug('Setting proposedActions', { actions: data.actions });
 
 					// Save AI response with proposed actions
 					try {
 						await addMessage(conversation!.id, 'assistant', previewMessage, { proposedActions: data.actions });
 					} catch (error) {
-						console.error('Error saving AI message:', error);
+						logger.error('Error saving AI message', error);
 					}
 
 					// Show proposed actions with confirmation buttons
@@ -231,7 +224,7 @@
 							awaitingConfirmation: true
 						} : msg
 					);
-					console.log('Updated message:', messages[aiMessageIndex]);
+					logger.debug('Updated message', { message: messages[aiMessageIndex] });
 					scrollToBottom();
 				}
 			} else if (data.type === 'questions' && Array.isArray(data.questions)) {
@@ -242,7 +235,7 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', questionsMessage, { questions: data.questions });
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					logger.error('Error saving AI message', error);
 				}
 
 				// Show questions inline
@@ -254,14 +247,14 @@
 						awaitingResponse: true
 					} : msg
 				);
-				console.log('After setting questions, message at index:', aiMessageIndex, messages[aiMessageIndex]);
-				console.log('Total messages:', messages.length);
+				logger.debug('After setting questions', { aiMessageIndex, message: messages[aiMessageIndex] });
+				logger.debug('Total messages count', { count: messages.length });
 			} else if (data.type === 'message') {
 				// Save conversational AI response
 				try {
 					await addMessage(conversation!.id, 'assistant', data.message);
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					logger.error('Error saving AI message', error);
 				}
 
 				// Conversational response
@@ -333,7 +326,7 @@
 					notificationCounts.incrementCount('notes');
 				}
 			} catch (error) {
-				console.error(`Error creating ${action.type}:`, error);
+				logger.error(`Error creating ${action.type}`, error);
 			}
 		}
 
@@ -419,7 +412,7 @@
 						// Filter out 'content' field - notes use block-based architecture
 						const { content, ...validChanges } = op.changes;
 						if (content) {
-							console.warn('Ignoring content field in note update - use note_blocks instead');
+							logger.warn('Ignoring content field in note update - use note_blocks instead');
 						}
 						await updateNote(op.id, validChanges);
 						results.push(`✓ Updated note`);
@@ -444,7 +437,7 @@
 					successCount++;
 				}
 			} catch (error) {
-				console.error(`Error executing ${op.operation} ${op.type}:`, error);
+				logger.error(`Error executing ${op.operation} ${op.type}`, error);
 				results.push(`✗ Failed to ${op.operation} ${op.type}`);
 				errorCount++;
 			}
@@ -455,7 +448,7 @@
 			const context = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(context);
 		} catch (error) {
-			console.error('Error reloading workspace context:', error);
+			logger.error('Error reloading workspace context', error);
 		}
 
 		// Update status message with results
@@ -859,12 +852,12 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={(e) => {
-										console.log('Submit button clicked!', e);
+										logger.debug('Submit button clicked', { event: e });
 										const answers = {};
 										message.questions.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
 											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
-											console.log('Question:', q.question, 'Selected:', selected);
+											logger.debug('Question answered', { question: q.question, selected });
 											if (selected) {
 												if (selected.value === '__other__') {
 													const otherInput = document.getElementById(`${questionId}_other_text`) as HTMLInputElement;
@@ -874,7 +867,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 												}
 											}
 										});
-										console.log('Submitting answers:', answers);
+										logger.debug('Submitting answers', { answers });
 										if (Object.keys(answers).length === 0) {
 											alert('Please select an answer for each question');
 											return;
@@ -884,7 +877,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 										Submit
 									</button>
 									<button class="cancel-btn" type="button" onclick={() => {
-										console.log('Cancel button clicked!');
+										logger.debug('Cancel button clicked');
 										handleInlineQuestionCancel(index);
 									}}>
 										Cancel
@@ -914,7 +907,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				accept="image/*,application/pdf,.doc,.docx,.txt"
 				maxSizeMB={10}
 				onUploadComplete={(file) => {
-					console.log('File uploaded:', file);
+					logger.debug('File uploaded', { file });
 				}}
 			/>
 			<input
