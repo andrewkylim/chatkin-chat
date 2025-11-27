@@ -153,7 +153,7 @@
 			// Handle structured response from worker
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
 				// Check if this is the new operations format
-				const isOperationsFormat = data.actions.some((a: any) => a.operation !== undefined);
+				const isOperationsFormat = data.actions.some((a: Record<string, unknown>) => a.operation !== undefined);
 
 				if (isOperationsFormat) {
 					// New operations format with create/update/delete

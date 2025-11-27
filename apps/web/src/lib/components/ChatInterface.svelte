@@ -106,7 +106,7 @@
 
 			// Handle operations format
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
-				const isOperationsFormat = data.actions.some((a: any) => a.operation !== undefined);
+				const isOperationsFormat = data.actions.some((a: Record<string, unknown>) => a.operation !== undefined);
 
 				if (isOperationsFormat) {
 					const operations = data.actions as Operation[];

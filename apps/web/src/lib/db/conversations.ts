@@ -86,7 +86,7 @@ export async function addMessage(
 	conversationId: string,
 	role: 'user' | 'assistant',
 	content: string,
-	metadata?: any
+	metadata?: Record<string, unknown>
 ) {
 	const newMessage: MessageInsert = {
 		conversation_id: conversationId,
