@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { logger } from '$lib/utils/logger';
 
 type Section = 'tasks' | 'notes' | 'projects';
 
@@ -27,7 +28,7 @@ function createNotificationStore() {
 		},
 		// Increment count for a section when an item is created (only if not on that page)
 		incrementCount: (section: Section) => {
-			console.log(`[Notifications] Increment called for ${section}, currentSection: ${currentSection}`);
+			logger.debug('Notification increment called', { section, currentSection });
 			// Only increment if we're not currently on that page
 			if (currentSection !== section) {
 				update(state => {
@@ -35,11 +36,11 @@ function createNotificationStore() {
 						...state,
 						[section]: state[section] + 1
 					};
-					console.log(`[Notifications] Incremented ${section} count to ${newState[section]}`);
+					logger.debug('Notification count incremented', { section, count: newState[section] });
 					return newState;
 				});
 			} else {
-				console.log(`[Notifications] Skipped increment - already on ${section} page`);
+				logger.debug('Skipped notification increment - already on page', { section });
 			}
 		},
 		// Clear count for a section when user visits it

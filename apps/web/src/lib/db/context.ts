@@ -3,12 +3,35 @@
  * Provides workspace context (projects, tasks, notes) to AI conversations
  */
 import { supabase } from '$lib/supabase';
-import type { Project, Task, Note } from '@chatkin/types';
 
 export interface WorkspaceContext {
 	projects: ProjectSummary[];
 	tasks: TaskSummary[];
 	notes: NoteSummary[];
+}
+
+// Database response types
+interface TaskDBResponse {
+	id: string;
+	status: 'todo' | 'in_progress' | 'completed';
+}
+
+interface TaskWithProjectResponse {
+	id: string;
+	title: string;
+	status: 'todo' | 'in_progress' | 'completed';
+	priority: 'low' | 'medium' | 'high';
+	due_date: string | null;
+	project_id: string | null;
+	projects: { name: string } | null;
+}
+
+interface NoteWithProjectResponse {
+	id: string;
+	title: string | null;
+	updated_at: string;
+	project_id: string | null;
+	projects: { name: string } | null;
 }
 
 export interface ProjectSummary {
@@ -83,9 +106,9 @@ async function loadProjectsSummary(): Promise<ProjectSummary[]> {
 				.eq('project_id', project.id)
 		]);
 
-		const tasks = tasksResult.data || [];
+		const tasks = (tasksResult.data as TaskDBResponse[]) || [];
 		const notes = notesResult.data || [];
-		const completedTasks = tasks.filter((t: any) => t.status === 'completed').length;
+		const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
 		projectSummaries.push({
 			id: project.id,
@@ -121,7 +144,7 @@ async function loadTasksSummary(): Promise<TaskSummary[]> {
 	if (error) throw error;
 	if (!tasks) return [];
 
-	return tasks.map((task: any) => ({
+	return (tasks as TaskWithProjectResponse[]).map(task => ({
 		id: task.id,
 		title: task.title,
 		status: task.status,
@@ -150,7 +173,7 @@ async function loadNotesSummary(): Promise<NoteSummary[]> {
 	if (error) throw error;
 	if (!notes) return [];
 
-	return notes.map((note: any) => ({
+	return (notes as NoteWithProjectResponse[]).map(note => ({
 		id: note.id,
 		title: note.title,
 		project_name: note.projects?.name || null,
@@ -194,7 +217,11 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 				formatted += `- ${task.title} [id: ${task.id}]`;
 				if (task.priority === 'high') formatted += ' [HIGH]';
 				if (task.due_date) formatted += ` (due: ${task.due_date})`;
-				if (task.project_name) formatted += ` [${task.project_name}]`;
+				if (task.project_name) {
+					formatted += ` [Project: ${task.project_name}]`;
+				} else {
+					formatted += ' [Standalone]';
+				}
 				formatted += '\n';
 			}
 		}
@@ -203,7 +230,11 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 			formatted += '**In Progress:**\n';
 			for (const task of inProgressTasks.slice(0, 5)) {
 				formatted += `- ${task.title} [id: ${task.id}]`;
-				if (task.project_name) formatted += ` [${task.project_name}]`;
+				if (task.project_name) {
+					formatted += ` [Project: ${task.project_name}]`;
+				} else {
+					formatted += ' [Standalone]';
+				}
 				formatted += '\n';
 			}
 		}
@@ -222,7 +253,11 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 		formatted += '### Recent Notes\n';
 		for (const note of context.notes.slice(0, 15)) {
 			formatted += `- ${note.title || 'Untitled'} [id: ${note.id}]`;
-			if (note.project_name) formatted += ` [${note.project_name}]`;
+			if (note.project_name) {
+				formatted += ` [Project: ${note.project_name}]`;
+			} else {
+				formatted += ' [Standalone]';
+			}
 			formatted += '\n';
 		}
 		formatted += '\n';

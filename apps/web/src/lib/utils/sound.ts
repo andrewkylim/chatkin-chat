@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { browser } from '$app/environment';
 
 let clickSound: HTMLAudioElement | null = null;
