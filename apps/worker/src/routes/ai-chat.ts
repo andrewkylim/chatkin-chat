@@ -2,6 +2,7 @@
  * AI chat endpoint handler
  */
 
+import type { MessageParam } from '@anthropic-ai/sdk/resources/messages';
 import type { ChatRequest } from '@chatkin/types/api';
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';
@@ -47,7 +48,7 @@ export async function handleAIChat(
     const anthropic = createAnthropicClient(env.ANTHROPIC_API_KEY);
 
     // Build messages array from conversation history
-    const apiMessages: any[] = [];
+    const apiMessages: MessageParam[] = [];
 
     // Add conversation summary if it exists (older messages)
     if (conversationSummary) {
