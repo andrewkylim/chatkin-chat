@@ -10,11 +10,7 @@
 	import { notificationCounts } from '$lib/stores/notifications';
 	import type {
 		Message,
-		Operation,
-		AIQuestion,
-		TaskData,
-		NoteData,
-		ProjectData
+		Operation
 	} from '$lib/types/chat';
 	import { logger } from '$lib/utils/logger';
 

@@ -2,7 +2,6 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import { getNotes, createNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
-	import { createTask } from '$lib/db/tasks';
 	import { getProjects } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
@@ -40,7 +39,6 @@
 	let chatMessagesContainer: HTMLDivElement;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
-	let isLoadingConversation = true;
 	let messagesReady = false;
 
 	onMount(async () => {
@@ -76,13 +74,11 @@
 			const workspaceContext = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
-			isLoadingConversation = false;
-			await scrollChatToBottom();
+				await scrollChatToBottom();
 			messagesReady = true;
 		} catch (error) {
 			console.error('Error loading conversation:', error);
-			isLoadingConversation = false;
-			// Show welcome message as fallback
+				// Show welcome message as fallback
 			chatMessages = [{
 				role: 'ai',
 				content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
