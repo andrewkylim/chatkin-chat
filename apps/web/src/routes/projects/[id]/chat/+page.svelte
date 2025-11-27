@@ -18,12 +18,31 @@
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
 
+	interface AIQuestion {
+		question: string;
+		options: string[];
+	}
+
+	interface Operation {
+		operation: 'create' | 'update' | 'delete';
+		type: 'task' | 'note' | 'project';
+		data: any;
+		reason?: string;
+	}
+
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
 		actions?: Array<{ type: string; title: string; [key: string]: any }>;
 		isTyping?: boolean;
+		questions?: AIQuestion[];
+		operations?: Operation[];
+		awaitingResponse?: boolean;
+		userResponse?: any;
+		selectedOperations?: Operation[];
+		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		awaitingConfirmation?: boolean;
 	}
 
 	interface AIAction {
@@ -576,7 +595,7 @@
 				{/if}
 				<div class="header-actions">
 					<div class="menu-container">
-						<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
+						<button class="icon-btn" title="Project menu" onclick={() => showMenu = !showMenu}>
 							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 								<circle cx="10" cy="10" r="1.5"/>
 								<circle cx="4" cy="10" r="1.5"/>
@@ -585,13 +604,13 @@
 						</button>
 						{#if showMenu}
 							<div class="dropdown-menu">
-								<button class="menu-item" on:click={startEditProject}>
+								<button class="menu-item" onclick={startEditProject}>
 									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 										<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
 									</svg>
 									Edit Project
 								</button>
-								<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
+								<button class="menu-item delete-item" onclick={() => { showMenu = false; showDeleteConfirm = true; }}>
 									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 										<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
 									</svg>
@@ -625,7 +644,7 @@
 									<div class="group-header">
 										<h2 class="group-title">Today</h2>
 										{#if completedTasks.length > 0}
-											<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+											<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed</button>
 										{/if}
 									</div>
 									{#each todayTasks as task (task.id)}
@@ -635,9 +654,9 @@
 												class="task-checkbox"
 												id={task.id}
 												checked={false}
-												on:change={() => handleToggleTask(task.id, task.status)}
+												onchange={() => handleToggleTask(task.id, task.status)}
 											/>
-											<div class="task-content" on:click={() => openTaskDetail(task)}>
+											<div class="task-content" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
 													<span class="task-title">{truncateTitle(task.title)}</span>
 												</div>
@@ -657,7 +676,7 @@
 									<div class="group-header">
 										<h2 class="group-title">This Week</h2>
 										{#if completedTasks.length > 0 && todayTasks.length === 0}
-											<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+											<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed</button>
 										{/if}
 									</div>
 									{#each thisWeekTasks as task (task.id)}
@@ -667,9 +686,9 @@
 												class="task-checkbox"
 												id={task.id}
 												checked={false}
-												on:change={() => handleToggleTask(task.id, task.status)}
+												onchange={() => handleToggleTask(task.id, task.status)}
 											/>
-											<div class="task-content" on:click={() => openTaskDetail(task)}>
+											<div class="task-content" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
 													<span class="task-title">{truncateTitle(task.title)}</span>
 												</div>
@@ -689,7 +708,7 @@
 									<div class="group-header">
 										<h2 class="group-title">Later</h2>
 										{#if completedTasks.length > 0 && todayTasks.length === 0 && thisWeekTasks.length === 0}
-											<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+											<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed</button>
 										{/if}
 									</div>
 									{#each laterTasks as task (task.id)}
@@ -699,9 +718,9 @@
 												class="task-checkbox"
 												id={task.id}
 												checked={false}
-												on:change={() => handleToggleTask(task.id, task.status)}
+												onchange={() => handleToggleTask(task.id, task.status)}
 											/>
-											<div class="task-content" on:click={() => openTaskDetail(task)}>
+											<div class="task-content" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
 													<span class="task-title">{truncateTitle(task.title)}</span>
 												</div>
@@ -720,7 +739,7 @@
 								<div class="task-group">
 									<div class="group-header">
 										<h2 class="group-title">Completed</h2>
-										<button class="toggle-link" on:click={toggleShowCompleted}>Show All Tasks</button>
+										<button class="toggle-link" onclick={toggleShowCompleted}>Show All Tasks</button>
 									</div>
 									{#each completedTasks as task (task.id)}
 										<div class="task-item">
@@ -729,9 +748,9 @@
 												class="task-checkbox"
 												id={task.id}
 												checked={true}
-												on:change={() => handleToggleTask(task.id, task.status)}
+												onchange={() => handleToggleTask(task.id, task.status)}
 											/>
-											<div class="task-content completed" on:click={() => openTaskDetail(task)}>
+											<div class="task-content completed" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
 													<span class="task-title">{truncateTitle(task.title)}</span>
 												</div>
@@ -853,7 +872,7 @@
 			</div>
 			<div class="mobile-header-actions">
 				<div class="menu-container">
-					<button class="icon-btn" title="Project menu" on:click={() => showMenu = !showMenu}>
+					<button class="icon-btn" title="Project menu" onclick={() => showMenu = !showMenu}>
 						<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 							<circle cx="10" cy="10" r="1.5"/>
 							<circle cx="4" cy="10" r="1.5"/>
@@ -862,13 +881,13 @@
 					</button>
 					{#if showMenu}
 						<div class="dropdown-menu">
-							<button class="menu-item" on:click={startEditProject}>
+							<button class="menu-item" onclick={startEditProject}>
 								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
 								</svg>
 								Edit Project
 							</button>
-							<button class="menu-item delete-item" on:click={() => { showMenu = false; showDeleteConfirm = true; }}>
+							<button class="menu-item delete-item" onclick={() => { showMenu = false; showDeleteConfirm = true; }}>
 								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
 								</svg>
@@ -903,7 +922,7 @@
 								<div class="group-header">
 									<h2 class="group-title">Today</h2>
 									{#if completedTasks.length > 0}
-										<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+										<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed</button>
 									{/if}
 								</div>
 								{#each todayTasks as task (task.id)}
@@ -913,9 +932,9 @@
 											class="task-checkbox"
 											id={task.id}
 											checked={false}
-											on:change={() => handleToggleTask(task.id, task.status)}
+											onchange={() => handleToggleTask(task.id, task.status)}
 										/>
-										<div class="task-content" on:click={() => openTaskDetail(task)}>
+										<div class="task-content" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
 												<span class="task-title">{truncateTitle(task.title)}</span>
 											</div>
@@ -935,7 +954,7 @@
 								<div class="group-header">
 									<h2 class="group-title">This Week</h2>
 									{#if completedTasks.length > 0 && todayTasks.length === 0}
-										<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+										<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed</button>
 									{/if}
 								</div>
 								{#each thisWeekTasks as task (task.id)}
@@ -945,9 +964,9 @@
 											class="task-checkbox"
 											id={task.id}
 											checked={false}
-											on:change={() => handleToggleTask(task.id, task.status)}
+											onchange={() => handleToggleTask(task.id, task.status)}
 										/>
-										<div class="task-content" on:click={() => openTaskDetail(task)}>
+										<div class="task-content" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
 												<span class="task-title">{truncateTitle(task.title)}</span>
 											</div>
@@ -967,7 +986,7 @@
 								<div class="group-header">
 									<h2 class="group-title">Later</h2>
 									{#if completedTasks.length > 0 && todayTasks.length === 0 && thisWeekTasks.length === 0}
-										<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed</button>
+										<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed</button>
 									{/if}
 								</div>
 								{#each laterTasks as task (task.id)}
@@ -977,9 +996,9 @@
 											class="task-checkbox"
 											id={task.id}
 											checked={false}
-											on:change={() => handleToggleTask(task.id, task.status)}
+											onchange={() => handleToggleTask(task.id, task.status)}
 										/>
-										<div class="task-content" on:click={() => openTaskDetail(task)}>
+										<div class="task-content" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
 												<span class="task-title">{truncateTitle(task.title)}</span>
 											</div>
@@ -998,7 +1017,7 @@
 							<div class="task-group">
 								<div class="group-header">
 									<h2 class="group-title">Completed</h2>
-									<button class="toggle-link" on:click={toggleShowCompleted}>Show All Tasks</button>
+									<button class="toggle-link" onclick={toggleShowCompleted}>Show All Tasks</button>
 								</div>
 								{#each completedTasks as task (task.id)}
 									<div class="task-item">
@@ -1007,9 +1026,9 @@
 											class="task-checkbox"
 											id={task.id}
 											checked={true}
-											on:change={() => handleToggleTask(task.id, task.status)}
+											onchange={() => handleToggleTask(task.id, task.status)}
 										/>
-										<div class="task-content completed" on:click={() => openTaskDetail(task)}>
+										<div class="task-content completed" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
 												<span class="task-title">{truncateTitle(task.title)}</span>
 											</div>
@@ -1066,15 +1085,15 @@
 
 	<!-- Delete Confirmation Modal -->
 	{#if showDeleteConfirm}
-		<div class="modal-overlay" on:click={() => showDeleteConfirm = false}>
+		<div class="modal-overlay" onclick={() => showDeleteConfirm = false}>
 			<div class="modal" on:click|stopPropagation>
 				<h2>Delete Project?</h2>
 				<p>Are you sure you want to delete "{project?.name || 'this project'}"? This will also delete all tasks and notes in this project. This action cannot be undone.</p>
 				<div class="modal-actions">
-					<button type="button" class="secondary-btn" on:click={() => showDeleteConfirm = false}>
+					<button type="button" class="secondary-btn" onclick={() => showDeleteConfirm = false}>
 						Cancel
 					</button>
-					<button type="button" class="danger-btn" on:click={handleDeleteProject}>
+					<button type="button" class="danger-btn" onclick={handleDeleteProject}>
 						Delete Project
 					</button>
 				</div>

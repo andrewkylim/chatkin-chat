@@ -3,20 +3,28 @@
  */
 
 // AI Chat API
+export interface ChatMessage {
+  role: 'user' | 'ai';
+  content: string;
+}
+
 export interface ChatRequest {
-  conversation_id?: string;
+  conversationId?: string;
   message: string;
+  conversationHistory?: ChatMessage[];
+  conversationSummary?: string; // AI-generated summary of older messages
+  workspaceContext?: string; // Formatted workspace context (projects, tasks, notes)
   context?: {
-    project_id?: string;
-    task_ids?: string[];
-    note_ids?: string[];
+    projectId?: string;
+    taskIds?: string[];
+    scope?: 'global' | 'tasks' | 'notes' | 'project';
   };
 }
 
 export interface ChatResponse {
   response: string;
-  conversation_id: string;
-  message_id: string;
+  conversationId: string;
+  messageId: string;
 }
 
 // AI Generation API
@@ -34,15 +42,15 @@ export interface GenerateResponse {
 // File Upload API
 export interface UploadRequest {
   file: File;
-  note_id?: string;
+  noteId?: string;
 }
 
 export interface UploadResponse {
-  file_id: string;
-  r2_url: string;
-  r2_key: string;
+  fileId: string;
+  r2Url: string;
+  r2Key: string;
   filename: string;
-  size_bytes: number;
+  sizeBytes: number;
 }
 
 // Error Response
