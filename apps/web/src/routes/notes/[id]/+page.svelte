@@ -122,7 +122,7 @@
 				{#each note.note_blocks.sort((a: NoteBlock, b: NoteBlock) => a.position - b.position) as block (block.id)}
 					{#if block.type === 'text'}
 						<div class="text-block markdown-content">
-							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+							<!-- svelte-ignore svelte/no-at-html-tags -->
 							{@html renderMarkdown(block.content.text || '')}
 						</div>
 					{:else if block.type === 'code'}
