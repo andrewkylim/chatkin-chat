@@ -13,6 +13,7 @@
 		Operation
 	} from '$lib/types/chat';
 	import { logger } from '$lib/utils/logger';
+	import { handleError } from '$lib/utils/error-handler';
 
 	// MobileChatLayout interface (minimal type safety for the component ref)
 	interface MobileChatLayoutRef {
@@ -53,7 +54,10 @@
 		try {
 			await addMessage(conversation.id, 'user', userMessage);
 		} catch (error) {
-			logger.error('Error saving user message', error);
+			handleError(error, {
+				operation: 'Save user message',
+				component: 'ChatInterface'
+			});
 		}
 
 		// Add user message to UI
@@ -120,7 +124,10 @@
 					try {
 						await addMessage(conversation!.id, 'assistant', previewMessage, { operations });
 					} catch (error) {
-						logger.error('Error saving AI message', error);
+						handleError(error, {
+							operation: 'Save AI operations message',
+							component: 'ChatInterface'
+						});
 					}
 
 					messages[aiMessageIndex] = {
@@ -139,7 +146,10 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', questionsMessage, { questions: data.questions });
 				} catch (error) {
-					logger.error('Error saving AI message', error);
+					handleError(error, {
+						operation: 'Save AI questions message',
+						component: 'ChatInterface'
+					});
 				}
 
 				messages[aiMessageIndex] = {
@@ -153,7 +163,10 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', data.message);
 				} catch (error) {
-					logger.error('Error saving AI message', error);
+					handleError(error, {
+						operation: 'Save AI text message',
+						component: 'ChatInterface'
+					});
 				}
 
 				messages[aiMessageIndex] = {
@@ -163,7 +176,11 @@
 				messages = messages;
 			}
 		} catch (error) {
-			logger.error('Error sending message', error);
+			handleError(error, {
+				operation: 'Send message to AI',
+				component: 'ChatInterface',
+				metadata: { scope, projectId }
+			});
 			messages[aiMessageIndex] = {
 				role: 'ai',
 				content: 'Sorry, I encountered an error processing your request. Please try again.'
@@ -244,7 +261,11 @@
 					successCount++;
 				}
 			} catch (error) {
-				logger.error(`Error executing ${op.operation} on ${op.type}`, error);
+				handleError(error, {
+					operation: `Execute ${op.operation} on ${op.type}`,
+					component: 'ChatInterface',
+					metadata: { operationType: op.type, operationAction: op.operation }
+				});
 				results.push(`✗ Failed to ${op.operation} ${op.type}`);
 				errorCount++;
 			}
@@ -255,7 +276,10 @@
 			const context = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(context);
 		} catch (error) {
-			logger.error('Error reloading workspace context', error);
+			handleError(error, {
+				operation: 'Reload workspace context',
+				component: 'ChatInterface'
+			});
 		}
 
 		// Update status message
@@ -345,7 +369,11 @@
 			messagesReady = true;
 			await scrollToBottom();
 		} catch (error) {
-			logger.error('Error loading conversation', error);
+			handleError(error, {
+				operation: 'Load conversation',
+				component: 'ChatInterface',
+				metadata: { scope, projectId }
+			});
 			messages = [{
 				role: 'ai',
 				content: 'Hi! I\'m your AI assistant. How can I help you today?'
