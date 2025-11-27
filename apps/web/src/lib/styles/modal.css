@@ -1,0 +1,238 @@
+/**
+ * Shared modal styles for consistent dialog appearance
+ * Import this in components that use modal patterns
+ */
+
+/* Modal Overlay */
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 20px;
+}
+
+/* Modal Container */
+.modal {
+	background: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-lg);
+	padding: 24px;
+	max-width: 500px;
+	width: 100%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal h2 {
+	font-size: 1.25rem;
+	font-weight: 700;
+	margin-bottom: 20px;
+	color: var(--text-primary);
+}
+
+/* Form Groups */
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.form-group label {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+	padding: 10px 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	background: var(--bg-tertiary);
+	color: var(--text-primary);
+	font-size: 0.9375rem;
+	font-family: 'Inter', sans-serif;
+	transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+	outline: none;
+	border-color: var(--accent-primary);
+	box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+}
+
+.form-group textarea {
+	resize: vertical;
+	min-height: 60px;
+}
+
+/* Detail Sections (for read-only views) */
+.detail-section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.detail-section label {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-secondary);
+}
+
+.detail-text {
+	font-size: 0.9375rem;
+	color: var(--text-primary);
+	margin: 0;
+	line-height: 1.5;
+}
+
+/* Button Styles */
+.primary-btn {
+	padding: 10px 20px;
+	background: var(--accent-primary);
+	border: none;
+	border-radius: var(--radius-md);
+	font-weight: 600;
+	font-size: 0.9375rem;
+	color: white;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	justify-content: center;
+}
+
+.primary-btn:hover {
+	background: var(--accent-hover);
+	transform: translateY(-1px);
+}
+
+.primary-btn:active {
+	transform: translateY(0);
+}
+
+.primary-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.secondary-btn {
+	padding: 10px 20px;
+	background: transparent;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	font-weight: 600;
+	font-size: 0.9375rem;
+	color: var(--text-primary);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+	background: var(--bg-tertiary);
+}
+
+.delete-btn {
+	padding: 10px 20px;
+	background: transparent;
+	border: 1px solid rgb(239, 68, 68);
+	border-radius: var(--radius-md);
+	font-weight: 600;
+	font-size: 0.9375rem;
+	color: rgb(239, 68, 68);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.delete-btn:hover {
+	background: rgba(239, 68, 68, 0.1);
+}
+
+.danger-btn {
+	padding: 10px 20px;
+	background: rgb(239, 68, 68);
+	border: none;
+	border-radius: var(--radius-md);
+	font-weight: 600;
+	font-size: 0.9375rem;
+	color: white;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+	background: rgb(220, 38, 38);
+	transform: translateY(-1px);
+}
+
+.danger-btn:active {
+	transform: translateY(0);
+}
+
+/* Modal Actions */
+.modal-actions {
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	margin-top: 24px;
+}
+
+/* Form Rows */
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+.detail-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+	.modal {
+		max-width: 100%;
+		margin: 0;
+		max-height: 100vh;
+		border-radius: 0;
+	}
+
+	.modal-overlay {
+		padding: 0;
+	}
+
+	.form-row,
+	.detail-row {
+		grid-template-columns: 1fr;
+		gap: 12px;
+	}
+
+	.modal-actions {
+		flex-direction: column-reverse;
+	}
+
+	.modal-actions button {
+		width: 100%;
+	}
+}
