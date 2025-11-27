@@ -16,7 +16,7 @@
 	import { createTask } from '$lib/db/tasks';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation } from '@chatkin/types';
+	import type { Conversation, Project, Task, Note } from '@chatkin/types';
 	import { logger } from '$lib/utils/logger';
 
 	interface AIQuestion {
@@ -27,7 +27,7 @@
 	interface Operation {
 		operation: 'create' | 'update' | 'delete';
 		type: 'task' | 'note' | 'project';
-		data: any;
+		data: Record<string, unknown>;
 		reason?: string;
 	}
 
@@ -35,31 +35,23 @@
 		role: 'user' | 'ai';
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
-		actions?: Array<{ type: string; title: string; [key: string]: any }>;
+		actions?: Array<{ type: string; title: string; [key: string]: unknown }>;
 		isTyping?: boolean;
 		questions?: AIQuestion[];
 		operations?: Operation[];
 		awaitingResponse?: boolean;
-		userResponse?: any;
+		userResponse?: unknown;
 		selectedOperations?: Operation[];
-		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: unknown }>;
 		awaitingConfirmation?: boolean;
-	}
-
-	interface AIAction {
-		type: 'task' | 'note';
-		title: string;
-		description?: string;
-		content?: string;
-		priority?: 'low' | 'medium' | 'high';
 	}
 
 
 	$: projectId = $page.params.id;
 
-	let project: any = null;
-	let tasks: any[] = [];
-	let notes: any[] = [];
+	let project: Project | null = null;
+	let tasks: Task[] = [];
+	let notes: Note[] = [];
 	let loading = true;
 	let messages: Message[] = [];
 	let inputMessage = '';
@@ -72,11 +64,11 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let messagesReady = false;
-	let projects: any[] = [];
+	let projects: Project[] = [];
 	let showTaskDetailModal = false;
-	let selectedTask: any = null;
+	let selectedTask: Task | null = null;
 	let showEditTaskModal = false;
-	let editingTask: any = null;
+	let editingTask: Task | null = null;
 	let showCompletedTasks = false;
 
 	onMount(async () => {
@@ -267,7 +259,7 @@
 		localStorage.setItem('showCompletedTasks', String(showCompletedTasks));
 	}
 
-	function openTaskDetail(task: any) {
+	function openTaskDetail(task: Task) {
 		selectedTask = task;
 		showTaskDetailModal = true;
 	}
@@ -278,7 +270,7 @@
 		showEditTaskModal = true;
 	}
 
-	async function handleUpdateTask(updatedTask: any) {
+	async function handleUpdateTask(updatedTask: Partial<Task>) {
 		if (!editingTask) return;
 
 		try {
@@ -317,18 +309,18 @@
 		}
 	}
 
-	function getContentPreview(note: any): string {
+	function getContentPreview(note: Note): string {
 		if (!note.note_blocks || note.note_blocks.length === 0) return 'No content yet...';
 
 		// Get first text block
-		const firstTextBlock = note.note_blocks.find((block: any) => block.type === 'text');
+		const firstTextBlock = note.note_blocks.find((block: Record<string, unknown>) => block.type === 'text');
 		if (!firstTextBlock || !firstTextBlock.content?.text) return 'No content yet...';
 
 		const text = firstTextBlock.content.text;
 		return text.length > 100 ? text.substring(0, 100) + '...' : text;
 	}
 
-	function getWordCount(note: any): number {
+	function getWordCount(note: Note): number {
 		if (!note.note_blocks || note.note_blocks.length === 0) return 0;
 
 		// Combine all text blocks
