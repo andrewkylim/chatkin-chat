@@ -14,7 +14,9 @@ vi.mock('$app/navigation', () => ({
 }));
 
 vi.mock('$env/static/public', () => ({
-  PUBLIC_WORKER_URL: 'http://localhost:8787'
+  PUBLIC_WORKER_URL: 'http://localhost:8787',
+  PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
+  PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key'
 }));
 
 // Mock Supabase client

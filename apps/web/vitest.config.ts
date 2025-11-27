@@ -24,7 +24,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '$lib': resolve('./src/lib'),
-      '$app': resolve('./node_modules/@sveltejs/kit')
+      '$app': resolve('./node_modules/@sveltejs/kit'),
+      '$env/static/public': resolve('./tests/mocks/env.ts')
     }
   }
 });
