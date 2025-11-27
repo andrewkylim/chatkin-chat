@@ -144,7 +144,7 @@ async function loadTasksSummary(): Promise<TaskSummary[]> {
 	if (error) throw error;
 	if (!tasks) return [];
 
-	return (tasks as TaskWithProjectResponse[]).map(task => ({
+	return (tasks as unknown as TaskWithProjectResponse[]).map(task => ({
 		id: task.id,
 		title: task.title,
 		status: task.status,
@@ -173,7 +173,7 @@ async function loadNotesSummary(): Promise<NoteSummary[]> {
 	if (error) throw error;
 	if (!notes) return [];
 
-	return (notes as NoteWithProjectResponse[]).map(note => ({
+	return (notes as unknown as NoteWithProjectResponse[]).map(note => ({
 		id: note.id,
 		title: note.title,
 		project_name: note.projects?.name || null,
