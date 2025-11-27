@@ -63,7 +63,9 @@ export interface Message {
   content: string;
   files?: FileAttachment[];
   operations?: Operation[];
+  selectedOperations?: Operation[];
   questions?: AIQuestion[];
+  userResponse?: Record<string, string>;
   summary?: string;
   isTyping?: boolean;
   awaitingResponse?: boolean;

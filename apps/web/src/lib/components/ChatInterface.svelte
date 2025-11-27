@@ -10,6 +10,8 @@
 	import { notificationCounts } from '$lib/stores/notifications';
 	import type {
 		Message,
+		MessageRole,
+		AIQuestion,
 		Operation
 	} from '$lib/types/chat';
 	import { logger } from '$lib/utils/logger';
@@ -210,35 +212,41 @@
 		for (const op of operations) {
 			try {
 				if (op.operation === 'create') {
+					if (!op.data) throw new Error('Missing data for create operation');
+
 					if (op.type === 'task') {
-						await createTask({ ...op.data, project_id: op.data.project_id || projectId || null });
+						const taskData = op.data as any;
+						await createTask({ ...taskData, project_id: taskData.project_id || projectId || null });
 						notificationCounts.incrementCount('tasks');
-						results.push(`✓ Created task: ${op.data.title}`);
+						results.push(`✓ Created task: ${taskData.title}`);
 					} else if (op.type === 'note') {
-						await createNote({ ...op.data, project_id: op.data.project_id || projectId || null });
+						const noteData = op.data as any;
+						await createNote({ ...noteData, project_id: noteData.project_id || projectId || null });
 						notificationCounts.incrementCount('notes');
-						results.push(`✓ Created note: ${op.data.title}`);
+						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
-						await createProject(op.data);
+						const projectData = op.data as any;
+						await createProject(projectData);
 						notificationCounts.incrementCount('projects');
-						results.push(`✓ Created project: ${op.data.name}`);
+						results.push(`✓ Created project: ${projectData.name}`);
 					}
 					successCount++;
 				} else if (op.operation === 'update') {
 					if (!op.id) throw new Error('Missing ID for update operation');
+					if (!op.changes) throw new Error('Missing changes for update operation');
 
 					if (op.type === 'task') {
-						await updateTask(op.id, op.changes);
+						await updateTask(op.id, op.changes as any);
 						results.push(`✓ Updated task`);
 					} else if (op.type === 'note') {
-						const { content, ...validChanges } = op.changes;
+						const { content, ...validChanges } = op.changes as any;
 						if (content) {
 							logger.warn('Ignoring content field in note update');
 						}
-						await updateNote(op.id, validChanges);
+						await updateNote(op.id, validChanges as any);
 						results.push(`✓ Updated note`);
 					} else if (op.type === 'project') {
-						await updateProject(op.id, op.changes);
+						await updateProject(op.id, op.changes as any);
 						results.push(`✓ Updated project`);
 					}
 					successCount++;
@@ -247,15 +255,12 @@
 
 					if (op.type === 'task') {
 						await deleteTask(op.id);
-						notificationCounts.decrementCount('tasks');
 						results.push(`✓ Deleted task`);
 					} else if (op.type === 'note') {
 						await deleteNote(op.id);
-						notificationCounts.decrementCount('notes');
 						results.push(`✓ Deleted note`);
 					} else if (op.type === 'project') {
 						await deleteProject(op.id);
-						notificationCounts.decrementCount('projects');
 						results.push(`✓ Deleted project`);
 					}
 					successCount++;
@@ -346,11 +351,10 @@
 			const recentMessages = await getRecentMessages(conversation.id, 50);
 
 			messages = recentMessages.map(m => ({
-				role: m.role === 'assistant' ? 'ai' : 'user',
+				role: (m.role === 'assistant' ? 'ai' : 'user') as MessageRole,
 				content: m.content,
-				questions: m.metadata?.questions,
-				operations: m.metadata?.operations,
-				proposedActions: m.metadata?.proposedActions
+				questions: m.metadata?.questions as AIQuestion[] | undefined,
+				operations: m.metadata?.operations as Operation[] | undefined,
 			}));
 
 			if (messages.length === 0) {

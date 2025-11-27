@@ -53,7 +53,7 @@
 		if (signInError) {
 			error = signInError.message;
 			loading = false;
-			console.error('Google signup error:', signInError);
+			handleError(signInError, { operation: 'Google signup', component: 'SignupPage' });
 		}
 	}
 </script>

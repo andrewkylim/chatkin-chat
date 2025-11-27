@@ -1,7 +1,5 @@
 <script lang="ts">
-	import AppLayout from '$lib/components/AppLayout.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
@@ -10,20 +8,34 @@
 	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation, Message as DBMessage } from '@chatkin/types';
+	import type { Conversation } from '@chatkin/types';
 	import { notificationCounts } from '$lib/stores/notifications';
+	import { logger } from '$lib/utils/logger';
+
+	// Props for customization
+	export let scope: 'global' | 'tasks' | 'notes' | 'project' = 'global';
+	export let projectId: string | undefined = undefined;
+	export let pageTitle: string = 'Chat';
+	export let pageIcon: string | undefined = undefined;
+	export let pageSubtitle: string | undefined = undefined;
+	export let welcomeMessage: string = "Hi! I'm your AI assistant. What would you like to do?";
+	export let isEmbedded: boolean = false;
+
+	// Optional callbacks for parent components
+	export let onOperationsComplete: ((operations: Operation[]) => Promise<void>) | undefined = undefined;
+	export let onDataChange: (() => Promise<void>) | undefined = undefined;
 
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
 		files?: Array<{ name: string; url: string; type: string }>;
-		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		proposedActions?: AIAction[];
 		awaitingConfirmation?: boolean;
 		isTyping?: boolean;
 		questions?: AIQuestion[];
 		operations?: Operation[];
 		awaitingResponse?: boolean;
-		userResponse?: any;
+		userResponse?: Record<string, string>;
 		selectedOperations?: Operation[];
 	}
 
@@ -42,19 +54,14 @@
 		operation: 'create' | 'update' | 'delete';
 		type: 'task' | 'note' | 'project';
 		id?: string;
-		data?: any;
-		changes?: any;
+		data?: Record<string, unknown>;
+		changes?: Record<string, unknown>;
 		reason?: string;
 	}
 
 	interface AIQuestion {
 		question: string;
 		options: string[];
-	}
-
-	interface AIResponse {
-		message: string;
-		actions?: AIAction[];
 	}
 
 	let messages: Message[] = [];
@@ -65,7 +72,6 @@
 	let showCreateMenu = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
-	let isLoadingConversation = true;
 	let messagesReady = false;
 
 	async function scrollToBottom() {
@@ -89,7 +95,7 @@
 		try {
 			await addMessage(conversation.id, 'user', userMessage);
 		} catch (error) {
-			console.error('Error saving user message:', error);
+			logger.error('Error saving user message', error);
 		}
 
 		// Add user message to UI
@@ -102,12 +108,13 @@
 		isStreaming = true;
 
 		// Show loading message
-		messages[aiMessageIndex] = {
-			role: 'ai',
-			content: '',
-		isTyping: true
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === aiMessageIndex ? {
+				role: 'ai',
+					content: '',
+				isTyping: true
+			} : msg
+		);
 		scrollToBottom();
 
 		try {
@@ -134,7 +141,8 @@
 					conversationSummary: conversation.conversation_summary,
 					workspaceContext: workspaceContextString,
 					context: {
-						scope: 'global'
+						scope,
+						projectId
 					}
 				}),
 			});
@@ -145,10 +153,13 @@
 
 			const data = await response.json();
 
+			// Debug logging
+			logger.debug('Received AI response', { data });
+
 			// Handle structured response from worker
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
 				// Check if this is the new operations format
-				const isOperationsFormat = data.actions.some((a: any) => a.operation !== undefined);
+				const isOperationsFormat = data.actions.some((a: Record<string, unknown>) => a.operation !== undefined);
 
 				if (isOperationsFormat) {
 					// New operations format with create/update/delete
@@ -171,21 +182,23 @@
 					try {
 						await addMessage(conversation!.id, 'assistant', previewMessage, { operations });
 					} catch (error) {
-						console.error('Error saving AI message:', error);
+						logger.error('Error saving AI message', error);
 					}
 
 					// Show operations inline
-					messages[aiMessageIndex] = {
-						role: 'ai',
+					messages = messages.map((msg, idx) =>
+						idx === aiMessageIndex ? {
+							role: 'ai',
 						content: previewMessage,
-						operations,
-						awaitingResponse: true,
-						selectedOperations: operations // All selected by default
-					};
-					messages = messages;
+							operations,
+							awaitingResponse: true,
+							selectedOperations: operations // All selected by default
+						} : msg
+					);
 					scrollToBottom();
 				} else {
 					// Old actions format (backward compatibility)
+					logger.debug('Using old actions format', { actions: data.actions });
 					// Count proposed items
 					const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
 					const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
@@ -198,22 +211,26 @@
 					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 
 					const previewMessage = `I'll create ${parts.join(', ')} for you:`;
+					logger.debug('Preview message', { previewMessage });
+					logger.debug('Setting proposedActions', { actions: data.actions });
 
 					// Save AI response with proposed actions
 					try {
 						await addMessage(conversation!.id, 'assistant', previewMessage, { proposedActions: data.actions });
 					} catch (error) {
-						console.error('Error saving AI message:', error);
+						logger.error('Error saving AI message', error);
 					}
 
 					// Show proposed actions with confirmation buttons
-					messages[aiMessageIndex] = {
-						role: 'ai',
+					messages = messages.map((msg, idx) =>
+						idx === aiMessageIndex ? {
+							role: 'ai',
 						content: previewMessage,
-						proposedActions: data.actions,
-						awaitingConfirmation: true
-					};
-					messages = messages;
+							proposedActions: data.actions,
+							awaitingConfirmation: true
+						} : msg
+					);
+					logger.debug('Updated message', { message: messages[aiMessageIndex] });
 					scrollToBottom();
 				}
 			} else if (data.type === 'questions' && Array.isArray(data.questions)) {
@@ -224,39 +241,44 @@
 				try {
 					await addMessage(conversation!.id, 'assistant', questionsMessage, { questions: data.questions });
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					logger.error('Error saving AI message', error);
 				}
 
 				// Show questions inline
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: questionsMessage,
-					questions: data.questions,
-					awaitingResponse: true
-				};
-				messages = messages;
+				messages = messages.map((msg, idx) =>
+					idx === aiMessageIndex ? {
+						role: 'ai',
+						content: questionsMessage,
+						questions: data.questions,
+						awaitingResponse: true
+					} : msg
+				);
+				logger.debug('After setting questions', { aiMessageIndex, message: messages[aiMessageIndex] });
+				logger.debug('Total messages count', { count: messages.length });
 			} else if (data.type === 'message') {
 				// Save conversational AI response
 				try {
 					await addMessage(conversation!.id, 'assistant', data.message);
 				} catch (error) {
-					console.error('Error saving AI message:', error);
+					logger.error('Error saving AI message', error);
 				}
 
 				// Conversational response
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: data.message
-				};
-				messages = messages;
+				messages = messages.map((msg, idx) =>
+					idx === aiMessageIndex ? {
+						role: 'ai',
+						content: data.message
+					} : msg
+				);
 			}
 		} catch (error) {
-			console.error('Error sending message:', error);
-			messages[aiMessageIndex] = {
-				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.'
-			};
-			messages = messages;
+			logger.error('Error sending message', error);
+			messages = messages.map((msg, idx) =>
+				idx === aiMessageIndex ? {
+					role: 'ai',
+					content: 'Sorry, I encountered an error processing your request. Please try again.'
+				} : msg
+			);
 		} finally {
 			isStreaming = false;
 			scrollToBottom();
@@ -268,12 +290,13 @@
 		if (!message.proposedActions || !message.awaitingConfirmation) return;
 
 		// Update message to show creating status
-		messages[messageIndex] = {
-			...message,
-			content: 'Creating items...',
-			awaitingConfirmation: false
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...message,
+	content: 'Creating items...',
+	awaitingConfirmation: false
+			} : msg
+		);
 
 		// Create all proposed items
 		let projectCount = 0, taskCount = 0, noteCount = 0;
@@ -309,7 +332,7 @@
 					notificationCounts.incrementCount('notes');
 				}
 			} catch (error) {
-				console.error(`Error creating ${action.type}:`, error);
+				logger.error(`Error creating ${action.type}`, error);
 			}
 		}
 
@@ -319,13 +342,14 @@
 		if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
 		if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 
-		messages[messageIndex] = {
-			...message,
-			content: `Created ${parts.join(', ')} for you!`,
-			awaitingConfirmation: false,
-			proposedActions: undefined
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...message,
+	content: `Created ${parts.join(', ')} for you!`,
+	awaitingConfirmation: false,
+	proposedActions: undefined
+			} : msg
+		);
 	}
 
 	function cancelActions(messageIndex: number) {
@@ -333,26 +357,28 @@
 		if (!message.awaitingConfirmation) return;
 
 		// Update message to show cancellation
-		messages[messageIndex] = {
-			...message,
-			content: 'Okay, I won\'t create those items.',
-			awaitingConfirmation: false,
-			proposedActions: undefined
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...message,
+	content: 'Okay, I won\'t create those items.',
+	awaitingConfirmation: false,
+	proposedActions: undefined
+			} : msg
+		);
 	}
 
 	async function executeOperations(operations: Operation[], messageIndex: number) {
 		// Update message to show executing status
-		messages[messageIndex] = {
-			...messages[messageIndex],
-			content: 'Executing operations...',
-			awaitingResponse: false,
-			operations: undefined,
-			selectedOperations: undefined,
-			isTyping: true
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...messages[messageIndex],
+	content: 'Executing operations...',
+	awaitingResponse: false,
+	operations: undefined,
+	selectedOperations: undefined,
+	isTyping: true
+			} : msg
+		);
 		const statusIndex = messageIndex;
 
 		let successCount = 0;
@@ -392,7 +418,7 @@
 						// Filter out 'content' field - notes use block-based architecture
 						const { content, ...validChanges } = op.changes;
 						if (content) {
-							console.warn('Ignoring content field in note update - use note_blocks instead');
+							logger.warn('Ignoring content field in note update - use note_blocks instead');
 						}
 						await updateNote(op.id, validChanges);
 						results.push(`✓ Updated note`);
@@ -417,7 +443,7 @@
 					successCount++;
 				}
 			} catch (error) {
-				console.error(`Error executing ${op.operation} ${op.type}:`, error);
+				logger.error(`Error executing ${op.operation} ${op.type}`, error);
 				results.push(`✗ Failed to ${op.operation} ${op.type}`);
 				errorCount++;
 			}
@@ -428,7 +454,25 @@
 			const context = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(context);
 		} catch (error) {
-			console.error('Error reloading workspace context:', error);
+			logger.error('Error reloading workspace context', error);
+		}
+
+		// Trigger parent callbacks after operations complete
+		if (successCount > 0) {
+			try {
+				// Call operation-specific callback
+				if (onOperationsComplete) {
+					await onOperationsComplete(operations);
+				}
+
+				// Call general data refresh callback
+				if (onDataChange) {
+					await onDataChange();
+				}
+			} catch (callbackError) {
+				logger.error('Parent callback failed', callbackError);
+				// Don't fail the entire operation if parent callback fails
+			}
 		}
 
 		// Update status message with results
@@ -436,11 +480,12 @@
 		const errorMsg = errorCount > 0 ? `${errorCount} failed` : '';
 		const parts = [successMsg, errorMsg].filter(Boolean);
 
-		messages[statusIndex] = {
-			role: 'ai',
-			content: `${parts.join(', ')}!\n\n${results.join('\n')}`
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === statusIndex ? {
+				role: 'ai',
+content: `${parts.join(', ')}!\n\n${results.join('\n')}`
+			} : msg
+		);
 		scrollToBottom();
 	}
 
@@ -453,14 +498,15 @@
 
 	function handleInlineOperationCancel(messageIndex: number) {
 		// Update message to show cancellation
-		messages[messageIndex] = {
-			...messages[messageIndex],
-			content: 'Okay, I won\'t make those changes.',
-			awaitingResponse: false,
-			operations: undefined,
-			selectedOperations: undefined
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...messages[messageIndex],
+	content: 'Okay, I won\'t make those changes.',
+	awaitingResponse: false,
+	operations: undefined,
+	selectedOperations: undefined
+			} : msg
+		);
 	}
 
 	function toggleOperationSelection(messageIndex: number, opIndex: number) {
@@ -500,12 +546,13 @@
 			.join('\n\n');
 
 		// Update message to show user's responses
-		messages[messageIndex] = {
-			...message,
-			awaitingResponse: false,
-			userResponse: answers
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...message,
+	awaitingResponse: false,
+	userResponse: answers
+			} : msg
+		);
 
 		// Send answers back to AI
 		await sendMessage(answersText);
@@ -513,13 +560,14 @@
 
 	function handleInlineQuestionCancel(messageIndex: number) {
 		// Update message to show cancellation
-		messages[messageIndex] = {
-			...messages[messageIndex],
-			content: 'No problem! Let me know if you need anything else.',
-			awaitingResponse: false,
-			questions: undefined
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+	...messages[messageIndex],
+	content: 'No problem! Let me know if you need anything else.',
+	awaitingResponse: false,
+	questions: undefined
+			} : msg
+		);
 	}
 
 	onMount(async () => {
@@ -537,7 +585,7 @@
 		// Load conversation and context
 		try {
 			// Get or create conversation for global scope
-			conversation = await getOrCreateConversation('global');
+			conversation = await getOrCreateConversation(scope, projectId);
 
 			// Load recent messages from database
 			const dbMessages = await getRecentMessages(conversation.id, 50);
@@ -553,7 +601,7 @@
 				// Show welcome message if no history
 				messages = [{
 					role: 'ai',
-					content: '👋 Hi! What would you like to work on today?'
+					content: welcomeMessage
 				}];
 			}
 
@@ -561,16 +609,14 @@
 			const workspaceContext = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
-			isLoadingConversation = false;
 			await scrollToBottom();
 			messagesReady = true;
 		} catch (error) {
-			console.error('Error loading conversation:', error);
-			isLoadingConversation = false;
+			logger.error('Error loading conversation', error);
 			// Show welcome message as fallback
 			messages = [{
 				role: 'ai',
-				content: '👋 Hi! What would you like to work on today?'
+				content: welcomeMessage
 			}];
 			await scrollToBottom();
 			messagesReady = true;
@@ -602,16 +648,29 @@
 	});
 </script>
 
-<AppLayout hideBottomNav={true}>
 <div class="chat-page">
 	<!-- Desktop: Full-screen chat -->
-	<div class="desktop-chat">
+	<div class="desktop-chat {isEmbedded ? 'embedded' : 'standalone'}">
 		<header class="chat-header">
 			<div class="header-content">
-				<h1>Chat</h1>
+				{#if pageIcon && pageSubtitle}
+					<!-- Embedded mode: icon + title + subtitle -->
+					<div class="chat-title">
+						<img src={pageIcon} alt={pageTitle} class="ai-icon" />
+						<div>
+							<h2>{pageTitle}</h2>
+							<p class="ai-subtitle">{pageSubtitle}</p>
+						</div>
+					</div>
+				{:else}
+					<!-- Standalone mode: just title -->
+					<h1>{pageTitle}</h1>
+				{/if}
+				{#if !isEmbedded}
+				<!-- Only show create menu on standalone chat page, NOT on tasks/notes -->
 				<div class="header-actions">
 					<div class="create-menu-container">
-						<button class="icon-btn" title="Create new" on:click={() => showCreateMenu = !showCreateMenu}>
+						<button class="icon-btn" title="Create new" onclick={() => showCreateMenu = !showCreateMenu}>
 							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M10 4v12M4 10h12"/>
 							</svg>
@@ -645,6 +704,7 @@
 						{/if}
 					</div>
 				</div>
+			{/if}
 			</div>
 		</header>
 
@@ -656,7 +716,7 @@
 		{/if}
 
 		<div class="messages" bind:this={desktopMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
-			{#each messages as message, index (message)}
+			{#each messages as message, index (index)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
 						{#if message.isTyping}
@@ -667,6 +727,7 @@
 							</div>
 						{:else}
 							<p>{message.content}</p>
+							<p style="background: yellow;">Q={message.questions?"Y":"N"} A={message.awaitingResponse?"Y":"N"}</p>
 
 							{#if message.proposedActions && message.awaitingConfirmation}
 								<!-- Action Preview List (OLD format for backward compatibility) -->
@@ -710,13 +771,10 @@
 
 								<!-- Confirmation Buttons -->
 								<div class="confirmation-buttons">
-									<button class="confirm-btn" on:click={() => confirmActions(index)}>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M4 8l2 2 6-6"/>
-										</svg>
+									<button class="confirm-btn" onclick={() => confirmActions(index)}>
 										Confirm
 									</button>
-									<button class="cancel-btn" on:click={() => cancelActions(index)}>
+									<button class="cancel-btn" onclick={() => cancelActions(index)}>
 										Cancel
 									</button>
 								</div>
@@ -736,7 +794,7 @@
 											<input
 												type="checkbox"
 												checked={isSelected}
-												on:change={() => toggleOperationSelection(index, opIndex)}
+												onchange={() => toggleOperationSelection(index, opIndex)}
 											/>
 											<div class="operation-content">
 												<div class="operation-header">
@@ -771,13 +829,10 @@
 
 								<!-- Confirmation Buttons -->
 								<div class="confirmation-buttons">
-									<button class="confirm-btn" on:click={() => handleInlineOperationConfirm(index)} disabled={!message.selectedOperations || message.selectedOperations.length === 0}>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M4 8l2 2 6-6"/>
-										</svg>
-										Confirm {message.selectedOperations?.length || 0} operation{(message.selectedOperations?.length || 0) !== 1 ? 's' : ''}
+									<button class="confirm-btn" onclick={() => handleInlineOperationConfirm(index)} disabled={!message.selectedOperations || message.selectedOperations.length === 0}>
+										Confirm
 									</button>
-									<button class="cancel-btn" on:click={() => handleInlineOperationCancel(index)}>
+									<button class="cancel-btn" onclick={() => handleInlineOperationCancel(index)}>
 										Cancel
 									</button>
 								</div>
@@ -791,7 +846,7 @@
 										<div class="question-block">
 											<label class="question-label">{question.question}</label>
 											<div class="question-options">
-												{#each question.options as option, optIndex}
+												{#each question.options.filter(opt => opt.toLowerCase() !== 'other') as option, optIndex}
 													<label class="option-label">
 														<input
 															type="radio"
@@ -815,6 +870,14 @@
 														class="other-input"
 														placeholder="Enter your answer"
 														id={`${questionId}_other_text`}
+														onfocus={(e) => {
+															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
+															if (radio) radio.checked = true;
+														}}
+														onclick={(e) => {
+															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
+															if (radio) radio.checked = true;
+														}}
 													/>
 												</label>
 											</div>
@@ -824,11 +887,13 @@
 
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
-									<button class="confirm-btn" on:click={() => {
+									<button class="confirm-btn" type="button" onclick={(e) => {
+										logger.debug('Submit button clicked', { event: e });
 										const answers = {};
 										message.questions.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
 											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
+											logger.debug('Question answered', { question: q.question, selected });
 											if (selected) {
 												if (selected.value === '__other__') {
 													const otherInput = document.getElementById(`${questionId}_other_text`) as HTMLInputElement;
@@ -838,11 +903,19 @@
 												}
 											}
 										});
+										logger.debug('Submitting answers', { answers });
+										if (Object.keys(answers).length === 0) {
+											alert('Please select an answer for each question');
+											return;
+										}
 										handleInlineQuestionSubmit(index, answers);
 									}}>
 										Submit
 									</button>
-									<button class="cancel-btn" on:click={() => handleInlineQuestionCancel(index)}>
+									<button class="cancel-btn" type="button" onclick={() => {
+										logger.debug('Cancel button clicked');
+										handleInlineQuestionCancel(index);
+									}}>
 										Cancel
 									</button>
 								</div>
@@ -865,12 +938,12 @@
 			{/each}
 		</div>
 
-		<form class="input-container" on:submit|preventDefault={() => sendMessage()}>
+		<form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
 			<FileUpload
 				accept="image/*,application/pdf,.doc,.docx,.txt"
 				maxSizeMB={10}
 				onUploadComplete={(file) => {
-					console.log('File uploaded:', file);
+					logger.debug('File uploaded', { file });
 				}}
 			/>
 			<input
@@ -897,9 +970,12 @@
 		{isStreaming}
 		{messagesReady}
 		onSubmit={() => sendMessage()}
+		onQuestionSubmit={handleInlineQuestionSubmit}
+		onQuestionCancel={handleInlineQuestionCancel}
+		onOperationConfirm={handleInlineOperationConfirm}
+		onOperationCancel={handleInlineOperationCancel}
 	/>
 </div>
-</AppLayout>
 
 <style>
 
@@ -909,7 +985,7 @@
 	}
 
 	/* Desktop: Full-screen chat */
-	.desktop-chat {
+	.desktop-chat.standalone {
 		position: absolute;
 		top: 0;
 		left: 240px;
@@ -921,13 +997,23 @@
 		background: var(--bg-primary);
 	}
 
+	/* Desktop: Embedded chat (for tasks/notes pages) */
+	.desktop-chat.embedded {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		background: var(--bg-primary);
+		height: 100%;
+	}
+
 	/* Mobile: Full-screen chat */
 	.mobile-content {
 		display: none;
 	}
 
 	@media (max-width: 1023px) {
-		.desktop-chat {
+		.desktop-chat.standalone,
+		.desktop-chat.embedded {
 			display: none;
 		}
 
@@ -942,10 +1028,14 @@
 		padding: 16px 20px;
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);
+	}
+
+	/* Align standalone chat header with sidebar header */
+	.desktop-chat.standalone .chat-header {
 		height: 64px;
+		box-sizing: border-box;
 		display: flex;
 		align-items: center;
-		box-sizing: border-box;
 	}
 
 	.header-content {
@@ -959,6 +1049,30 @@
 		font-size: 1.5rem;
 		font-weight: 700;
 		letter-spacing: -0.02em;
+	}
+
+	.chat-title {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.ai-icon {
+		width: 40px;
+		height: 40px;
+		border-radius: var(--radius-md);
+	}
+
+	.chat-title h2 {
+		font-size: 1.125rem;
+		font-weight: 600;
+		margin: 0 0 2px 0;
+	}
+
+	.ai-subtitle {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		margin: 0;
 	}
 
 	.header-actions {
@@ -1186,45 +1300,34 @@
 		border-top: 1px solid var(--border-color);
 	}
 
-	.confirm-btn,
-	.cancel-btn {
+	.confirm-btn, .cancel-btn {
 		flex: 1;
-		padding: 8px 16px;
+		padding: 10px 16px;
 		border-radius: var(--radius-md);
 		font-weight: 600;
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
+		border: none;
 	}
 
 	.confirm-btn {
 		background: var(--accent-primary);
 		color: white;
-		border: none;
 	}
 
 	.confirm-btn:hover {
 		background: var(--accent-hover);
-		transform: translateY(-1px);
-	}
-
-	.confirm-btn:active {
-		transform: translateY(0);
 	}
 
 	.cancel-btn {
-		background: transparent;
-		color: var(--text-secondary);
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
 		border: 1px solid var(--border-color);
 	}
 
 	.cancel-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
+		background: var(--bg-secondary);
 	}
 
 	/* Typing Indicator */
@@ -1349,7 +1452,7 @@
 		display: flex;
 		gap: 10px;
 		padding: 10px;
-		background: var(--bg-secondary);
+		background: var(--bg-tertiary);
 		border-radius: var(--radius-md);
 		border: 2px solid var(--border-color);
 		cursor: pointer;
@@ -1357,7 +1460,7 @@
 	}
 
 	.operation-item:hover {
-		background: var(--bg-tertiary);
+		background: var(--bg-secondary);
 	}
 
 	.operation-item input[type="checkbox"] {
@@ -1478,7 +1581,7 @@
 		align-items: center;
 		gap: 10px;
 		padding: 10px 12px;
-		background: var(--bg-secondary);
+		background: var(--bg-tertiary);
 		border: 2px solid var(--border-color);
 		border-radius: var(--radius-md);
 		cursor: pointer;
@@ -1487,7 +1590,7 @@
 	}
 
 	.option-label:hover {
-		background: var(--bg-tertiary);
+		background: var(--bg-secondary);
 		border-color: var(--accent-primary);
 	}
 

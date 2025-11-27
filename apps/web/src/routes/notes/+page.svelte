@@ -1,25 +1,16 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
-	import { getNotes, createNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
+	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
+	import { getNotes } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
-	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
-	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation, Note, Project, NoteBlock } from '@chatkin/types';
-	import { onMount, tick } from 'svelte';
+	import { useNotes, type NoteWithBlocks } from '$lib/logic/useNotes';
+	import type { Project } from '@chatkin/types';
+	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
-	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { goto } from '$app/navigation';
-
-	interface ChatMessage {
-		role: 'user' | 'ai';
-		content: string;
-		isTyping?: boolean;
-	}
-
-	interface NoteWithBlocks extends Note {
-		note_blocks: NoteBlock[];
-	}
+	import { handleError } from '$lib/utils/error-handler';
+	import { logger } from '$lib/utils/logger';
 
 	let notes: NoteWithBlocks[] = [];
 	let projects: Project[] = [];
@@ -36,14 +27,17 @@
 	let editNoteContent = '';
 	let editBlockId = '';
 
-	// Chat state
-	let chatMessages: ChatMessage[] = [];
-	let chatInput = '';
-	let isChatStreaming = false;
-	let chatMessagesContainer: HTMLDivElement;
-	let conversation: Conversation | null = null;
-	let workspaceContextString = '';
-	let messagesReady = false;
+	// Get note utilities and actions
+	const {
+		truncateTitle,
+		formatDate,
+		getContentPreview,
+		getWordCount,
+		createNote,
+		updateNote,
+		deleteNote,
+		updateNoteBlock
+	} = useNotes();
 
 	onMount(async () => {
 		// Set current section and clear notification count
@@ -51,45 +45,6 @@
 		notificationCounts.clearCount('notes');
 
 		await loadData();
-
-		// Load conversation and context
-		try {
-			// Get or create conversation for notes scope
-			conversation = await getOrCreateConversation('notes');
-
-			// Load recent messages from database
-			const dbMessages = await getRecentMessages(conversation.id, 50);
-
-			// Convert DB messages to UI messages
-			if (dbMessages.length > 0) {
-				chatMessages = dbMessages.map(msg => ({
-					role: msg.role === 'assistant' ? 'ai' : 'user',
-					content: msg.content
-				}));
-			} else {
-				// Show welcome message if no history
-				chatMessages = [{
-					role: 'ai',
-					content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
-				}];
-			}
-
-			// Load workspace context
-			const workspaceContext = await loadWorkspaceContext();
-			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
-
-				await scrollChatToBottom();
-			messagesReady = true;
-		} catch (error) {
-			handleError(error, { operation: 'Load conversation', component: 'NotesPage' });
-				// Show welcome message as fallback
-			chatMessages = [{
-				role: 'ai',
-				content: "Hi! I'm your Notes AI. I can help you create, organize, and search your notes. What would you like to capture today?"
-			}];
-			await scrollChatToBottom();
-			messagesReady = true;
-		}
 	});
 
 	async function loadData() {
@@ -106,7 +61,7 @@
 				return acc;
 			}, {} as Record<string, Project>);
 		} catch (error) {
-			console.error('Error loading data:', error);
+			logger.error('Error loading data:', error);
 		} finally {
 			loading = false;
 		}
@@ -128,62 +83,8 @@
 			showNewNoteModal = false;
 			await loadData();
 		} catch (error) {
-			handleError(error, { operation: 'Create note', component: 'NotesPage' });
+			// Error already handled by action
 		}
-	}
-
-	function truncateTitle(title: string, maxLength: number = 30) {
-		if (!title) return 'Untitled';
-		if (title.length <= maxLength) return title;
-		return title.substring(0, maxLength) + '...';
-	}
-
-	function formatDate(dateString: string) {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffInMs = now.getTime() - date.getTime();
-		const diffInHours = diffInMs / (1000 * 60 * 60);
-
-		if (diffInHours < 1) {
-			const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-			return `Updated ${diffInMinutes}m ago`;
-		} else if (diffInHours < 24) {
-			return `Updated ${Math.floor(diffInHours)}h ago`;
-		} else if (diffInHours < 48) {
-			return 'Updated yesterday';
-		} else if (diffInHours < 168) {
-			return `Updated ${Math.floor(diffInHours / 24)} days ago`;
-		} else if (diffInHours < 336) {
-			return 'Updated last week';
-		} else {
-			return `Updated ${Math.floor(diffInHours / 168)} weeks ago`;
-		}
-	}
-
-	function getContentPreview(note: NoteWithBlocks): string {
-		if (!note.note_blocks || note.note_blocks.length === 0) return 'No content yet...';
-
-		// Get first text block
-		const firstTextBlock = note.note_blocks.find((block: NoteBlock) => block.type === 'text');
-		if (!firstTextBlock || !firstTextBlock.content?.text) return 'No content yet...';
-
-		const text = firstTextBlock.content.text;
-		return text.length > 200 ? text.substring(0, 200) + '...' : text;
-	}
-
-	function getWordCount(note: NoteWithBlocks): number {
-		if (!note.note_blocks || note.note_blocks.length === 0) return 0;
-
-		// Combine all text blocks
-		let allText = '';
-		for (const block of note.note_blocks) {
-			if (block.type === 'text' && block.content?.text) {
-				allText += block.content.text + ' ';
-			}
-		}
-
-		if (!allText.trim()) return 0;
-		return allText.trim().split(/\s+/).length;
 	}
 
 	async function handleDeleteNote() {
@@ -194,7 +95,7 @@
 			deleteNoteId = null;
 			await loadData();
 		} catch (error) {
-			handleError(error, { operation: 'Delete note', component: 'NotesPage' });
+			// Error already handled by action
 			alert('Failed to delete note');
 		}
 	}
@@ -202,7 +103,7 @@
 	function startEditNote(note: NoteWithBlocks) {
 		editNoteId = note.id;
 		editNoteTitle = note.title;
-		const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
+		const firstTextBlock = note.note_blocks?.find((b) => b.type === 'text');
 		editNoteContent = firstTextBlock?.content?.text || '';
 		editBlockId = firstTextBlock?.id || '';
 	}
@@ -222,179 +123,11 @@
 			editNoteId = null;
 			await loadData();
 		} catch (error) {
-			console.error('Error updating note:', error);
+			handleError(error, { operation: 'Update note', component: 'NotesPage' });
 			alert('Failed to update note');
 		}
 	}
 
-	async function scrollChatToBottom() {
-		await tick();
-		if (chatMessagesContainer) {
-			chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-		}
-	}
-
-	async function sendChatMessage(message?: string) {
-		const userMessage = message || chatInput.trim();
-		if (!userMessage || isChatStreaming || !conversation) return;
-
-		chatInput = '';
-
-		// Build conversation history BEFORE adding new message (last 50 messages)
-		const allMessages = chatMessages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !m.isTyping);
-		const recentMessages = allMessages.slice(-50);
-
-		const conversationHistory = recentMessages.map(m => ({
-			role: m.role,
-			content: m.content
-		}));
-
-		// Save user message to database
-		try {
-			await addMessage(conversation.id, 'user', userMessage);
-		} catch (error) {
-			handleError(error, { operation: 'Save user message', component: 'NotesPage' });
-		}
-
-		// Add user message
-		chatMessages = [...chatMessages, { role: 'user', content: userMessage }];
-		scrollChatToBottom();
-
-		// Add placeholder for AI response
-		const aiMessageIndex = chatMessages.length;
-		chatMessages = [...chatMessages, { role: 'ai', content: '' }];
-		isChatStreaming = true;
-
-		// Show loading message
-		chatMessages[aiMessageIndex] = {
-			role: 'ai',
-			content: '',
-		isTyping: true
-		};
-		chatMessages = chatMessages;
-		scrollChatToBottom();
-
-		try {
-
-			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					message: userMessage,
-					conversationHistory: conversationHistory,
-					conversationSummary: conversation.conversation_summary,
-					workspaceContext: workspaceContextString,
-					context: {
-						scope: 'notes'
-					}
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const data = await response.json();
-
-			// Handle structured response from worker
-			if (data.type === 'actions' && Array.isArray(data.actions)) {
-				// Update loading message
-				chatMessages[aiMessageIndex] = {
-					role: 'ai',
-					content: 'Processing...',
-					isTyping: false
-				};
-				chatMessages = chatMessages;
-				scrollChatToBottom();
-
-				// Process all operations
-				let createCount = 0;
-				let updateCount = 0;
-				let deleteCount = 0;
-
-				for (const action of data.actions) {
-					try {
-						if (action.type === 'note') {
-							if (action.operation === 'create') {
-								const noteData = action.data;
-								await createNote({
-									title: noteData.title,
-									content: noteData.content,
-									project_id: null
-								});
-								createCount++;
-							} else if (action.operation === 'update' && action.id) {
-								// Filter out 'content' field - notes use block-based architecture
-								const { content, ...validChanges } = action.changes;
-								if (content) {
-									console.warn('Ignoring content field in note update - use note_blocks instead');
-								}
-								await updateNote(action.id, validChanges);
-								updateCount++;
-							} else if (action.operation === 'delete' && action.id) {
-								await deleteNote(action.id);
-								deleteCount++;
-							}
-						}
-					} catch (error) {
-						handleError(error, { operation: `Process ${action.operation} note`, component: "NotesPage" });
-					}
-				}
-
-				// Reload notes
-				await loadData();
-
-				// Show custom confirmation message
-				const parts = [];
-				if (createCount > 0) parts.push(`Created ${createCount} note${createCount > 1 ? 's' : ''}`);
-				if (updateCount > 0) parts.push(`Updated ${updateCount} note${updateCount > 1 ? 's' : ''}`);
-				if (deleteCount > 0) parts.push(`Deleted ${deleteCount} note${deleteCount > 1 ? 's' : ''}`);
-				const confirmMessage = parts.length > 0 ? parts.join(', ') + '.' : 'No changes made.';
-
-				// Save AI response to database
-				try {
-					await addMessage(conversation!.id, 'assistant', confirmMessage);
-				} catch (error) {
-					handleError(error, { operation: 'Save AI message', component: 'NotesPage' });
-				}
-
-				chatMessages[aiMessageIndex] = {
-					role: 'ai',
-					content: confirmMessage,
-					isTyping: false
-				};
-				chatMessages = chatMessages;
-			} else if (data.type === 'message') {
-				// Save conversational AI response
-				try {
-					await addMessage(conversation!.id, 'assistant', data.message);
-				} catch (error) {
-					handleError(error, { operation: 'Save AI message', component: 'NotesPage' });
-				}
-
-				// Conversational response
-				chatMessages[aiMessageIndex] = {
-					role: 'ai',
-					content: data.message,
-					isTyping: false
-				};
-				chatMessages = chatMessages;
-			}
-		} catch (error) {
-			handleError(error, { operation: 'Send message', component: 'NotesPage' });
-			chatMessages[aiMessageIndex] = {
-				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.',
-				isTyping: false
-			};
-			chatMessages = chatMessages;
-		} finally {
-			isChatStreaming = false;
-			scrollChatToBottom();
-		}
-	}
 </script>
 
 <AppLayout>
@@ -478,58 +211,15 @@
 
 		<!-- Notes AI Chat Section -->
 		<div class="chat-section">
-			<div class="chat-header">
-				<div class="header-content">
-					<div class="chat-title">
-						<img src="/notes.webp" alt="Notes AI" class="ai-icon" />
-						<div>
-							<h2>Notes AI</h2>
-							<p class="ai-subtitle">Your note-taking assistant</p>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{#if !messagesReady}
-				<div class="chat-loading-overlay">
-					<div class="spinner"></div>
-					<p>Loading conversation...</p>
-				</div>
-			{/if}
-
-			<div class="messages" bind:this={chatMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
-				{#each chatMessages as message (message)}
-					<div class="message {message.role}">
-						<div class="message-bubble">
-							{#if message.isTyping}
-							<div class="typing-indicator">
-								<span></span>
-								<span></span>
-								<span></span>
-							</div>
-						{:else}
-							<p>{message.content}</p>
-						{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-
-			<form class="input-container" on:submit|preventDefault={() => sendChatMessage()}>
-				<input
-					type="text"
-					bind:value={chatInput}
-					placeholder="Ask about notes..."
-					class="message-input"
-					disabled={isChatStreaming}
-				/>
-				<button type="submit" class="send-btn" disabled={isChatStreaming || !chatInput.trim()}>
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M5 15L15 5"/>
-						<path d="M9 5h6v6"/>
-					</svg>
-				</button>
-			</form>
+			<UnifiedChatPage
+				scope="notes"
+				pageTitle="Notes AI"
+				pageIcon="/notes.webp"
+				pageSubtitle="Your note-taking assistant"
+				welcomeMessage="✓ Hi! I can help you manage your notes. What would you like to capture today?"
+				onDataChange={loadData}
+				isEmbedded={true}
+			/>
 		</div>
 	</div>
 

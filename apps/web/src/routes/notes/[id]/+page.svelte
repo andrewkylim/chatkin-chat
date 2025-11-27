@@ -51,7 +51,7 @@
 			await deleteNote(noteId);
 			goto('/notes');
 		} catch (error) {
-			console.error('Error deleting note:', error);
+			handleError(error, { operation: 'Delete note', component: 'NoteDetailPage' });
 			alert('Failed to delete note');
 		}
 	}

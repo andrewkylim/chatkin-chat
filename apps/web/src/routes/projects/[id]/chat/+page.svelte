@@ -1,52 +1,21 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
-	import FileUpload from '$lib/components/FileUpload.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
+	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, onDestroy, tick } from 'svelte';
-	import { PUBLIC_WORKER_URL } from '$env/static/public';
-	import { getProject, deleteProject, getProjects } from '$lib/db/projects';
-	import { getTasks, toggleTaskComplete, updateTask, deleteTask } from '$lib/db/tasks';
-	import { getNotes, createNote, updateNote, deleteNote } from '$lib/db/notes';
-	import { createTask } from '$lib/db/tasks';
-	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
-	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
-	import type { Conversation, Project, Task, Note } from '@chatkin/types';
-	import { logger } from '$lib/utils/logger';
+	import { onMount, onDestroy } from 'svelte';
+	import { getProject, getProjects } from '$lib/db/projects';
+	import { getTasks, updateTask, deleteTask, createTask } from '$lib/db/tasks';
+	import { getNotes, createNote } from '$lib/db/notes';
+	import type { Project, Task, Note } from '@chatkin/types';
+	import { useProjectTasks } from '$lib/logic/useProjectTasks';
+	import { useProjectNotes } from '$lib/logic/useProjectNotes';
+	import { useProjectActions } from '$lib/logic/useProjectActions';
 	import { handleError } from '$lib/utils/error-handler';
-
-	interface AIQuestion {
-		question: string;
-		options: string[];
-	}
-
-	interface Operation {
-		operation: 'create' | 'update' | 'delete';
-		type: 'task' | 'note' | 'project';
-		data: Record<string, unknown>;
-		reason?: string;
-	}
-
-	interface Message {
-		role: 'user' | 'ai';
-		content: string;
-		files?: Array<{ name: string; url: string; type: string }>;
-		actions?: Array<{ type: string; title: string; [key: string]: unknown }>;
-		isTyping?: boolean;
-		questions?: AIQuestion[];
-		operations?: Operation[];
-		awaitingResponse?: boolean;
-		userResponse?: unknown;
-		selectedOperations?: Operation[];
-		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: unknown }>;
-		awaitingConfirmation?: boolean;
-	}
-
 
 	$: projectId = $page.params.id;
 
@@ -54,23 +23,45 @@
 	let tasks: Task[] = [];
 	let notes: Note[] = [];
 	let loading = true;
-	let messages: Message[] = [];
-	let inputMessage = '';
-	let isStreaming = false;
-	let messagesContainer: HTMLDivElement;
-	let mobileChatLayout: MobileChatLayout;
 	let showMenu = false;
 	let showDeleteConfirm = false;
 	let showEditModal = false;
-	let conversation: Conversation | null = null;
-	let workspaceContextString = '';
-	let messagesReady = false;
 	let projects: Project[] = [];
 	let showTaskDetailModal = false;
 	let selectedTask: Task | null = null;
 	let showEditTaskModal = false;
 	let editingTask: Task | null = null;
 	let showCompletedTasks = false;
+	let showFabMenu = false;
+	let showNewItemMenu = false;
+	let showNewTaskModal = false;
+	let showNewNoteModal = false;
+	let newTaskTitle = '';
+	let newTaskDescription = '';
+	let newTaskPriority: 'low' | 'medium' | 'high' = 'medium';
+	let newTaskDueDate = '';
+	let newNoteTitle = '';
+	let newNoteContent = '';
+
+	// Get utilities and actions from helper modules
+	const taskHelpers = useProjectTasks();
+	const noteHelpers = useProjectNotes();
+	const { deleteProject, updateProject, toggleTaskComplete } = useProjectActions();
+
+	// Destructure for convenience
+	const { truncateTitle, formatDueDate, categorizeTasks } = taskHelpers;
+	const { formatDate, getContentPreview, getWordCount } = noteHelpers;
+
+	// Close menu when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (showMenu && !target.closest('.menu-container')) {
+			showMenu = false;
+		}
+		if (showNewItemMenu && !target.closest('.new-item-container')) {
+			showNewItemMenu = false;
+		}
+	}
 
 	onMount(async () => {
 		// Lock viewport to prevent elastic scroll on mobile
@@ -83,68 +74,16 @@
 
 		await loadData();
 
-		// Load conversation and context
-		try {
-			// Get or create conversation for this project
-			conversation = await getOrCreateConversation('project', projectId);
-
-			// Load recent messages from database
-			const dbMessages = await getRecentMessages(conversation.id, 50);
-
-			// Convert DB messages to UI messages
-			if (dbMessages.length > 0) {
-				messages = dbMessages.map(msg => ({
-					role: msg.role === 'assistant' ? 'ai' : 'user',
-					content: msg.content
-				}));
-			} else {
-				// Show welcome message if no history
-				messages = [
-					{
-						role: 'ai',
-						content: project ? `Hi! I'm here to help you with ${project.name}. What would you like to work on?` : 'Hi! What would you like to work on?'
-					}
-				];
+		// Load completed tasks preference from localStorage
+		if (typeof window !== 'undefined') {
+			const saved = localStorage.getItem('showCompletedTasks');
+			if (saved !== null) {
+				showCompletedTasks = saved === 'true';
 			}
-
-			// Load workspace context
-			const workspaceContext = await loadWorkspaceContext();
-			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
-
-				await scrollToBottom();
-			messagesReady = true;
-		} catch (convError) {
-			handleError(convError, { operation: 'Load conversation', component: 'ProjectChatPage' });
-				// Show welcome message as fallback
-			messages = [
-				{
-					role: 'ai',
-					content: project ? `Hi! I'm here to help you with ${project.name}. What would you like to work on?` : 'Hi! What would you like to work on?'
-				}
-			];
-			await scrollToBottom();
-			messagesReady = true;
 		}
 
-		// Load completed tasks preference
-		const savedShowCompleted = localStorage.getItem('showCompletedTasks');
-		if (savedShowCompleted !== null) {
-			showCompletedTasks = savedShowCompleted === 'true';
-		}
-
-		// Close menu when clicking outside
-		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as HTMLElement;
-			if (showMenu && !target.closest('.menu-container')) {
-				showMenu = false;
-			}
-		};
-
+		// Setup click-outside handler for menu
 		document.addEventListener('click', handleClickOutside);
-
-		return () => {
-			document.removeEventListener('click', handleClickOutside);
-		};
 	});
 
 	onDestroy(() => {
@@ -170,16 +109,6 @@
 			handleError(error, { operation: 'Load project data', component: 'ProjectChatPage' });
 		} finally {
 			loading = false;
-		}
-	}
-
-	async function scrollToBottom() {
-		await tick();
-		if (messagesContainer) {
-			messagesContainer.scrollTop = messagesContainer.scrollHeight;
-		}
-		if (mobileChatLayout) {
-			mobileChatLayout.scrollToBottom();
 		}
 	}
 
@@ -214,45 +143,8 @@
 			await toggleTaskComplete(taskId, completed);
 			await loadData();
 		} catch (error) {
-			handleError(error, { operation: 'Toggle task', component: 'ProjectChatPage' });
+			// Error already handled by action
 		}
-	}
-
-	function truncateTitle(title: string, maxLength: number = 30) {
-		if (!title) return 'Untitled';
-		if (title.length <= maxLength) return title;
-		return title.substring(0, maxLength) + '...';
-	}
-
-	function formatDueDate(date: string | null) {
-		if (!date) return 'No due date';
-		const taskDate = new Date(date);
-		const today = new Date();
-
-		// Check if today
-		if (taskDate.toDateString() === today.toDateString()) return 'Due today';
-
-		// Compare dates without time component
-		taskDate.setHours(0, 0, 0, 0);
-		today.setHours(0, 0, 0, 0);
-		if (taskDate < today) return 'Overdue';
-
-		return taskDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-	}
-
-	function isToday(date: string | null) {
-		if (!date) return false;
-		const today = new Date();
-		const taskDate = new Date(date);
-		return taskDate.toDateString() === today.toDateString();
-	}
-
-	function isThisWeek(date: string | null) {
-		if (!date) return false;
-		const today = new Date();
-		const taskDate = new Date(date);
-		const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-		return taskDate >= today && taskDate <= weekFromNow;
 	}
 
 	function toggleShowCompleted() {
@@ -310,253 +202,61 @@
 		}
 	}
 
-	function getContentPreview(note: Note): string {
-		if (!note.note_blocks || note.note_blocks.length === 0) return 'No content yet...';
-
-		// Get first text block
-		const firstTextBlock = note.note_blocks.find((block: Record<string, unknown>) => block.type === 'text');
-		if (!firstTextBlock || !firstTextBlock.content?.text) return 'No content yet...';
-
-		const text = firstTextBlock.content.text;
-		return text.length > 100 ? text.substring(0, 100) + '...' : text;
-	}
-
-	function getWordCount(note: Note): number {
-		if (!note.note_blocks || note.note_blocks.length === 0) return 0;
-
-		// Combine all text blocks
-		let allText = '';
-		for (const block of note.note_blocks) {
-			if (block.type === 'text' && block.content?.text) {
-				allText += block.content.text + ' ';
-			}
-		}
-
-		if (!allText.trim()) return 0;
-		return allText.trim().split(/\s+/).length;
-	}
-
-	function formatDate(dateString: string) {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffInMs = now.getTime() - date.getTime();
-		const diffInHours = diffInMs / (1000 * 60 * 60);
-
-		if (diffInHours < 1) {
-			const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-			return `${diffInMinutes}m ago`;
-		} else if (diffInHours < 24) {
-			return `${Math.floor(diffInHours)}h ago`;
-		} else if (diffInHours < 48) {
-			return 'yesterday';
-		} else {
-			return `${Math.floor(diffInHours / 24)} days ago`;
-		}
-	}
-
-	async function sendMessage(message?: string) {
-		const userMessage = message || inputMessage.trim();
-		if (!userMessage || isStreaming || !conversation) return;
-
-		inputMessage = '';
-
-		// Build conversation history BEFORE adding new message (last 50 messages)
-		const allMessages = messages.filter(m => m.content && typeof m.content === 'string' && m.content.trim() && !m.isTyping);
-		const recentMessages = allMessages.slice(-50);
-
-		const conversationHistory = recentMessages.map(m => ({
-			role: m.role,
-			content: m.content
-		}));
-
-		// Save user message to database
-		try {
-			await addMessage(conversation.id, 'user', userMessage);
-		} catch (error) {
-			console.error('Error saving user message:', error);
-		}
-
-		// Add user message
-		messages = [...messages, { role: 'user', content: userMessage }];
-		scrollToBottom();
-
-		// Add placeholder for AI response
-		const aiMessageIndex = messages.length;
-		messages = [...messages, { role: 'ai', content: '' }];
-		isStreaming = true;
-
-		// Show loading message
-		messages[aiMessageIndex] = {
-			role: 'ai',
-			content: '',
-		isTyping: true
-		};
-		messages = messages;
-		scrollToBottom();
+	async function handleCreateTask() {
+		if (!newTaskTitle.trim()) return;
 
 		try {
-
-			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					message: userMessage,
-					conversationHistory: conversationHistory,
-					conversationSummary: conversation.conversation_summary,
-					workspaceContext: workspaceContextString,
-					context: {
-						projectId: projectId,
-						scope: 'project'
-					}
-				}),
+			await createTask({
+				title: newTaskTitle,
+				description: newTaskDescription,
+				priority: newTaskPriority,
+				status: 'todo',
+				project_id: projectId,
+				due_date: newTaskDueDate || null
 			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const data = await response.json();
-
-			// Handle structured response from worker
-			if (data.type === 'actions' && Array.isArray(data.actions)) {
-				// Update loading message
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: 'Processing...',
-					isTyping: false
-				};
-				messages = messages;
-				scrollToBottom();
-
-				// Process all operations
-				const processedActions = [];
-				let taskCreateCount = 0;
-				let taskUpdateCount = 0;
-				let taskDeleteCount = 0;
-				let noteCreateCount = 0;
-				let noteUpdateCount = 0;
-				let noteDeleteCount = 0;
-
-				for (const action of data.actions) {
-					try {
-						if (action.type === 'task') {
-							if (action.operation === 'create') {
-								const taskData = action.data;
-								await createTask({
-									title: taskData.title,
-									description: taskData.description,
-									priority: taskData.priority || 'medium',
-									status: 'todo',
-									project_id: projectId,
-									due_date: taskData.due_date || null
-								});
-								processedActions.push(action);
-								taskCreateCount++;
-							} else if (action.operation === 'update' && action.id) {
-								await updateTask(action.id, action.changes);
-								processedActions.push(action);
-								taskUpdateCount++;
-							} else if (action.operation === 'delete' && action.id) {
-								await deleteTask(action.id);
-								processedActions.push(action);
-								taskDeleteCount++;
-							}
-						} else if (action.type === 'note') {
-							if (action.operation === 'create') {
-								const noteData = action.data;
-								await createNote({
-									title: noteData.title,
-									content: noteData.content,
-									project_id: projectId
-								});
-								processedActions.push(action);
-								noteCreateCount++;
-							} else if (action.operation === 'update' && action.id) {
-								// Filter out 'content' field - notes use block-based architecture
-								const { content, ...validChanges } = action.changes;
-								if (content) {
-									console.warn('Ignoring content field in note update - use note_blocks instead');
-								}
-								await updateNote(action.id, validChanges);
-								processedActions.push(action);
-								noteUpdateCount++;
-							} else if (action.operation === 'delete' && action.id) {
-								await deleteNote(action.id);
-								processedActions.push(action);
-								noteDeleteCount++;
-							}
-						}
-					} catch (error) {
-						handleError(error, { operation: `Process ${action.operation} ${action.type}`, component: "ProjectChatPage" });
-					}
-				}
-
-				// Reload data
-				await loadData();
-
-				// Show custom confirmation message
-				const parts = [];
-				if (taskCreateCount > 0) parts.push(`Created ${taskCreateCount} task${taskCreateCount > 1 ? 's' : ''}`);
-				if (taskUpdateCount > 0) parts.push(`Updated ${taskUpdateCount} task${taskUpdateCount > 1 ? 's' : ''}`);
-				if (taskDeleteCount > 0) parts.push(`Deleted ${taskDeleteCount} task${taskDeleteCount > 1 ? 's' : ''}`);
-				if (noteCreateCount > 0) parts.push(`Created ${noteCreateCount} note${noteCreateCount > 1 ? 's' : ''}`);
-				if (noteUpdateCount > 0) parts.push(`Updated ${noteUpdateCount} note${noteUpdateCount > 1 ? 's' : ''}`);
-				if (noteDeleteCount > 0) parts.push(`Deleted ${noteDeleteCount} note${noteDeleteCount > 1 ? 's' : ''}`);
-				const confirmMessage = parts.length > 0 ? parts.join(', ') + '.' : 'No changes made.';
-
-				// Save AI response to database
-				try {
-					await addMessage(conversation!.id, 'assistant', confirmMessage);
-				} catch (error) {
-					console.error('Error saving AI message:', error);
-				}
-
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: confirmMessage,
-					actions: processedActions,
-					isTyping: false
-				};
-				messages = messages;
-			} else if (data.type === 'message') {
-				// Save conversational AI response
-				try {
-					await addMessage(conversation!.id, 'assistant', data.message);
-				} catch (error) {
-					console.error('Error saving AI message:', error);
-				}
-
-				// Conversational response
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: data.message,
-					isTyping: false
-				};
-				messages = messages;
-			}
+			// Reset form
+			newTaskTitle = '';
+			newTaskDescription = '';
+			newTaskPriority = 'medium';
+			newTaskDueDate = '';
+			showNewTaskModal = false;
+			await loadData();
 		} catch (error) {
-			console.error('Error sending message:', error);
-			messages[aiMessageIndex] = {
-				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.',
-				isTyping: false
-			};
-			messages = messages;
-		} finally {
-			isStreaming = false;
-			scrollToBottom();
+			handleError(error, { operation: 'Create task', component: 'ProjectChatPage' });
+			alert('Failed to create task');
 		}
 	}
 
-	$: todayTasks = tasks.filter(t => t.status !== 'completed' && isToday(t.due_date));
-	$: thisWeekTasks = tasks.filter(t => t.status !== 'completed' && isThisWeek(t.due_date) && !isToday(t.due_date));
-	$: laterTasks = tasks.filter(t => t.status !== 'completed' && !isToday(t.due_date) && !isThisWeek(t.due_date));
-	$: completedTasks = tasks.filter(t => t.status === 'completed');
+	async function handleCreateNote() {
+		if (!newNoteTitle.trim()) return;
+
+		try {
+			await createNote({
+				title: newNoteTitle,
+				content: newNoteContent,
+				project_id: projectId
+			});
+
+			// Reset form
+			newNoteTitle = '';
+			newNoteContent = '';
+			showNewNoteModal = false;
+			await loadData();
+		} catch (error) {
+			handleError(error, { operation: 'Create note', component: 'ProjectChatPage' });
+			alert('Failed to create note');
+		}
+	}
+
+	$: categorized = categorizeTasks(tasks);
+	$: todayTasks = categorized.todayTasks;
+	$: thisWeekTasks = categorized.thisWeekTasks;
+	$: laterTasks = categorized.laterTasks;
+	$: completedTasks = categorized.completedTasks;
 </script>
 
-<AppLayout hideBottomNav={true}>
+<AppLayout>
 <div class="project-chat-page">
 	<div class="project-container">
 		<!-- Project Content Section (Tasks & Notes) -->
@@ -575,6 +275,34 @@
 					</div>
 				{/if}
 				<div class="header-actions">
+					<!-- New Item Button with Dropdown -->
+					<div class="new-item-container">
+						<button class="new-item-btn" onclick={() => showNewItemMenu = !showNewItemMenu}>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+								<path d="M12 5v14M5 12h14"/>
+							</svg>
+							<span>New Item</span>
+						</button>
+
+						{#if showNewItemMenu}
+							<div class="new-item-dropdown">
+								<button class="dropdown-item" onclick={() => { showNewTaskModal = true; showNewItemMenu = false; }}>
+									<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M9 11l3 3L22 4"/>
+										<path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+									</svg>
+									<span>New Task</span>
+								</button>
+								<button class="dropdown-item" onclick={() => { showNewNoteModal = true; showNewItemMenu = false; }}>
+									<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M15 3l2 2-9 9-4 1 1-4 9-9z"/>
+									</svg>
+									<span>New Note</span>
+								</button>
+							</div>
+						{/if}
+					</div>
+
 					<div class="menu-container">
 						<button class="icon-btn" title="Project menu" onclick={() => showMenu = !showMenu}>
 							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -612,7 +340,7 @@
 				<div class="empty-state">
 					<div class="project-icon-large">{project?.color || '📁'}</div>
 					<h2>No tasks or notes yet</h2>
-					<p>Use the chat to create tasks and notes for this project</p>
+					<p>Create tasks and notes to get started</p>
 				</div>
 			{:else}
 				<div class="content-list">
@@ -770,65 +498,16 @@
 
 		<!-- Chat Section -->
 		<div class="chat-section">
-			<div class="chat-header">
-				<div class="header-content">
-					<div class="chat-title">
-						<div class="project-icon-small">{project?.color || '📁'}</div>
-						<div>
-							<h2>Project Chat</h2>
-							<p class="ai-subtitle">Plan and organize</p>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{#if !messagesReady}
-				<div class="chat-loading-overlay">
-					<div class="spinner"></div>
-					<p>Loading conversation...</p>
-				</div>
-			{/if}
-
-			<div class="messages" bind:this={messagesContainer} style:opacity={messagesReady ? '1' : '0'}>
-				{#each messages as message (message)}
-					<div class="message {message.role}">
-						<div class="message-bubble">
-							{#if message.isTyping}
-								<div class="typing-indicator">
-									<span></span>
-									<span></span>
-									<span></span>
-								</div>
-							{:else}
-								<p>{message.content}</p>
-							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-
-			<form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
-				<FileUpload
-					accept="image/*,application/pdf,.doc,.docx,.txt"
-					maxSizeMB={10}
-					onUploadComplete={(file) => {
-						logger.debug('File uploaded', { file });
-					}}
-				/>
-				<input
-					type="text"
-					bind:value={inputMessage}
-					placeholder="Ask about this project..."
-					class="message-input"
-					disabled={isStreaming}
-				/>
-				<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()}>
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M5 15L15 5"/>
-						<path d="M9 5h6v6"/>
-					</svg>
-				</button>
-			</form>
+			<UnifiedChatPage
+				scope="project"
+				{projectId}
+				pageTitle="Project Chat"
+				pageIcon="/projects.webp"
+				pageSubtitle="Plan and organize your project"
+				welcomeMessage="Hi! I can help you manage tasks and notes for this project. What would you like to work on?"
+				onDataChange={loadData}
+				isEmbedded={true}
+			/>
 		</div>
 	</div>
 
@@ -891,7 +570,7 @@
 				<div class="empty-state">
 					<div class="project-icon-large">{project?.color || '📁'}</div>
 					<h2>No tasks or notes yet</h2>
-					<p>Use the chat to create tasks and notes for this project</p>
+					<p>Create tasks and notes to get started</p>
 				</div>
 			{:else}
 				<!-- Tasks Section -->
@@ -1046,16 +725,6 @@
 		</div>
 	</div>
 
-	<!-- Mobile Chat Layout (Mobile Only) -->
-	<MobileChatLayout
-		bind:this={mobileChatLayout}
-		{messages}
-		bind:inputMessage
-		{isStreaming}
-		{messagesReady}
-		onSubmit={() => sendMessage()}
-	/>
-
 	<!-- Edit Project Modal -->
 	<EditProjectModal
 		show={showEditModal}
@@ -1099,6 +768,134 @@
 		onSave={handleUpdateTask}
 		onDelete={handleDeleteTask}
 	/>
+
+	<!-- New Task Modal -->
+	{#if showNewTaskModal}
+		<div class="modal-overlay" onclick={() => showNewTaskModal = false}>
+			<div class="modal" onclick={(e) => e.stopPropagation()}>
+				<h2>Create New Task</h2>
+				<form onsubmit={(e) => { e.preventDefault(); handleCreateTask(); }}>
+					<div class="form-group">
+						<label for="task-title">Title</label>
+						<input
+							id="task-title"
+							type="text"
+							bind:value={newTaskTitle}
+							placeholder="Task title"
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label for="task-description">Description</label>
+						<textarea
+							id="task-description"
+							bind:value={newTaskDescription}
+							placeholder="Task description"
+							rows="3"
+						></textarea>
+					</div>
+					<div class="form-row">
+						<div class="form-group">
+							<label for="task-priority">Priority</label>
+							<select id="task-priority" bind:value={newTaskPriority}>
+								<option value="low">Low</option>
+								<option value="medium">Medium</option>
+								<option value="high">High</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="task-due-date">Due Date</label>
+							<input
+								id="task-due-date"
+								type="date"
+								bind:value={newTaskDueDate}
+							/>
+						</div>
+					</div>
+					<div class="modal-actions">
+						<button type="button" class="secondary-btn" onclick={() => showNewTaskModal = false}>
+							Cancel
+						</button>
+						<button type="submit" class="primary-btn">
+							Create Task
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- New Note Modal -->
+	{#if showNewNoteModal}
+		<div class="modal-overlay" onclick={() => showNewNoteModal = false}>
+			<div class="modal" onclick={(e) => e.stopPropagation()}>
+				<h2>Create New Note</h2>
+				<form onsubmit={(e) => { e.preventDefault(); handleCreateNote(); }}>
+					<div class="form-group">
+						<label for="note-title">Title</label>
+						<input
+							id="note-title"
+							type="text"
+							bind:value={newNoteTitle}
+							placeholder="Note title"
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label for="note-content">Content</label>
+						<textarea
+							id="note-content"
+							bind:value={newNoteContent}
+							placeholder="Note content"
+							rows="6"
+						></textarea>
+					</div>
+					<div class="modal-actions">
+						<button type="button" class="secondary-btn" onclick={() => showNewNoteModal = false}>
+							Cancel
+						</button>
+						<button type="submit" class="primary-btn">
+							Create Note
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Floating Action Button with Menu (Mobile Only) -->
+	<div class="fab-container">
+		{#if showFabMenu}
+			<div class="fab-menu">
+				<button class="fab-menu-item" onclick={() => { showNewTaskModal = true; showFabMenu = false; }}>
+					<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M9 11l3 3L22 4"/>
+						<path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+					</svg>
+					<span>Add Task</span>
+				</button>
+				<button class="fab-menu-item" onclick={() => { showNewNoteModal = true; showFabMenu = false; }}>
+					<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M15 3l2 2-9 9-4 1 1-4 9-9z"/>
+					</svg>
+					<span>Add Note</span>
+				</button>
+				<button class="fab-menu-item" onclick={() => { showFabMenu = false; }}>
+					<svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
+						<path d="M10 2l1.5 3.5L15 7l-3.5 1.5L10 12l-1.5-3.5L5 7l3.5-1.5L10 2z"/>
+						<path d="M5 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
+					<path d="M15 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
+					</svg>
+					<span>Create with AI</span>
+				</button>
+			</div>
+		{/if}
+		<button class="fab" onclick={() => showFabMenu = !showFabMenu} aria-label="Create options">
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+				<path d="M12 5v14M5 12h14"/>
+			</svg>
+		</button>
+	</div>
 </div>
 </AppLayout>
 
@@ -1251,6 +1048,99 @@
 
 	.delete-item:hover {
 		background: rgba(239, 68, 68, 0.1);
+	}
+
+	/* New Item Button */
+	.new-item-container {
+		position: relative;
+	}
+
+	.new-item-btn {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 14px;
+		height: 36px;
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		white-space: nowrap;
+	}
+
+	.new-item-btn:hover {
+		opacity: 0.9;
+		transform: translateY(-1px);
+	}
+
+	.new-item-btn svg {
+		flex-shrink: 0;
+	}
+
+	.new-item-dropdown {
+		position: absolute;
+		top: calc(100% + 8px);
+		right: 0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		min-width: 180px;
+		overflow: hidden;
+		z-index: 100;
+		animation: slideDown 0.2s ease;
+	}
+
+	.new-item-dropdown .dropdown-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		padding: 12px 16px;
+		background: transparent;
+		border: none;
+		border-bottom: 1px solid var(--border-color);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		font-weight: 500;
+		text-align: left;
+		cursor: pointer;
+		transition: background 0.2s ease;
+	}
+
+	.new-item-dropdown .dropdown-item:last-child {
+		border-bottom: none;
+	}
+
+	.new-item-dropdown .dropdown-item:hover {
+		background: var(--bg-hover);
+	}
+
+	.new-item-dropdown .dropdown-item svg {
+		flex-shrink: 0;
+		color: var(--text-secondary);
+	}
+
+	@keyframes slideDown {
+		from {
+			opacity: 0;
+			transform: translateY(-8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Hide new item button on mobile */
+	@media (max-width: 768px) {
+		.new-item-container {
+			display: none;
+		}
 	}
 
 	.content-list {
@@ -1997,6 +1887,104 @@
 			-webkit-overflow-scrolling: touch;
 			padding: 20px;
 			background: var(--bg-secondary);
+		}
+
+		.fab-container {
+			display: block;
+			position: fixed;
+			bottom: 80px;
+			left: 27px;
+			z-index: 50;
+			margin-bottom: env(safe-area-inset-bottom);
+		}
+
+		.fab {
+			width: 56px;
+			height: 56px;
+			border-radius: 50%;
+			background: var(--accent-primary);
+			color: white;
+			border: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			transition: transform 0.3s ease;
+			opacity: 0.7;
+		}
+
+		.fab:hover {
+			transform: scale(1.05);
+		}
+
+		.fab:active {
+			transform: scale(0.95);
+		}
+
+		.fab-menu {
+			position: absolute;
+			bottom: calc(100% + 12px);
+			left: 0;
+			background: var(--bg-secondary);
+			border: 1px solid var(--border-color);
+			border-radius: var(--radius-md);
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			min-width: 180px;
+			overflow: hidden;
+			animation: slideUp 0.2s ease;
+		}
+
+		@keyframes slideUp {
+			from {
+				opacity: 0;
+				transform: translateY(10px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.fab-menu-item {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 14px 16px;
+			width: 100%;
+			background: transparent;
+			border: none;
+			border-bottom: 1px solid var(--border-color);
+			cursor: pointer;
+			transition: background 0.2s ease;
+			color: var(--text-primary);
+			font-size: 0.9375rem;
+			font-weight: 500;
+			text-align: left;
+		}
+
+		.fab-menu-item:last-child {
+			border-bottom: none;
+		}
+
+		.fab-menu-item:hover {
+			background: var(--bg-tertiary);
+		}
+
+		.fab-menu-item:active {
+			transform: scale(0.98);
+		}
+
+		.fab-menu-item svg {
+			flex-shrink: 0;
+			color: var(--text-secondary);
+		}
+	}
+
+	/* Hide FAB on desktop */
+	@media (min-width: 1024px) {
+		.fab-container {
+			display: none;
 		}
 	}
 </style>
