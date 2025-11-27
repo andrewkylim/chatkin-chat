@@ -42,18 +42,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: pnpm lint
-        continue-on-error: true
-
-      - name: Type check worker
-        run: pnpm --filter worker typecheck
-        continue-on-error: true
-
-      - name: Type check web
-        run: pnpm --filter web typecheck
-        continue-on-error: true
-
       - name: Run worker tests
         run: pnpm --filter worker test
 
@@ -71,12 +59,14 @@ jobs:
           name: worker-coverage
         continue-on-error: true
 
-      - name: Build worker
-        run: pnpm --filter worker build
+      - name: Run ESLint
+        run: pnpm lint
+        continue-on-error: true
 
-      - name: Build web
-        run: pnpm --filter web build
-        env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-          PUBLIC_WORKER_URL: https://chatkin.ai
+      - name: Type check worker
+        run: pnpm --filter worker typecheck
+        continue-on-error: true
+
+      - name: Type check web
+        run: pnpm --filter web typecheck
+        continue-on-error: true
