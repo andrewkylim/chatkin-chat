@@ -66,7 +66,6 @@
 	let showCreateMenu = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
-	let isLoadingConversation = true;
 	let messagesReady = false;
 
 	async function scrollToBottom() {
@@ -586,12 +585,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			const workspaceContext = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
-			isLoadingConversation = false;
 			await scrollToBottom();
 			messagesReady = true;
 		} catch (error) {
 			logger.error('Error loading conversation', error);
-			isLoadingConversation = false;
 			// Show welcome message as fallback
 			messages = [{
 				role: 'ai',
