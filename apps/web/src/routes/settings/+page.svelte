@@ -2,7 +2,6 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { supabase } from '$lib/supabase';
 	import { auth } from '$lib/stores/auth';
-	import { goto } from '$app/navigation';
 
 	let status = '';
 	let cleaning = false;

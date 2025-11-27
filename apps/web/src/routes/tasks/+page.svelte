@@ -4,7 +4,6 @@
 	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import { getTasks, createTask, toggleTaskComplete, updateTask, deleteTask, deleteOldCompletedTasks } from '$lib/db/tasks';
-	import { createNote } from '$lib/db/notes';
 	import { getProjects } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
@@ -12,7 +11,6 @@
 	import { onMount, tick } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { notificationCounts } from '$lib/stores/notifications';
-	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
 	interface ChatMessage {
@@ -49,7 +47,6 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let messagesReady = false;
-	let isLoadingConversation = true;
 
 	onMount(async () => {
 		// Set current section and clear notification count
@@ -97,13 +94,11 @@
 			const workspaceContext = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
-			isLoadingConversation = false;
-			await scrollChatToBottom();
+				await scrollChatToBottom();
 			messagesReady = true;
 		} catch (error) {
 			console.error('Error loading conversation:', error);
-			isLoadingConversation = false;
-			// Show welcome message as fallback
+				// Show welcome message as fallback
 			chatMessages = [{
 				role: 'ai',
 				content: "Hi! I'm your Tasks AI. I can help you create, organize, and prioritize your tasks. What would you like to work on?"
@@ -281,13 +276,6 @@
 			if (!b.updated_at) return -1;
 			return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 		});
-	$: completedTodayCount = completedTasks.filter(t => {
-		if (!t.updated_at) return false;
-		const completedDate = new Date(t.updated_at);
-		const today = new Date();
-		return completedDate.toDateString() === today.toDateString();
-	}).length;
-
 	function toggleShowCompleted() {
 		showCompletedTasks = !showCompletedTasks;
 		localStorage.setItem('showCompletedTasks', String(showCompletedTasks));

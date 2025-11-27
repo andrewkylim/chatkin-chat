@@ -54,10 +54,6 @@
 		priority?: 'low' | 'medium' | 'high';
 	}
 
-	interface AIResponse {
-		message: string;
-		actions?: AIAction[];
-	}
 
 	$: projectId = $page.params.id;
 
@@ -75,7 +71,6 @@
 	let showEditModal = false;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
-	let isLoadingConversation = true;
 	let messagesReady = false;
 	let projects: any[] = [];
 	let showTaskDetailModal = false;
@@ -123,13 +118,11 @@
 			const workspaceContext = await loadWorkspaceContext();
 			workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
-			isLoadingConversation = false;
-			await scrollToBottom();
+				await scrollToBottom();
 			messagesReady = true;
 		} catch (convError) {
 			console.error('Error loading conversation:', convError);
-			isLoadingConversation = false;
-			// Show welcome message as fallback
+				// Show welcome message as fallback
 			messages = [
 				{
 					role: 'ai',
@@ -236,12 +229,6 @@
 		if (!title) return 'Untitled';
 		if (title.length <= maxLength) return title;
 		return title.substring(0, maxLength) + '...';
-	}
-
-	function getProjectName(projectId: string | null) {
-		if (!projectId) return null;
-		const project = projects.find(p => p.id === projectId);
-		return project?.name;
 	}
 
 	function formatDueDate(date: string | null) {
