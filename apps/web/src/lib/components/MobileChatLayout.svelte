@@ -4,10 +4,30 @@
 	import { notificationCounts } from '$lib/stores/notifications';
 	import MobileUserMenu from './MobileUserMenu.svelte';
 
+	interface AIQuestion {
+		question: string;
+		options: string[];
+	}
+
+	interface Operation {
+		operation: 'create' | 'update' | 'delete';
+		type: 'task' | 'note' | 'project';
+		data: any;
+		reason?: string;
+	}
+
 	interface Message {
 		role: 'user' | 'ai';
 		content: string;
 		isTyping?: boolean;
+		questions?: AIQuestion[];
+		operations?: Operation[];
+		awaitingResponse?: boolean;
+		userResponse?: any;
+		selectedOperations?: Operation[];
+		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
+		awaitingConfirmation?: boolean;
+		files?: Array<{ name: string; url: string; type: string }>;
 	}
 
 	let {
@@ -16,6 +36,10 @@
 		isStreaming = false,
 		messagesReady = false,
 		onSubmit,
+		onQuestionSubmit,
+		onQuestionCancel,
+		onOperationConfirm,
+		onOperationCancel,
 		title = 'Chat',
 		backUrl = null
 	}: {
@@ -24,6 +48,10 @@
 		isStreaming: boolean;
 		messagesReady: boolean;
 		onSubmit: () => void;
+		onQuestionSubmit?: (messageIndex: number, answers: Record<string, string>) => void;
+		onQuestionCancel?: (messageIndex: number) => void;
+		onOperationConfirm?: (messageIndex: number) => void;
+		onOperationCancel?: (messageIndex: number) => void;
 		title?: string;
 		backUrl?: string | null;
 	} = $props();
@@ -81,7 +109,7 @@
 				<p>Loading conversation...</p>
 			</div>
 		{:else}
-			{#each messages as message (message)}
+			{#each messages as message, index (index)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
 						{#if message.isTyping}
@@ -92,6 +120,138 @@
 							</div>
 						{:else}
 							<p>{message.content}</p>
+							{#if message.questions && message.awaitingResponse}
+								<!-- Inline Questions Form -->
+								<div class="inline-questions">
+									{#each message.questions as question, qIndex}
+										{@const questionId = `q${index}_${qIndex}`}
+										<div class="question-block">
+											<label class="question-label">{question.question}</label>
+											<div class="question-options">
+												{#each question.options.filter(opt => opt.toLowerCase() !== 'other') as option, optIndex}
+													<label class="option-label">
+														<input
+															type="radio"
+															name={questionId}
+															value={option}
+															id={`${questionId}_${optIndex}`}
+														/>
+														<span>{option}</span>
+													</label>
+												{/each}
+												<label class="option-label other-option">
+													<input
+														type="radio"
+														name={questionId}
+														value="__other__"
+														id={`${questionId}_other`}
+													/>
+													<span>Other:</span>
+													<input
+														type="text"
+														class="other-input"
+														placeholder="Enter your answer"
+														id={`${questionId}_other_text`}
+														onfocus={(e) => {
+															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
+															if (radio) radio.checked = true;
+														}}
+														onclick={(e) => {
+															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
+															if (radio) radio.checked = true;
+														}}
+													/>
+												</label>
+											</div>
+										</div>
+									{/each}
+								</div>
+
+								<!-- Submit/Cancel Buttons -->
+								<div class="confirmation-buttons">
+									<button class="confirm-btn" type="button" onclick={() => {
+										console.log('Mobile Submit clicked!');
+										if (!onQuestionSubmit) return;
+										const answers = {};
+										message.questions.forEach((q, qIdx) => {
+											const questionId = `q${index}_${qIdx}`;
+											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
+											if (selected) {
+												if (selected.value === '__other__') {
+													const otherInput = document.getElementById(`${questionId}_other_text`) as HTMLInputElement;
+													answers[q.question] = otherInput?.value || '';
+												} else {
+													answers[q.question] = selected.value;
+												}
+											}
+										});
+										console.log('Mobile answers:', answers);
+										if (Object.keys(answers).length === 0) {
+											alert('Please select an answer for each question');
+											return;
+										}
+										onQuestionSubmit(index, answers);
+									}}>Submit</button>
+									<button class="cancel-btn" type="button" onclick={() => {
+										console.log('Mobile Cancel clicked!');
+										if (onQuestionCancel) onQuestionCancel(index);
+									}}>Cancel</button>
+								</div>
+							{/if}
+
+							{#if message.operations && message.awaitingResponse}
+								<!-- Inline Operations Preview -->
+								<div class="inline-operations">
+									{#each message.operations as operation, opIndex}
+										<div class="operation-item {operation.operation}">
+											<input
+												type="checkbox"
+												checked={true}
+												disabled
+											/>
+											<div class="operation-content">
+												<div class="operation-header">
+													{#if operation.operation === 'create'}
+														<span class="operation-icon create">✓</span>
+														<strong>Create {operation.type}</strong>
+													{:else if operation.operation === 'update'}
+														<span class="operation-icon update">✎</span>
+														<strong>Update {operation.type}</strong>
+													{:else if operation.operation === 'delete'}
+														<span class="operation-icon delete">✕</span>
+														<strong>Delete {operation.type}</strong>
+													{/if}
+												</div>
+												{#if operation.data.title}
+													<div class="operation-title">{operation.data.title}</div>
+												{/if}
+												{#if operation.data.description}
+													<div class="operation-desc">{operation.data.description}</div>
+												{/if}
+												{#if operation.reason}
+													<div class="operation-reason">{operation.reason}</div>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								</div>
+
+								<!-- Confirmation Buttons -->
+								<div class="confirmation-buttons">
+									<button class="confirm-btn" type="button" onclick={() => {
+										console.log('Mobile Operation Confirm clicked!');
+										if (onOperationConfirm) onOperationConfirm(index);
+									}}>
+										Confirm
+									</button>
+									<button class="cancel-btn" type="button" onclick={() => {
+										console.log('Mobile Operation Cancel clicked!');
+										if (onOperationCancel) onOperationCancel(index);
+									}}>
+										Cancel
+									</button>
+								</div>
+							{/if}
 						{/if}
 					</div>
 				</div>
@@ -100,7 +260,7 @@
 	</div>
 
 	<!-- Input Bar: flex-shrink: 0 (NOT position: fixed) -->
-	<form class="input-bar" on:submit|preventDefault={onSubmit}>
+	<form class="input-bar" onsubmit={(e) => { e.preventDefault(); onSubmit(); }}>
 		<input
 			type="text"
 			bind:value={inputMessage}
@@ -306,6 +466,11 @@
 		border: 1px solid var(--border-color);
 	}
 
+
+	/* Wider bubble for inline questions */
+	.message.ai .message-bubble:has(.inline-questions) {
+		max-width: 95%;
+	}
 	/* Typing Indicator */
 	.typing-indicator {
 		display: flex;
@@ -475,6 +640,203 @@
 	@media (min-width: 1024px) {
 		.mobile-chat-layout {
 			display: none;
+		}
+	}
+
+	/* Inline Questions Styles */
+	.inline-questions {
+		margin-top: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.question-block {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.question-label {
+		font-weight: 600;
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+	}
+
+	.question-options {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.option-label {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
+		padding: 10px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.option-label:hover {
+		background: var(--bg-secondary);
+		border-color: var(--accent-primary);
+	}
+
+	.option-label input[type="radio"] {
+		flex-shrink: 0;
+		width: auto;
+		margin: 0;
+		cursor: pointer;
+	}
+
+	.option-label span {
+		flex: 1;
+	}
+
+	.other-option {
+		align-items: center;
+	}
+
+	.other-option span {
+		flex: 0 0 auto;
+	}
+
+	.other-input {
+		flex: 1;
+		padding: 8px 12px;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		width: auto;
+	}
+
+	.confirmation-buttons {
+		display: flex;
+		gap: 8px;
+		margin-top: 12px;
+	}
+
+	.confirm-btn, .cancel-btn {
+		flex: 1;
+		padding: 10px 16px;
+		border-radius: var(--radius-md);
+		font-weight: 600;
+		font-size: 0.9375rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		border: none;
+	}
+
+	.confirm-btn {
+		background: var(--accent-primary);
+		color: white;
+	}
+
+	.confirm-btn:hover {
+		background: var(--accent-hover);
+	}
+
+	.cancel-btn {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		border: 1px solid var(--border-color);
+	}
+
+	.cancel-btn:hover {
+		background: var(--bg-secondary);
+	}
+
+	/* Inline Operations Styles */
+	.inline-operations {
+		margin-top: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.operation-item {
+		display: flex;
+		gap: 12px;
+		padding: 12px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		align-items: flex-start;
+	}
+
+	.operation-item input[type="checkbox"] {
+		margin-top: 2px;
+		flex-shrink: 0;
+		width: auto;
+	}
+
+	.operation-content {
+		flex: 1;
+		min-width: 0;
+		overflow-wrap: break-word;
+		word-break: break-word;
+	}
+
+	.operation-header {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin-bottom: 4px;
+	}
+
+	.operation-icon {
+		font-size: 1rem;
+		line-height: 1;
+	}
+
+	.operation-icon.create {
+		color: var(--accent-success);
+	}
+
+	.operation-icon.update {
+		color: var(--accent-primary);
+	}
+
+	.operation-icon.delete {
+		color: var(--danger);
+	}
+
+	.operation-title {
+		font-weight: 500;
+		color: var(--text-primary);
+		margin-top: 4px;
+	}
+
+	.operation-desc {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		margin-top: 4px;
+	}
+
+	.operation-reason {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		margin-top: 4px;
+		font-style: italic;
+	}
+
+	/* Responsive fixes for mobile */
+	@media (max-width: 768px) {
+		/* Wider AI bubbles on mobile */
+		.message.ai .message-bubble {
+			max-width: 95%;
+		}
+
+		/* Wider bubbles for inline content on mobile */
+		.message.ai .message-bubble:has(.inline-questions) {
+			max-width: 100%;
 		}
 	}
 </style>

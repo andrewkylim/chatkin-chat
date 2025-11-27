@@ -1,8 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import OperationPreview from '$lib/components/OperationPreview.svelte';
-	import AIQuestionDialog from '$lib/components/AIQuestionDialog.svelte';
 	import MobileChatLayout from '$lib/components/MobileChatLayout.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -22,6 +20,11 @@
 		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: any }>;
 		awaitingConfirmation?: boolean;
 		isTyping?: boolean;
+		questions?: AIQuestion[];
+		operations?: Operation[];
+		awaitingResponse?: boolean;
+		userResponse?: any;
+		selectedOperations?: Operation[];
 	}
 
 	interface AIAction {
@@ -62,10 +65,6 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let isLoadingConversation = true;
-	let showOperationPreview = false;
-	let pendingOperations: Operation[] = [];
-	let showQuestionDialog = false;
-	let pendingQuestions: AIQuestion[] = [];
 	let messagesReady = false;
 
 	async function scrollToBottom() {
@@ -102,12 +101,13 @@
 		isStreaming = true;
 
 		// Show loading message
-		messages[aiMessageIndex] = {
-			role: 'ai',
-			content: '',
-			isTyping: true
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === aiMessageIndex ? {
+				role: 'ai',
+				content: '',
+				isTyping: true
+			} : msg
+		);
 		scrollToBottom();
 
 		try {
@@ -145,6 +145,12 @@
 
 			const data = await response.json();
 
+			// Debug logging
+			console.log('Received AI response (tasks):', data);
+			if (data.type === 'actions' && data.actions) {
+				console.log('Actions array:', JSON.stringify(data.actions, null, 2));
+			}
+
 			// Handle structured response from worker
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
 				// Check if this is the new operations format
@@ -153,6 +159,8 @@
 				if (isOperationsFormat) {
 					// New operations format with create/update/delete
 					const operations = data.actions as Operation[];
+
+					console.log('Processing NEW operations format, count:', operations.length);
 
 					// Count operations by type
 					const createCount = operations.filter(op => op.operation === 'create').length;
@@ -167,6 +175,9 @@
 
 					const previewMessage = `I'll ${parts.join(', ')} for you. Please review:`;
 
+					console.log('Preview message:', previewMessage);
+					console.log('aiMessageIndex:', aiMessageIndex);
+
 					// Save AI response
 					try {
 						await addMessage(conversation!.id, 'assistant', previewMessage, { operations });
@@ -174,16 +185,18 @@
 						console.error('Error saving AI message:', error);
 					}
 
-					// Show conversational message
-					messages[aiMessageIndex] = {
-						role: 'ai',
-						content: previewMessage
-					};
-					messages = messages;
-
-					// Show operation preview modal
-					pendingOperations = operations;
-					showOperationPreview = true;
+					// Show operations inline
+					messages = messages.map((msg, idx) =>
+						idx === aiMessageIndex ? {
+							role: 'ai',
+							content: previewMessage,
+							operations,
+							awaitingResponse: true,
+							selectedOperations: operations // All selected by default
+						} : msg
+					);
+					console.log('Updated message with operations:', messages[aiMessageIndex]);
+					scrollToBottom();
 				} else {
 					// Old actions format (backward compatibility)
 					// Count proposed items
@@ -207,23 +220,40 @@
 					}
 
 					// Show proposed actions with confirmation buttons
-					messages[aiMessageIndex] = {
-						role: 'ai',
-						content: previewMessage,
-						proposedActions: data.actions,
-						awaitingConfirmation: true
-					};
-					messages = messages;
+					messages = messages.map((msg, idx) =>
+						idx === aiMessageIndex ? {
+							role: 'ai',
+							content: previewMessage,
+							proposedActions: data.actions,
+							awaitingConfirmation: true
+						} : msg
+					);
 					scrollToBottom();
 				}
 			} else if (data.type === 'questions' && Array.isArray(data.questions)) {
-				// AI is asking structured questions
-				// Remove the typing indicator
-				messages = messages.slice(0, -1);
+				// AI is asking structured questions - display inline
+				const questionsMessage = "I need some information to help you:";
 
-				// Show question dialog
-				pendingQuestions = data.questions;
-				showQuestionDialog = true;
+				console.log('Setting up inline questions, aiMessageIndex:', aiMessageIndex);
+				console.log('Questions:', data.questions);
+
+				// Save AI response
+				try {
+					await addMessage(conversation!.id, 'assistant', questionsMessage, { questions: data.questions });
+				} catch (error) {
+					console.error('Error saving AI message:', error);
+				}
+
+				// Show questions inline
+				messages = messages.map((msg, idx) =>
+					idx === aiMessageIndex ? {
+						role: 'ai',
+						content: questionsMessage,
+						questions: data.questions,
+						awaitingResponse: true
+					} : msg
+				);
+				console.log('Updated message:', messages[aiMessageIndex]);
 			} else if (data.type === 'message') {
 				// Save conversational AI response
 				try {
@@ -233,19 +263,21 @@
 				}
 
 				// Conversational response
-				messages[aiMessageIndex] = {
-					role: 'ai',
-					content: data.message
-				};
-				messages = messages;
+				messages = messages.map((msg, idx) =>
+					idx === aiMessageIndex ? {
+						role: 'ai',
+						content: data.message
+					} : msg
+				);
 			}
 		} catch (error) {
 			console.error('Error sending message:', error);
-			messages[aiMessageIndex] = {
-				role: 'ai',
-				content: 'Sorry, I encountered an error processing your request. Please try again.'
-			};
-			messages = messages;
+			messages = messages.map((msg, idx) =>
+				idx === aiMessageIndex ? {
+					role: 'ai',
+					content: 'Sorry, I encountered an error processing your request. Please try again.'
+				} : msg
+			);
 		} finally {
 			isStreaming = false;
 			scrollToBottom();
@@ -257,12 +289,13 @@
 		if (!message.proposedActions || !message.awaitingConfirmation) return;
 
 		// Update message to show creating status
-		messages[messageIndex] = {
-			...message,
-			content: 'Creating items...',
-			awaitingConfirmation: false
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...message,
+				content: 'Creating items...',
+				awaitingConfirmation: false
+			} : msg
+		);
 
 		// Create all proposed items
 		let projectCount = 0, taskCount = 0, noteCount = 0;
@@ -308,13 +341,14 @@
 		if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
 		if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 
-		messages[messageIndex] = {
-			...message,
-			content: `Created ${parts.join(', ')} for you!`,
-			awaitingConfirmation: false,
-			proposedActions: undefined
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...message,
+				content: `Created ${parts.join(', ')} for you!`,
+				awaitingConfirmation: false,
+				proposedActions: undefined
+			} : msg
+		);
 	}
 
 	function cancelActions(messageIndex: number) {
@@ -322,25 +356,29 @@
 		if (!message.awaitingConfirmation) return;
 
 		// Update message to show cancellation
-		messages[messageIndex] = {
-			...message,
-			content: 'Okay, I won\'t create those items.',
-			awaitingConfirmation: false,
-			proposedActions: undefined
-		};
-		messages = messages;
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...message,
+				content: 'Okay, I won\'t create those items.',
+				awaitingConfirmation: false,
+				proposedActions: undefined
+			} : msg
+		);
 	}
 
-	async function executeOperations(operations: Operation[]) {
-		showOperationPreview = false;
-
-		// Add status message
-		messages = [...messages, {
-			role: 'ai',
-			content: 'Executing operations...',
-			isTyping: true
-		}];
-		const statusIndex = messages.length - 1;
+	async function executeOperations(operations: Operation[], messageIndex: number) {
+		// Update message to show executing status
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...messages[messageIndex],
+				content: 'Executing operations...',
+				awaitingResponse: false,
+				operations: undefined,
+				selectedOperations: undefined,
+				isTyping: true
+			} : msg
+		);
+		const statusIndex = messageIndex;
 
 		let successCount = 0;
 		let errorCount = 0;
@@ -418,50 +456,94 @@
 		const errorMsg = errorCount > 0 ? `${errorCount} failed` : '';
 		const parts = [successMsg, errorMsg].filter(Boolean);
 
-		messages[statusIndex] = {
-			role: 'ai',
-			content: `${parts.join(', ')}!\n\n${results.join('\n')}`
-		};
+		messages = messages.map((msg, idx) =>
+			idx === statusIndex ? {
+				role: 'ai',
+				content: `${parts.join(', ')}!\n\n${results.join('\n')}`
+			} : msg
+		);
+		scrollToBottom();
+	}
+
+	function handleInlineOperationConfirm(messageIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.selectedOperations || message.selectedOperations.length === 0) return;
+
+		executeOperations(message.selectedOperations, messageIndex);
+	}
+
+	function handleInlineOperationCancel(messageIndex: number) {
+		// Update message to show cancellation
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...messages[messageIndex],
+				content: 'Okay, I won\'t make those changes.',
+				awaitingResponse: false,
+				operations: undefined,
+				selectedOperations: undefined
+			} : msg
+		);
+	}
+
+	function toggleOperationSelection(messageIndex: number, opIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.operations || !message.selectedOperations) return;
+
+		const operation = message.operations[opIndex];
+		const isSelected = message.selectedOperations.some(op =>
+			op.operation === operation.operation &&
+			op.type === operation.type &&
+			op.id === operation.id &&
+			JSON.stringify(op.data) === JSON.stringify(operation.data)
+		);
+
+		if (isSelected) {
+			// Remove from selection
+			messages[messageIndex].selectedOperations = message.selectedOperations.filter(op =>
+				!(op.operation === operation.operation &&
+				  op.type === operation.type &&
+				  op.id === operation.id &&
+				  JSON.stringify(op.data) === JSON.stringify(operation.data))
+			);
+		} else {
+			// Add to selection
+			messages[messageIndex].selectedOperations = [...message.selectedOperations, operation];
+		}
 		messages = messages;
-		scrollToBottom();
 	}
 
-	function handleOperationConfirm(operations: Operation[]) {
-		executeOperations(operations);
-	}
-
-	function handleOperationCancel() {
-		showOperationPreview = false;
-
-		// Add cancellation message
-		messages = [...messages, {
-			role: 'ai',
-			content: 'Okay, I won\'t make those changes.'
-		}];
-		scrollToBottom();
-	}
-
-	function handleQuestionSubmit(answers: Record<string, string>) {
-		showQuestionDialog = false;
+	async function handleInlineQuestionSubmit(messageIndex: number, answers: Record<string, string>) {
+		const message = messages[messageIndex];
+		if (!message.questions) return;
 
 		// Format answers as a message
 		const answersText = Object.entries(answers)
 			.map(([question, answer]) => `${question}\n→ ${answer}`)
 			.join('\n\n');
 
+		// Update message to show user's responses
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...message,
+				awaitingResponse: false,
+				userResponse: answers
+			} : msg
+		);
+
 		// Send answers back to AI
-		sendMessage(answersText);
+		await sendMessage(answersText);
 	}
 
-	function handleQuestionCancel() {
-		showQuestionDialog = false;
-
-		// Add cancellation message
-		messages = [...messages, {
-			role: 'ai',
-			content: 'No problem! Let me know if you need anything else.'
-		}];
-		scrollToBottom();
+	function handleInlineQuestionCancel(messageIndex: number) {
+		// Update message to show cancellation
+		messages = messages.map((msg, idx) =>
+			idx === messageIndex ? {
+				...messages[messageIndex],
+				content: 'No problem! Let me know if you need anything else.',
+				awaitingResponse: false,
+				questions: undefined
+			} : msg
+		);
 	}
 
 	onMount(async () => {
@@ -537,7 +619,7 @@
 	<div class="desktop-chat">
 		<header class="chat-header">
 			<div class="header-content">
-				<button class="back-btn" on:click={() => goto('/tasks')} title="Back to Tasks">
+				<button class="back-btn" onclick={() => goto('/tasks')} title="Back to Tasks">
 					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M12 5L7 10l5 5"/>
 					</svg>
@@ -555,7 +637,7 @@
 		{/if}
 
 		<div class="messages" bind:this={desktopMessagesContainer} style:opacity={messagesReady ? '1' : '0'}>
-			{#each messages as message, index (message)}
+			{#each messages as message, index (index)}
 				<div class="message {message.role}">
 					<div class="message-bubble">
 						{#if message.isTyping}
@@ -568,7 +650,7 @@
 							<p>{message.content}</p>
 
 							{#if message.proposedActions && message.awaitingConfirmation}
-								<!-- Action Preview List -->
+								<!-- Action Preview List (OLD format for backward compatibility) -->
 								<div class="actions-preview">
 									{#each message.proposedActions as action}
 										<div class="action-item">
@@ -609,15 +691,155 @@
 
 								<!-- Confirmation Buttons -->
 								<div class="confirmation-buttons">
-									<button class="confirm-btn" on:click={() => confirmActions(index)}>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M4 8l2 2 6-6"/>
-										</svg>
+									<button class="confirm-btn" onclick={() => confirmActions(index)}>
 										Confirm
 									</button>
-									<button class="cancel-btn" on:click={() => cancelActions(index)}>
+									<button class="cancel-btn" onclick={() => cancelActions(index)}>
 										Cancel
 									</button>
+								</div>
+							{/if}
+
+							{#if message.operations && message.awaitingResponse}
+								<!-- Inline Operations Preview -->
+								<div class="inline-operations">
+									{#each message.operations as operation, opIndex}
+										{@const isSelected = message.selectedOperations?.some(op =>
+											op.operation === operation.operation &&
+											op.type === operation.type &&
+											op.id === operation.id &&
+											JSON.stringify(op.data) === JSON.stringify(operation.data)
+										)}
+										<label class="operation-item {operation.operation}">
+											<input
+												type="checkbox"
+												checked={isSelected}
+												onchange={() => toggleOperationSelection(index, opIndex)}
+											/>
+											<div class="operation-content">
+												<div class="operation-header">
+													{#if operation.operation === 'create'}
+														<span class="operation-icon create">✓</span>
+														<strong>Create {operation.type}</strong>
+													{:else if operation.operation === 'update'}
+														<span class="operation-icon update">✎</span>
+														<strong>Update {operation.type}</strong>
+													{:else if operation.operation === 'delete'}
+														<span class="operation-icon delete">✗</span>
+														<strong>Delete {operation.type}</strong>
+													{/if}
+												</div>
+												{#if operation.data}
+													<div class="operation-details">
+														{#if operation.data.title || operation.data.name}
+															<span class="operation-title">{operation.data.title || operation.data.name}</span>
+														{/if}
+														{#if operation.data.description}
+															<span class="operation-desc">{operation.data.description}</span>
+														{/if}
+													</div>
+												{/if}
+												{#if operation.reason}
+													<div class="operation-reason">{operation.reason}</div>
+												{/if}
+											</div>
+										</label>
+									{/each}
+								</div>
+
+								<!-- Confirmation Buttons -->
+								<div class="confirmation-buttons">
+									<button class="confirm-btn" onclick={() => handleInlineOperationConfirm(index)} disabled={!message.selectedOperations || message.selectedOperations.length === 0}>
+										Confirm
+									</button>
+									<button class="cancel-btn" onclick={() => handleInlineOperationCancel(index)}>
+										Cancel
+									</button>
+								</div>
+							{/if}
+
+							{#if message.questions && message.awaitingResponse}
+								<!-- Inline Questions Form -->
+								<div class="inline-questions">
+									{#each message.questions as question, qIndex}
+										{@const questionId = `q${index}_${qIndex}`}
+										<div class="question-block">
+											<label class="question-label">{question.question}</label>
+											<div class="question-options">
+												{#each question.options.filter(opt => opt.toLowerCase() !== 'other') as option, optIndex}
+													<label class="option-label">
+														<input
+															type="radio"
+															name={questionId}
+															value={option}
+															id={`${questionId}_${optIndex}`}
+														/>
+														<span>{option}</span>
+													</label>
+												{/each}
+												<label class="option-label other-option">
+													<input
+														type="radio"
+														name={questionId}
+														value="__other__"
+														id={`${questionId}_other`}
+													/>
+													<span>Other:</span>
+													<input
+														type="text"
+														class="other-input"
+														placeholder="Enter your answer"
+														id={`${questionId}_other_text`}
+														onfocus={(e) => {
+															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
+															if (radio) radio.checked = true;
+														}}
+														onclick={(e) => {
+															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
+															if (radio) radio.checked = true;
+														}}
+													/>
+												</label>
+											</div>
+										</div>
+									{/each}
+								</div>
+
+								<!-- Submit/Cancel Buttons -->
+								<div class="confirmation-buttons">
+									<button class="confirm-btn" onclick={() => {
+										const answers = {};
+										message.questions.forEach((q, qIdx) => {
+											const questionId = `q${index}_${qIdx}`;
+											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
+											if (selected) {
+												if (selected.value === '__other__') {
+													const otherInput = document.getElementById(`${questionId}_other_text`) as HTMLInputElement;
+													answers[q.question] = otherInput?.value || '';
+												} else {
+													answers[q.question] = selected.value;
+												}
+											}
+										});
+										handleInlineQuestionSubmit(index, answers);
+									}}>
+										Submit
+									</button>
+									<button class="cancel-btn" onclick={() => handleInlineQuestionCancel(index)}>
+										Cancel
+									</button>
+								</div>
+							{/if}
+
+							{#if message.userResponse}
+								<!-- Show user's responses after submission -->
+								<div class="user-responses">
+									{#each Object.entries(message.userResponse) as [question, answer]}
+										<div class="response-item">
+											<strong>{question}</strong>
+											<span>→ {answer}</span>
+										</div>
+									{/each}
 								</div>
 							{/if}
 						{/if}
@@ -663,24 +885,6 @@
 	/>
 </div>
 </AppLayout>
-
-<!-- Operation Preview Modal -->
-{#if showOperationPreview}
-	<OperationPreview
-		operations={pendingOperations}
-		onConfirm={handleOperationConfirm}
-		onCancel={handleOperationCancel}
-	/>
-{/if}
-
-<!-- Question Dialog -->
-{#if showQuestionDialog}
-	<AIQuestionDialog
-		questions={pendingQuestions}
-		onSubmit={handleQuestionSubmit}
-		onCancel={handleQuestionCancel}
-	/>
-{/if}
 
 <style>
 
@@ -920,45 +1124,34 @@
 		border-top: 1px solid var(--border-color);
 	}
 
-	.confirm-btn,
-	.cancel-btn {
+	.confirm-btn, .cancel-btn {
 		flex: 1;
-		padding: 8px 16px;
+		padding: 10px 16px;
 		border-radius: var(--radius-md);
 		font-weight: 600;
-		font-size: 0.875rem;
+		font-size: 0.9375rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
+		border: none;
 	}
 
 	.confirm-btn {
 		background: var(--accent-primary);
 		color: white;
-		border: none;
 	}
 
 	.confirm-btn:hover {
 		background: var(--accent-hover);
-		transform: translateY(-1px);
-	}
-
-	.confirm-btn:active {
-		transform: translateY(0);
 	}
 
 	.cancel-btn {
-		background: transparent;
-		color: var(--text-secondary);
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
 		border: 1px solid var(--border-color);
 	}
 
 	.cancel-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
+		background: var(--bg-secondary);
 	}
 
 	/* Typing Indicator */
@@ -1065,6 +1258,246 @@
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	/* Inline Operations */
+	.inline-operations {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.operation-item {
+		display: flex;
+		gap: 10px;
+		padding: 10px;
+		background: var(--bg-secondary);
+		border-radius: var(--radius-md);
+		border: 2px solid var(--border-color);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.operation-item:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.operation-item input[type="checkbox"] {
+		margin-top: 2px;
+		cursor: pointer;
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
+	}
+
+	.operation-item.create {
+		border-color: rgba(76, 175, 80, 0.3);
+	}
+
+	.operation-item.update {
+		border-color: rgba(33, 150, 243, 0.3);
+	}
+
+	.operation-item.delete {
+		border-color: rgba(211, 47, 47, 0.3);
+	}
+
+	.operation-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.operation-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.operation-icon {
+		font-size: 16px;
+		font-weight: bold;
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+	}
+
+	.operation-icon.create {
+		background: rgba(76, 175, 80, 0.15);
+		color: #4caf50;
+	}
+
+	.operation-icon.update {
+		background: rgba(33, 150, 243, 0.15);
+		color: #2196f3;
+	}
+
+	.operation-icon.delete {
+		background: rgba(211, 47, 47, 0.15);
+		color: #d32f2f;
+	}
+
+	.operation-details {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin-top: 4px;
+	}
+
+	.operation-title {
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+
+	.operation-desc {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
+
+	.operation-reason {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		font-style: italic;
+		margin-top: 4px;
+	}
+
+	/* Inline Questions */
+	.inline-questions {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.question-block {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.question-label {
+		font-weight: 600;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+	}
+
+	.question-options {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.option-label {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 12px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		font-size: 0.9375rem;
+	}
+
+	.option-label:hover {
+		background: var(--bg-tertiary);
+		border-color: var(--accent-primary);
+	}
+
+	.option-label input[type="radio"] {
+		cursor: pointer;
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
+	}
+
+	.option-label span {
+		flex: 1;
+	}
+
+	.other-option {
+		align-items: center;
+	}
+
+	.other-option span {
+		flex: 0 0 auto;
+	}
+
+	.other-input {
+		flex: 1;
+		padding: 8px 12px;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-sm);
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		width: auto;
+	}
+
+	.other-input:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	/* User Responses Display */
+	.user-responses {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-color);
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.response-item {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 8px;
+		background: var(--bg-secondary);
+		border-radius: var(--radius-md);
+	}
+
+	.response-item strong {
+		font-size: 0.875rem;
+		color: var(--text-primary);
+	}
+
+	.response-item span {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+	}
+
+	/* Awaiting Response Indicator */
+	.message.ai .message-bubble:has(.inline-operations[data-awaiting="true"]),
+	.message.ai .message-bubble:has(.inline-questions[data-awaiting="true"]) {
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	/* Disabled button state */
+	.confirm-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.confirm-btn:disabled:hover {
+		transform: none;
 	}
 
 </style>
