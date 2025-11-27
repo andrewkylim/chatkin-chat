@@ -2,7 +2,7 @@
  * AI response parser and handler
  */
 
-import type { Message } from '@anthropic-ai/sdk/resources/messages';
+import type { Message, TextBlock, ToolUseBlock } from '@anthropic-ai/sdk/resources/messages';
 
 export interface AIResponse {
   type: 'message' | 'actions' | 'questions';
@@ -15,38 +15,39 @@ export interface AIResponse {
 export function parseAIResponse(response: Message): AIResponse {
   // Check if AI wants to use a tool
   if (response.stop_reason === 'tool_use') {
-    const toolUseBlock = response.content.find((block: Record<string, unknown>) => block.type === 'tool_use');
+    const toolUseBlock = response.content.find((block): block is ToolUseBlock => block.type === 'tool_use');
 
     if (toolUseBlock) {
       // Get any text response that came before the tool use
-      const textBlock = response.content.find((block: Record<string, unknown>) => block.type === 'text');
-      const textMessage = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+      const textBlock = response.content.find((block): block is TextBlock => block.type === 'text');
+      const textMessage = textBlock?.text || '';
 
-      if (toolUseBlock.type === 'tool_use' && toolUseBlock.name === 'propose_operations') {
+      if (toolUseBlock.name === 'propose_operations') {
         // AI wants to propose operations
         const input = toolUseBlock.input as Record<string, unknown>;
         return {
           type: 'actions',
           message: textMessage,
-          summary: input.summary,
-          actions: input.operations
+          summary: input.summary as string | undefined,
+          actions: input.operations as Array<Record<string, unknown>> | undefined
         };
       }
 
-      if (toolUseBlock.type === 'tool_use' && toolUseBlock.name === 'ask_questions') {
+      if (toolUseBlock.name === 'ask_questions') {
         // AI wants to ask questions
         const input = toolUseBlock.input as Record<string, unknown>;
         return {
           type: 'questions',
           message: textMessage,
-          questions: input.questions
+          questions: input.questions as Array<Record<string, unknown>> | undefined
         };
       }
     }
   }
 
   // No tool use - return conversational message
-  const aiMessage = response.content[0].type === 'text' ? response.content[0].text : '';
+  const firstBlock = response.content[0];
+  const aiMessage = firstBlock?.type === 'text' ? firstBlock.text : '';
   return {
     type: 'message',
     message: aiMessage
