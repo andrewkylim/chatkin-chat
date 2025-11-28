@@ -4,6 +4,7 @@
 	import { notificationCounts } from '$lib/stores/notifications';
 	import MobileUserMenu from './MobileUserMenu.svelte';
 	import FileUpload from './FileUpload.svelte';
+	import VoiceInput from './VoiceInput.svelte';
 
 	interface AIQuestion {
 		question: string;
@@ -456,14 +457,24 @@
 				}];
 			}}
 		/>
-		<input
-			type="text"
-			bind:value={inputMessage}
-			maxlength="10000"
-			placeholder="Ask me anything..."
-			class="message-input"
-			disabled={isStreaming}
-		/>
+		<div class="input-wrapper">
+			<input
+				type="text"
+				bind:value={inputMessage}
+				maxlength="10000"
+				placeholder="Ask me anything..."
+				class="message-input"
+				disabled={isStreaming}
+			/>
+			<VoiceInput
+				onTranscriptUpdate={(transcript) => {
+					inputMessage = transcript;
+				}}
+				onTranscriptComplete={(transcript) => {
+					inputMessage = transcript;
+				}}
+			/>
+		</div>
 		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()} aria-label="Send message">
 			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M5 15L15 5"/>
@@ -823,11 +834,19 @@
 		box-sizing: border-box;
 	}
 
+	.input-wrapper {
+		position: relative;
+		flex: 1;
+		display: flex;
+		align-items: center;
+	}
+
 	.message-input {
 		flex: 1;
+		width: 100%;
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
-		padding: 10px 14px;
+		padding: 10px 48px 10px 14px;
 		background: var(--bg-tertiary);
 		color: var(--text-primary);
 		font-size: 0.9375rem;
@@ -841,6 +860,21 @@
 		outline: none;
 		border-color: var(--accent-primary);
 		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	.input-wrapper :global(.voice-input) {
+		position: absolute;
+		right: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+
+	.input-wrapper :global(.mic-btn) {
+		width: 32px;
+		height: 32px;
+		background: transparent;
+		border: none;
+		padding: 0;
 	}
 
 	.message-input:disabled {
