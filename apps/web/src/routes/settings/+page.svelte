@@ -2,6 +2,7 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { supabase } from '$lib/supabase';
 	import { auth } from '$lib/stores/auth';
+	import { onMount } from 'svelte';
 
 	let status = '';
 	let cleaning = false;
@@ -11,8 +12,35 @@
 	let deleteAllStatus = '';
 	let deletingAll = false;
 
+	// Theme state
+	let theme: 'light' | 'dark' = 'light';
+
 	$: userEmail = $auth.user?.email || '';
 	$: canDeleteAll = deleteConfirmText.toLowerCase() === 'delete';
+
+	onMount(() => {
+		// Load theme preference from localStorage
+		const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+		if (savedTheme) {
+			theme = savedTheme;
+			applyTheme(savedTheme);
+		}
+	});
+
+	function applyTheme(newTheme: 'light' | 'dark') {
+		if (newTheme === 'dark') {
+			document.documentElement.setAttribute('data-theme', 'dark');
+		} else {
+			document.documentElement.removeAttribute('data-theme');
+		}
+	}
+
+	function toggleTheme() {
+		const newTheme = theme === 'light' ? 'dark' : 'light';
+		theme = newTheme;
+		applyTheme(newTheme);
+		localStorage.setItem('theme', newTheme);
+	}
 
 	async function clearChatHistory() {
 		if (!confirm('⚠️ Are you sure you want to delete ALL your chat history?\n\nThis will remove all conversations and messages across:\n• Global Chat\n• Tasks Chat\n• Notes Chat\n• Project Chats\n\nThis action cannot be undone.')) {
@@ -191,6 +219,26 @@
 				</div>
 			</div>
 
+			<div class="settings-section">
+				<div class="section-header">
+					<h2>Appearance</h2>
+				</div>
+				<div class="section-content">
+					<div class="theme-toggle-container">
+						<div class="theme-toggle-label">
+							<h3>Theme</h3>
+							<p class="theme-description">Choose your preferred color scheme</p>
+						</div>
+						<button class="theme-toggle" on:click={toggleTheme} aria-label="Toggle theme">
+							<div class="toggle-track" class:active={theme === 'dark'}>
+								<div class="toggle-thumb"></div>
+							</div>
+							<span class="theme-text">{theme === 'light' ? 'Light' : 'Dark'}</span>
+						</button>
+					</div>
+				</div>
+			</div>
+
 			<div class="settings-section danger-zone">
 				<div class="section-header">
 					<h2>Danger Zone</h2>
@@ -199,7 +247,7 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Clear All Chat History</h3>
 						<p class="section-description">
-							Clear all your conversation history across the entire app. This will delete all messages in Global Chat, Tasks Chat, Notes Chat, and Project Chats.
+							Clear all your conversation history across the entire app. This will delete all messages in Global Chat, Tasks Chat, Notes Chat, and Project Chats. Note: This does not delete your files, projects, tasks, or notes.
 						</p>
 
 						<button
@@ -222,7 +270,7 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Delete All Content</h3>
 						<p class="section-description">
-							Permanently delete all your content including projects, tasks, and notes. This action cannot be undone.
+							Permanently delete all your content including projects, tasks, notes, files, and images. This action cannot be undone.
 						</p>
 
 						<button
@@ -399,7 +447,7 @@
 
 	.section-description {
 		margin: 0 0 16px 0;
-		font-size: 0.9375rem;
+		font-size: 0.875rem;
 		line-height: 1.6;
 		color: var(--text-secondary);
 	}
@@ -550,6 +598,73 @@
 
 	.secondary-btn:hover {
 		background: var(--bg-primary);
+	}
+
+	/* Theme Toggle */
+	.theme-toggle-container {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	.theme-toggle-label h3 {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0 0 4px 0;
+	}
+
+	.theme-description {
+		margin: 0;
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+	}
+
+	.theme-toggle {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.toggle-track {
+		position: relative;
+		width: 52px;
+		height: 28px;
+		background: var(--border-color);
+		border-radius: 14px;
+		transition: all 0.3s ease;
+	}
+
+	.toggle-track.active {
+		background: var(--accent-primary);
+	}
+
+	.toggle-thumb {
+		position: absolute;
+		top: 3px;
+		left: 3px;
+		width: 22px;
+		height: 22px;
+		background: white;
+		border-radius: 50%;
+		transition: transform 0.3s ease;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.toggle-track.active .toggle-thumb {
+		transform: translateX(24px);
+	}
+
+	.theme-text {
+		font-size: 0.9375rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		min-width: 50px;
 	}
 
 	@media (max-width: 640px) {

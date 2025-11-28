@@ -20,7 +20,7 @@ describe('CORS Middleware', () => {
       const headers = getCorsHeaders(request, mockEnv);
 
       expect(headers['Access-Control-Allow-Origin']).toBe('http://localhost:5173');
-      expect(headers['Access-Control-Allow-Methods']).toBe('GET, POST, OPTIONS');
+      expect(headers['Access-Control-Allow-Methods']).toBe('GET, POST, DELETE, OPTIONS');
       expect(headers['Access-Control-Allow-Headers']).toBe('Content-Type, Authorization');
       expect(headers['Access-Control-Allow-Credentials']).toBe('true');
     });
@@ -63,7 +63,7 @@ describe('CORS Middleware', () => {
     it('should return 200 response with CORS headers', () => {
       const corsHeaders = {
         'Access-Control-Allow-Origin': 'http://localhost:5173',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Credentials': 'true'
       };

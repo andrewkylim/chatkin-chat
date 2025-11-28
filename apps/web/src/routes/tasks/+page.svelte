@@ -1170,12 +1170,24 @@
 		padding: 24px;
 		max-width: 500px;
 		width: 100%;
+		max-height: 85vh;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 	}
 
 	.modal h2 {
+		flex-shrink: 0;
 		font-size: 1.5rem;
 		margin-bottom: 20px;
+	}
+
+	.modal form {
+		flex: 1;
+		overflow-y: auto;
+		min-height: 0;
+		padding-bottom: 8px;
 	}
 
 	/* Task Detail Styles */

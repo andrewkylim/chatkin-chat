@@ -170,13 +170,23 @@
 		padding: 24px;
 		max-width: 500px;
 		width: 100%;
-		max-height: 90vh;
+		max-height: 85vh;
 		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.modal h2 {
+		flex-shrink: 0;
 		margin-bottom: 20px;
 		font-size: 1.25rem;
+	}
+
+	.modal form {
+		flex: 1;
+		overflow-y: auto;
+		min-height: 0;
+		padding-bottom: 8px;
 	}
 
 	.form-group {
