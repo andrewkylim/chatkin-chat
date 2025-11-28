@@ -20,14 +20,18 @@ async function fetchImageAsBase64(
   url: string,
   env: Env
 ): Promise<{ data: string; mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' }> {
-  // Extract filename from URL (format: /api/files/{filename})
+  // Extract filename from URL (format: /api/files/{filename} or /api/temp-files/{filename})
   const filename = url.split('/').pop();
   if (!filename) {
     throw new WorkerError('Invalid file URL', 400);
   }
 
+  // Determine which bucket to use based on URL path
+  const isTemporary = url.includes('/api/temp-files/');
+  const bucket = isTemporary ? env.CHATKIN_TEMP_BUCKET : env.CHATKIN_BUCKET;
+
   // Fetch from R2
-  const object = await env.CHATKIN_BUCKET.get(filename);
+  const object = await bucket.get(filename);
   if (!object) {
     throw new WorkerError('File not found in storage', 404);
   }
