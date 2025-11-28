@@ -12,6 +12,32 @@ vi.mock('../../src/utils/logger', () => ({
   }
 }));
 
+// Mock moderation utilities
+vi.mock('../../src/utils/moderation', () => ({
+  moderateImageContent: vi.fn().mockResolvedValue({
+    safe: true,
+    riskLevel: 0,
+    categories: []
+  })
+}));
+
+// Mock file-metadata utilities
+vi.mock('../../src/utils/file-metadata', () => ({
+  generateImageMetadata: vi.fn().mockResolvedValue({
+    title: 'Test Image',
+    description: 'A test image'
+  }),
+  generateDocumentMetadata: vi.fn().mockReturnValue({
+    title: 'Test Document',
+    description: 'A test document'
+  })
+}));
+
+// Mock AI client
+vi.mock('../../src/ai/client', () => ({
+  createAnthropicClient: vi.fn().mockReturnValue({})
+}));
+
 describe('Upload Endpoint', () => {
   const corsHeaders: CorsHeaders = {
     'Access-Control-Allow-Origin': 'http://localhost:5173',
@@ -31,7 +57,15 @@ describe('Upload Endpoint', () => {
       ANTHROPIC_API_KEY: 'test-api-key',
       SUPABASE_URL: 'https://test.supabase.co',
       SUPABASE_ANON_KEY: 'test-anon-key',
+      PUBLIC_WORKER_URL: 'https://test.chatkin.ai',
       CHATKIN_BUCKET: {
+        put: mockPut,
+        get: vi.fn(),
+        delete: vi.fn(),
+        head: vi.fn(),
+        list: vi.fn()
+      } as never,
+      CHATKIN_TEMP_BUCKET: {
         put: mockPut,
         get: vi.fn(),
         delete: vi.fn(),
@@ -204,7 +238,9 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
     const data = await response.json() as any;
 
-    expect(data.file.url).toMatch(/^\/api\/files\/.+\.txt$/);
+    // Files without permanent=true go to temp bucket
+    expect(data.file.url).toMatch(/^https:\/\/test\.chatkin\.ai\/api\/temp-files\/.+\.txt$/);
+    expect(data.file.temporary).toBe(true);
   });
 
   it('should handle R2 upload errors', async () => {
@@ -248,9 +284,9 @@ describe('Upload Endpoint', () => {
     expect(data.file.originalName).toBe(longFileName);
   });
 
-  it('should handle files without extension', async () => {
+  it('should handle files with simple names', async () => {
     const blob = new Blob(['content'], { type: 'text/plain' });
-    const file = new File([blob], 'README', { type: 'text/plain' });
+    const file = new File([blob], 'README.txt', { type: 'text/plain' });
 
     const formData = new FormData();
     formData.append('file', file);
@@ -264,7 +300,9 @@ describe('Upload Endpoint', () => {
 
     expect(response.status).toBe(200);
     const data = await response.json() as any;
-    // Should still generate a filename
+    // Should generate a unique filename with timestamp
     expect(data.file.name).toBeDefined();
+    expect(data.file.name).toMatch(/^\d+-[a-z0-9]+\.txt$/);
+    expect(data.file.originalName).toBe('README.txt');
   });
 });
