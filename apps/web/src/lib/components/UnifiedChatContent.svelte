@@ -1140,7 +1140,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				conversationId={conversation?.id || null}
 				bind:uploadStatus
 				onUploadComplete={(file) => {
-				console.log('Upload complete:', file);
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
 					url: file.url,
@@ -1148,7 +1147,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					size: file.size,
 					temporary: file.temporary
 				}];
-				console.log('Uploaded files:', uploadedFiles);
 				}}
 			/>
 			<input
