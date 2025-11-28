@@ -55,25 +55,23 @@ export function parseImageOptions(optionsString: string): ImageTransformOptions 
 /**
  * Build image transformation request options
  */
-export function buildTransformOptions(options: ImageTransformOptions): RequestInit {
-	const cf: any = {
-		image: {
-			fit: options.fit || 'scale-down',
-			format: options.format || 'auto',
-			quality: options.quality || 85,
-			metadata: options.metadata || 'none'
-		}
+export function buildTransformOptions(options: ImageTransformOptions): Record<string, unknown> {
+	const image: Record<string, string | number> = {
+		fit: options.fit || 'scale-down',
+		format: options.format || 'auto',
+		quality: options.quality || 85,
+		metadata: options.metadata || 'none'
 	};
 
 	if (options.width) {
-		cf.image.width = options.width;
+		image.width = options.width;
 	}
 
 	if (options.height) {
-		cf.image.height = options.height;
+		image.height = options.height;
 	}
 
-	return { cf };
+	return { cf: { image } };
 }
 
 /**

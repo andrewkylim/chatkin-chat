@@ -18,7 +18,6 @@ describe('AI Response Handler', () => {
         model: 'claude-3-5-haiku-20241022',
         stop_reason: 'end_turn',
         stop_sequence: null,
-        stop_sequence: null,
         usage: { input_tokens: 10, output_tokens: 20 }
       };
 

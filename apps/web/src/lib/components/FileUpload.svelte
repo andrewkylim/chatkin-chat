@@ -21,8 +21,11 @@
 	export let permanent: boolean = false; // NEW: If true, save to permanent bucket with DB entry
 	export let showDragDrop: boolean = false; // NEW: If true, show drag and drop area
 
-	let uploading = false;
-	let uploadProgress = 0;
+	// Export upload state so parent can display status
+	export let uploading = false;
+	export let uploadProgress = 0;
+	export let uploadStatus: string = '';
+
 	let error: string | null = null;
 	let fileInput: HTMLInputElement;
 	let isDragging = false;
@@ -50,6 +53,7 @@
 		uploading = true;
 		error = null;
 		uploadProgress = 0;
+		uploadStatus = 'Uploading image...';
 
 		try {
 			const formData = new FormData();
@@ -59,12 +63,16 @@
 			// Track upload stages
 			uploadProgress = 25; // Starting upload
 
-			const response = await fetch(`${PUBLIC_WORKER_URL}/api/upload`, {
+			// Use local worker URL in development
+			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+
+			const response = await fetch(`${workerUrl}/api/upload`, {
 				method: 'POST',
 				body: formData,
 			});
 
 			uploadProgress = 75; // Upload complete, processing
+			uploadStatus = 'Checking content safety...';
 
 			if (!response.ok) {
 				const errorData = await response.json().catch(() => ({}));
@@ -98,12 +106,18 @@
 				}
 
 				uploadProgress = 100;
+				uploadStatus = 'Complete!';
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Upload failed';
+			uploadStatus = '';
 			handleError(err, { operation: 'File upload', component: 'FileUpload' });
 		} finally {
 			uploading = false;
+			// Clear status after a brief delay
+			setTimeout(() => {
+				uploadStatus = '';
+			}, 1000);
 		}
 	}
 
@@ -219,21 +233,6 @@
 				<path d="M10 4v10"/>
 			</svg>
 		</button>
-
-		{#if uploading}
-			<div class="upload-progress">
-				<div class="progress-bar" style="width: {uploadProgress}%"></div>
-			</div>
-			<div class="upload-status">
-				{#if uploadProgress < 50}
-					<span>Uploading...</span>
-				{:else if uploadProgress < 100}
-					<span>Checking content safety...</span>
-				{:else}
-					<span>Complete!</span>
-				{/if}
-			</div>
-		{/if}
 	{/if}
 
 	{#if error}
@@ -270,23 +269,6 @@
 		cursor: not-allowed;
 	}
 
-	.upload-progress {
-		position: absolute;
-		bottom: -8px;
-		left: 0;
-		right: 0;
-		height: 2px;
-		background: var(--border-color);
-		border-radius: 1px;
-		overflow: hidden;
-	}
-
-	.progress-bar {
-		height: 100%;
-		background: var(--accent-primary);
-		transition: width 0.3s ease;
-	}
-
 	.upload-error {
 		position: absolute;
 		top: 100%;
@@ -299,21 +281,6 @@
 		border-radius: 4px;
 		white-space: nowrap;
 		z-index: 10;
-	}
-
-	.upload-status {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		margin-top: 10px;
-		padding: 2px 8px;
-		background: var(--bg-tertiary);
-		color: var(--text-secondary);
-		font-size: 0.6875rem;
-		border-radius: 4px;
-		white-space: nowrap;
-		z-index: 10;
-		font-weight: 500;
 	}
 
 	/* Drag and drop area */

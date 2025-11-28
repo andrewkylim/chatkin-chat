@@ -76,6 +76,7 @@
 	let workspaceContextString = '';
 	let messagesReady = false;
 	let uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean }> = [];
+	let uploadStatus: string = '';
 
 	async function scrollToBottom() {
 		// Wait for DOM to update, then scroll immediately (for new messages during session)
@@ -808,8 +809,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 														type="button"
 														class="message-save-btn"
 														onclick={async () => {
-															// Create a temporary array entry for this message file
-															const tempFiles = message.files || [];
 															await saveFileToLibrary(file, fileIndex);
 															// Update the file in the message to mark it as permanent
 															if (message.files && message.files[fileIndex]) {
@@ -1001,7 +1000,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
-									<button class="confirm-btn" type="button" onclick={(e) => {
+									<button class="confirm-btn" type="button" onclick={() => {
 										const answers = {};
 										message.questions.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
@@ -1048,7 +1047,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			{/each}
 		</div>
 
-		<form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+		<form class="input-container" class:global-scope={scope === 'global' && !isEmbedded} onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
 			{#if uploadedFiles.length > 0}
 				<div class="uploaded-files-preview">
 					{#each uploadedFiles as file, index}
@@ -1133,6 +1132,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				maxSizeMB={10}
 				permanent={false}
 				conversationId={conversation?.id || null}
+				bind:uploadStatus
 				onUploadComplete={(file) => {
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
@@ -1146,7 +1146,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			<input
 				type="text"
 				bind:value={inputMessage}
-				placeholder="Ask me anything..."
+				placeholder={uploadStatus || "Ask me anything..."}
 				class="message-input"
 				disabled={isStreaming}
 			/>
@@ -1651,6 +1651,14 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		box-sizing: border-box;
 		transform: translate3d(0, 0, 0);
 		-webkit-transform: translate3d(0, 0, 0);
+	}
+
+	/* Match sidebar footer height on desktop for global chat */
+	@media (min-width: 1024px) {
+		.input-container.global-scope {
+			height: 76px;
+			min-height: 76px;
+		}
 	}
 
 	.message-input {
