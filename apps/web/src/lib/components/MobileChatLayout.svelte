@@ -48,7 +48,10 @@
 		updateMessageMetadata,
 		title = 'Chat',
 		subtitle = null,
-		backUrl = null
+		backUrl = null,
+		talkModeActive = false,
+		isPlayingAudio = false,
+		toggleTalkMode = undefined
 	}: {
 		messages: Message[];
 		inputMessage: string;
@@ -65,9 +68,13 @@
 		title?: string;
 		subtitle?: string | null;
 		backUrl?: string | null;
+		talkModeActive?: boolean;
+		isPlayingAudio?: boolean;
+		toggleTalkMode?: () => Promise<void>;
 	} = $props();
 
 	let messagesContainer: HTMLDivElement;
+	let voiceInputRef: any;
 	const currentPath = $derived($page.url.pathname);
 
 	export function scrollToBottom() {
@@ -114,7 +121,31 @@
 				{/if}
 			</div>
 		</div>
-		<MobileUserMenu />
+		<div class="header-right">
+			<!-- Talk Mode Button -->
+			{#if toggleTalkMode}
+				<button
+					class="talk-mode-btn {talkModeActive ? 'active' : ''}"
+					title={talkModeActive ? 'Turn off Talk Mode' : 'Turn on Talk Mode'}
+					onclick={toggleTalkMode}
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+						<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+						<line x1="12" y1="19" x2="12" y2="23"/>
+						<line x1="8" y1="23" x2="16" y2="23"/>
+					</svg>
+					<span class="talk-mode-label">
+						{#if isPlayingAudio}
+							Speaking...
+						{:else}
+							Talk Mode
+						{/if}
+					</span>
+				</button>
+			{/if}
+			<MobileUserMenu />
+		</div>
 	</header>
 
 	<!-- Messages: flex: 1, overflow-y: auto -->
@@ -467,11 +498,18 @@
 				disabled={isStreaming}
 			/>
 			<VoiceInput
+				bind:this={voiceInputRef}
+				autoSendEnabled={talkModeActive}
+				{talkModeActive}
 				onTranscriptUpdate={(transcript) => {
 					inputMessage = transcript;
 				}}
 				onTranscriptComplete={(transcript) => {
 					inputMessage = transcript;
+				}}
+				onAutoSend={async (transcript) => {
+					inputMessage = transcript;
+					await onSubmit();
 				}}
 			/>
 		</div>
@@ -544,6 +582,15 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.header-right {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-shrink: 0;
 	}
 
 	.logo-button {
@@ -609,6 +656,39 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Talk Mode Button */
+	.talk-mode-btn {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 16px;
+		background: var(--bg-tertiary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		flex-shrink: 0;
+		font-size: 0.9375rem;
+		font-weight: 500;
+		height: 40px;
+		box-sizing: border-box;
+	}
+
+	.talk-mode-btn:active {
+		transform: scale(0.95);
+	}
+
+	.talk-mode-btn.active {
+		background: var(--accent-primary);
+		border-color: var(--accent-primary);
+		color: white;
+	}
+
+	.talk-mode-label {
+		white-space: nowrap;
 	}
 
 	/* Messages Area - flex: 1 (DESIGN-SPEC pattern) */

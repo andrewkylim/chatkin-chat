@@ -73,7 +73,15 @@
 	let isStreaming = false;
 	let desktopMessagesContainer: HTMLDivElement;
 	let mobileChatLayout: MobileChatLayout;
-	let showCreateMenu = false;
+	let talkModeActive = false;
+	let isPlayingAudio = false;
+	let audioUnlocked = false;
+	let currentAudio: HTMLAudioElement | null = null;
+	let lastActivityTime = Date.now();
+	let inactivityTimer: number | undefined;
+	let autoListenTimeout: number | undefined;
+	let waitingForAutoListen = false;
+	let voiceInputRef: any;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let messagesReady = false;
@@ -288,6 +296,16 @@
 						content: data.message
 					} : msg
 				);
+
+
+			// Scroll into view immediately after message appears
+			await tick();
+			await scrollToBottom();
+			setTimeout(() => scrollToBottom(), 100);
+				// Play TTS if Talk Mode is active
+				if (talkModeActive && data.message) {
+					await playTTS(data.message);
+				}
 			}
 		} catch (error) {
 			logger.error('Error sending message', error);
@@ -299,7 +317,11 @@
 			);
 		} finally {
 			isStreaming = false;
-			scrollToBottom();
+			// Wait for DOM to fully update and render markdown before scrolling
+			await tick();
+			await scrollToBottom();
+			// Scroll again after a short delay to catch any delayed rendering
+			setTimeout(() => scrollToBottom(), 100);
 		}
 	}
 
@@ -716,6 +738,159 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		}
 	}
 
+	// Talk Mode functions
+	async function unlockAudio() {
+		if (audioUnlocked) return;
+
+		try {
+			// Create a silent audio to unlock audio playback
+			// This is required due to browser autoplay policies
+			const silentAudio = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T/////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T/////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+			await silentAudio.play();
+			audioUnlocked = true;
+			logger.debug('Audio playback unlocked');
+		} catch (error) {
+			logger.error('Failed to unlock audio', error);
+		}
+	}
+
+	async function toggleTalkMode() {
+		talkModeActive = !talkModeActive;
+		logger.debug('Talk Mode toggled', { talkModeActive });
+
+		if (talkModeActive) {
+			// Unlock audio playback first (required for autoplay)
+			await unlockAudio();
+
+			lastActivityTime = Date.now();
+			startInactivityTimer();
+			// Immediately start listening when Talk Mode is turned ON
+			if (voiceInputRef) {
+				voiceInputRef.startListening();
+			}
+		} else {
+			stopInactivityTimer();
+			stopAutoListen();  // Cancel auto-listen when Talk Mode is turned off
+
+			// Stop any playing audio
+			if (currentAudio) {
+				currentAudio.pause();
+				currentAudio = null;
+				isPlayingAudio = false;
+			}
+
+			// Stop recording if active
+			if (voiceInputRef) {
+				voiceInputRef.stopListening();
+			}
+		}
+	}
+
+	function startInactivityTimer() {
+		stopInactivityTimer(); // Clear any existing timer
+
+		inactivityTimer = window.setInterval(() => {
+			const now = Date.now();
+			const timeSinceActivity = now - lastActivityTime;
+
+			// Auto-pause after 2 minutes (120000ms) of inactivity
+			if (timeSinceActivity > 120000 && talkModeActive) {
+				talkModeActive = false;
+				stopInactivityTimer();
+				logger.debug('Talk Mode auto-paused due to inactivity');
+			}
+		}, 5000); // Check every 5 seconds
+	}
+
+	function stopInactivityTimer() {
+		if (inactivityTimer) {
+			clearInterval(inactivityTimer);
+			inactivityTimer = undefined;
+		}
+	}
+
+	function resetActivityTimer() {
+		lastActivityTime = Date.now();
+		if (talkModeActive) {
+			startInactivityTimer();
+		}
+	}
+
+	async function playTTS(text: string) {
+		try {
+			isPlayingAudio = true;
+
+			// Call Amazon Polly API endpoint
+			const response = await fetch('/api/tts', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text })
+			});
+
+			if (!response.ok) {
+				throw new Error('TTS request failed');
+			}
+
+			const audioBlob = await response.blob();
+			const audioUrl = URL.createObjectURL(audioBlob);
+			const audio = new Audio(audioUrl);
+		currentAudio = audio;
+
+			// Play the audio
+			await audio.play();
+
+			// Wait for audio to finish
+			await new Promise<void>((resolve) => {
+				audio.onended = () => {
+					URL.revokeObjectURL(audioUrl);
+					resolve();
+				currentAudio = null;
+				};
+			});
+
+			resetActivityTimer();
+
+			// After TTS finishes, start auto-listen if Talk Mode is active
+			if (talkModeActive && waitingForAutoListen) {
+				triggerAutoListen();
+			}
+		} catch (error) {
+			logger.error('Failed to play TTS audio', error);
+			// Still trigger auto-listen even if TTS fails
+			if (talkModeActive && waitingForAutoListen) {
+				triggerAutoListen();
+			}
+		} finally {
+			isPlayingAudio = false;
+		}
+	}
+
+	// Auto-listen functions for Talk Mode
+	function startAutoListenAfterResponse() {
+		waitingForAutoListen = true;
+	}
+
+	function triggerAutoListen() {
+		if (!talkModeActive || !voiceInputRef) return;
+
+		// Start listening programmatically
+		voiceInputRef.startListening();
+		logger.debug('Auto-listen started - will auto-stop after 2 seconds of silence');
+
+		// Don't set a hard timeout - let the VoiceInput silence detection handle when to stop
+		// The user has unlimited time to start speaking, and recording will stop 2 seconds after they finish
+		waitingForAutoListen = false; // Clear the waiting flag now that we've started
+	}
+
+	function stopAutoListen() {
+		if (autoListenTimeout) {
+			clearTimeout(autoListenTimeout);
+			autoListenTimeout = undefined;
+		}
+		waitingForAutoListen = false;
+		logger.debug('Auto-listen stopped');
+	}
+
 	onMount(async () => {
 		// Lock viewport to prevent elastic scroll on mobile
 		if (typeof document !== 'undefined') {
@@ -769,20 +944,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			await scrollToBottom();
 			messagesReady = true;
 		}
-
-		// Close create menu when clicking outside
-		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as HTMLElement;
-			if (showCreateMenu && !target.closest('.create-menu-container')) {
-				showCreateMenu = false;
-			}
-		};
-
-		document.addEventListener('click', handleClickOutside);
-
-		return () => {
-			document.removeEventListener('click', handleClickOutside);
-		};
 	});
 
 	onDestroy(() => {
@@ -793,6 +954,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			document.documentElement.style.overscrollBehavior = '';
 			document.body.style.overscrollBehavior = '';
 		}
+
+		// Clean up Talk Mode timers
+		stopInactivityTimer();
+		stopAutoListen();
 	});
 </script>
 
@@ -815,42 +980,29 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					<h1>{pageTitle}</h1>
 				{/if}
 				{#if !isEmbedded}
-				<!-- Only show create menu on standalone chat page, NOT on tasks/notes -->
+				<!-- Talk Mode Toggle -->
 				<div class="header-actions">
-					<div class="create-menu-container">
-						<button class="icon-btn" title="Create new" onclick={() => showCreateMenu = !showCreateMenu}>
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M10 4v12M4 10h12"/>
-							</svg>
-						</button>
-						{#if showCreateMenu}
-							<div class="create-menu">
-								<a href="/tasks" class="menu-item">
-									<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M4 8l2 2 6-6"/>
-										<rect x="2" y="2" width="12" height="12" rx="2"/>
-									</svg>
-									New Task
-								</a>
-								<a href="/notes" class="menu-item">
-									<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M4 6h8M4 10h6"/>
-										<rect x="2" y="2" width="12" height="12" rx="2"/>
-									</svg>
-									New Note
-								</a>
-								<a href="/projects" class="menu-item">
-									<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-										<rect x="2" y="2" width="4" height="4" rx="1"/>
-										<rect x="10" y="2" width="4" height="4" rx="1"/>
-										<rect x="2" y="10" width="4" height="4" rx="1"/>
-										<rect x="10" y="10" width="4" height="4" rx="1"/>
-									</svg>
-									New Project
-								</a>
-							</div>
-						{/if}
-					</div>
+					<button
+						class="talk-mode-btn {talkModeActive ? 'active' : ''}"
+						title={talkModeActive ? 'Turn off Talk Mode' : 'Turn on Talk Mode'}
+						onclick={toggleTalkMode}
+					>
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+						<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+						<line x1="12" y1="19" x2="12" y2="23"/>
+						<line x1="8" y1="23" x2="16" y2="23"/>
+						</svg>
+						<span class="talk-mode-label">
+							{#if isPlayingAudio}
+								Speaking...
+							{:else if talkModeActive}
+								Talk Mode
+							{:else}
+								Talk Mode
+							{/if}
+						</span>
+					</button>
 				</div>
 			{/if}
 			</div>
@@ -1288,11 +1440,25 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					disabled={isStreaming}
 				/>
 				<VoiceInput
+					bind:this={voiceInputRef}
+					autoSendEnabled={talkModeActive}
+					talkModeActive={talkModeActive}
 					onTranscriptUpdate={(transcript) => {
 						inputMessage = transcript;
+						resetActivityTimer();
 					}}
 					onTranscriptComplete={(transcript) => {
 						inputMessage = transcript;
+						resetActivityTimer();
+					}}
+					onAutoSend={async (transcript) => {
+						// Set flag BEFORE sending message so TTS knows to auto-listen
+						if (talkModeActive) {
+							startAutoListenAfterResponse();
+						}
+
+						await sendMessage(transcript);
+						resetActivityTimer();
 					}}
 				/>
 			</div>
@@ -1323,6 +1489,9 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		title={pageTitle}
 		subtitle={pageSubtitle}
 		backUrl={scope === 'tasks' ? '/tasks' : scope === 'notes' ? '/notes' : scope === 'project' && projectId ? `/projects/${projectId}/chat` : null}
+		{talkModeActive}
+		{isPlayingAudio}
+		{toggleTalkMode}
 	/>
 </div>
 
@@ -1429,69 +1598,58 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		gap: 8px;
 	}
 
-	.icon-btn {
-		width: 36px;
-		height: 36px;
+	.talk-mode-btn {
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		gap: 8px;
+		padding: 8px 16px;
 		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
+		border: 2px solid var(--border-color);
 		border-radius: var(--radius-md);
 		color: var(--text-primary);
 		cursor: pointer;
 		transition: all 0.2s ease;
+		font-size: 0.9375rem;
+		font-weight: 500;
 	}
 
-	.icon-btn:hover {
+	.talk-mode-btn:hover {
 		background: var(--bg-primary);
 		transform: translateY(-1px);
+		border-color: var(--accent-primary);
 	}
 
-	.icon-btn:active {
+	.talk-mode-btn:active {
 		transform: translateY(0);
 	}
 
-	.create-menu-container {
-		position: relative;
+	.talk-mode-btn.active {
+		background: var(--accent-primary);
+		border-color: var(--accent-primary);
+		color: white;
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.2);
 	}
 
-	.create-menu {
-		position: absolute;
-		top: calc(100% + 8px);
-		right: 0;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		min-width: 180px;
-		z-index: 100;
-		overflow: hidden;
+	.talk-mode-btn.active:hover {
+		background: var(--accent-hover);
+		border-color: var(--accent-hover);
 	}
 
-	.menu-item {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 14px 16px;
-		color: var(--text-primary);
-		text-decoration: none;
-		font-size: 0.9375rem;
-		font-weight: 500;
-		transition: background 0.2s ease;
-		border-bottom: 1px solid var(--border-color);
+	.talk-mode-label {
+		white-space: nowrap;
 	}
 
-	.menu-item:last-child {
-		border-bottom: none;
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 0.2;
+		}
+		50% {
+			opacity: 0.4;
+		}
 	}
 
-	.menu-item:hover {
-		background: var(--bg-tertiary);
-	}
-
-	.menu-item svg {
-		color: var(--text-secondary);
+	.pulse-ring {
+		animation: pulse 2s ease-in-out infinite;
 	}
 
 	/* Messages */

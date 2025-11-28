@@ -67,10 +67,6 @@
 					if (isFinal) {
 						// Final result - accumulate it
 						fullTranscript = fullTranscript ? fullTranscript + ' ' + transcript : transcript;
-					// Update input box with the accumulated transcript
-					if (onTranscriptUpdate) {
-						onTranscriptUpdate(fullTranscript);
-					}
 					} else {
 						// Interim result - show accumulated + current interim
 						const displayTranscript = fullTranscript ? fullTranscript + ' ' + transcript : transcript;
@@ -189,13 +185,6 @@
 	export function startListening() {
 		if (!isRecording) {
 			startRecording();
-		}
-	}
-
-	// Export method to programmatically stop recording
-	export function stopListening() {
-		if (isRecording) {
-			stopRecording();
 		}
 	}
 
