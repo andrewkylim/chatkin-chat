@@ -23,7 +23,11 @@ describe('Tasks Database Operations', () => {
     due_date: '2025-12-31',
     completed_at: null,
     created_at: '2025-11-27T00:00:00Z',
-    updated_at: '2025-11-27T00:00:00Z'
+    updated_at: '2025-11-27T00:00:00Z',
+    is_recurring: false,
+    recurrence_pattern: null,
+    parent_task_id: null,
+    recurrence_end_date: null
   };
 
   beforeEach(() => {
@@ -126,7 +130,11 @@ describe('Tasks Database Operations', () => {
         status: 'todo' as const,
         priority: 'high' as const,
         due_date: '2025-12-31',
-        project_id: null
+        project_id: null,
+        is_recurring: false,
+        recurrence_pattern: null,
+        parent_task_id: null,
+        recurrence_end_date: null
       };
 
       const mockFrom = vi.fn().mockReturnValue({
@@ -159,7 +167,11 @@ describe('Tasks Database Operations', () => {
         priority: 'medium',
         project_id: null,
         description: null,
-        due_date: null
+        due_date: null,
+        is_recurring: false,
+        recurrence_pattern: null,
+        parent_task_id: null,
+        recurrence_end_date: null
       })).rejects.toThrow('Not authenticated');
     });
 
@@ -189,7 +201,11 @@ describe('Tasks Database Operations', () => {
         priority: 'medium',
         project_id: null,
         description: null,
-        due_date: null
+        due_date: null,
+        is_recurring: false,
+        recurrence_pattern: null,
+        parent_task_id: null,
+        recurrence_end_date: null
       });
 
       expect(mockInsert).toHaveBeenCalledWith(

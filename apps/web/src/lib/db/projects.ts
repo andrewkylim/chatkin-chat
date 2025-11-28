@@ -74,8 +74,7 @@ export async function getProjectStats(projectId: string) {
 		supabase
 			.from('files')
 			.select('id')
-			.eq('project_id', projectId)
-			.eq('is_hidden_from_library', false)
+			.match({ project_id: projectId, is_hidden_from_library: false })
 	]);
 
 	const tasks = tasksResult.data || [];

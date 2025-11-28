@@ -154,7 +154,13 @@ export async function createTaskAction(taskData: {
 	status: 'todo' | 'in_progress' | 'completed';
 }): Promise<void> {
 	try {
-		await dbCreateTask(taskData);
+		await dbCreateTask({
+			...taskData,
+			is_recurring: false,
+			recurrence_pattern: null,
+			parent_task_id: null,
+			recurrence_end_date: null
+		});
 	} catch (error) {
 		handleError(error, { operation: 'Create task', component: 'TasksPage' });
 		throw error; // Re-throw so caller can handle UI updates
