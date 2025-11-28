@@ -22,11 +22,22 @@
 	let editContent = '';
 	let editBlockId = '';
 
-	$: backUrl = note?.project_id ? `/projects/${note.project_id}/chat` : '/notes';
-	$: backText = note?.project_id ? 'Back to Project' : 'Back to Notes';
+	// Determine back navigation based on referrer or default to /notes
+	let backUrl = '/notes';
+	let backText = 'Back to Notes';
 
 	onMount(async () => {
 		await loadNote();
+
+		// Check if user came from a project page
+		const referrer = document.referrer;
+		if (referrer && referrer.includes('/projects/')) {
+			const projectMatch = referrer.match(/\/projects\/([^/]+)/);
+			if (projectMatch && note?.project_id) {
+				backUrl = `/projects/${note.project_id}/chat`;
+				backText = 'Back to Project';
+			}
+		}
 	});
 
 	async function loadNote() {
