@@ -18,20 +18,24 @@
 		display: flex;
 		height: 100vh;
 		overflow: hidden;
-		gap: 0;
 	}
 
 	.side-by-side-container :global(.left-panel) {
-		flex: 0 0 45%;
-		overflow-y: auto;
+		flex: 2;
+		display: flex;
+		flex-direction: column;
+		border-right: 1px solid var(--border-color);
 		background: var(--bg-secondary);
+		overflow: hidden;
 	}
 
 	.side-by-side-container :global(.right-panel) {
 		flex: 1;
-		overflow: hidden;
+		display: flex;
+		flex-direction: column;
 		background: var(--bg-primary);
-		border-left: 1px solid var(--border-color);
+		min-width: 400px;
+		overflow: hidden;
 	}
 
 	/* CRITICAL: Hide on mobile to show mobile-content instead */

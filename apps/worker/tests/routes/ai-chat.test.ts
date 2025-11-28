@@ -63,7 +63,7 @@ describe('AI Chat Endpoint', () => {
     const response = await handleAIChat(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(400);
-    const data = await response.json();
+    const data = await response.json() as { error?: string };
     expect(data.error).toBeDefined();
   });
 
@@ -94,7 +94,7 @@ describe('AI Chat Endpoint', () => {
     expect(response.status).toBe(200);
     expect(mockCreate).toHaveBeenCalled();
 
-    const data = await response.json();
+    const data = await response.json() as { type: string; message: string };
     expect(data.type).toBe('message');
     expect(data.message).toBe('Hello! How can I help you?');
   });
@@ -317,7 +317,7 @@ describe('AI Chat Endpoint', () => {
     const response = await handleAIChat(request, mockEnv, corsHeaders);
 
     expect(response.status).toBeGreaterThanOrEqual(400);
-    const data = await response.json();
+    const data = await response.json() as { error?: string };
     expect(data.error).toBeDefined();
   });
 });

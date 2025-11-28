@@ -50,7 +50,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(405);
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data).toEqual({ error: 'Method not allowed' });
   });
 
@@ -66,7 +66,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(400);
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data.error).toBeDefined();
   });
 
@@ -82,7 +82,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(400);
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data.error).toBeDefined();
   });
 
@@ -104,7 +104,7 @@ describe('Upload Endpoint', () => {
     expect(response.status).toBe(200);
     expect(mockPut).toHaveBeenCalled();
 
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data.success).toBe(true);
     expect(data.file).toBeDefined();
     expect(data.file.originalName).toBe('test.txt');
@@ -146,7 +146,7 @@ describe('Upload Endpoint', () => {
     });
 
     const response = await handleUpload(request, mockEnv, corsHeaders);
-    const data = await response.json();
+    const data = await response.json() as any;
 
     expect(data.file.name).toMatch(/\.pdf$/);
   });
@@ -202,7 +202,7 @@ describe('Upload Endpoint', () => {
     });
 
     const response = await handleUpload(request, mockEnv, corsHeaders);
-    const data = await response.json();
+    const data = await response.json() as any;
 
     expect(data.file.url).toMatch(/^\/api\/files\/.+\.txt$/);
   });
@@ -224,7 +224,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBeGreaterThanOrEqual(400);
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data.error).toBeDefined();
   });
 
@@ -244,7 +244,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = await response.json() as any;
     expect(data.file.originalName).toBe(longFileName);
   });
 
@@ -263,7 +263,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = await response.json() as any;
     // Should still generate a filename
     expect(data.file.name).toBeDefined();
   });

@@ -1,5 +1,5 @@
 import { supabase } from '$lib/supabase';
-import type { Project, Task } from '@chatkin/types';
+import type { Project } from '@chatkin/types';
 
 type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
 type ProjectUpdate = Partial<Omit<Project, 'id' | 'user_id' | 'created_at'>>;
@@ -76,7 +76,7 @@ export async function getProjectStats(projectId: string) {
 	const tasks = tasksResult.data || [];
 	const notes = notesResult.data || [];
 
-	const completedTasks = tasks.filter((t) => t.status === 'completed').length;
+	const completedTasks = tasks.filter((t: { status: string }) => t.status === 'completed').length;
 
 	return {
 		totalTasks: tasks.length,

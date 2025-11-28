@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import MobileUserMenu from './MobileUserMenu.svelte';
+	import FileUpload from './FileUpload.svelte';
 	import { logger } from '$lib/utils/logger';
 
 	interface AIQuestion {
@@ -34,6 +35,7 @@
 	let {
 		messages = [],
 		inputMessage = $bindable(''),
+		uploadedFiles = $bindable([]),
 		isStreaming = false,
 		messagesReady = false,
 		onSubmit,
@@ -47,6 +49,7 @@
 	}: {
 		messages: Message[];
 		inputMessage: string;
+		uploadedFiles: Array<{ name: string; url: string; type: string }>;
 		isStreaming: boolean;
 		messagesReady: boolean;
 		onSubmit: () => void;
@@ -269,6 +272,48 @@
 
 	<!-- Input Bar: flex-shrink: 0 (NOT position: fixed) -->
 	<form class="input-bar" onsubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+		{#if uploadedFiles.length > 0}
+			<div class="uploaded-files-preview">
+				{#each uploadedFiles as file, index}
+					<div class="file-chip">
+						<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+							{#if file.type.startsWith('image/')}
+								<rect x="3" y="3" width="14" height="14" rx="2"/>
+								<path d="M3 13l4-4 4 4 4-6"/>
+							{:else}
+								<path d="M6 2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+								<path d="M14 2v6h6"/>
+							{/if}
+						</svg>
+						<span class="file-name">{file.name}</span>
+						<button
+							type="button"
+							class="remove-file-btn"
+							onclick={() => {
+								uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+							}}
+							aria-label="Remove file"
+						>
+							<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M15 5L5 15M5 5l10 10"/>
+							</svg>
+						</button>
+					</div>
+				{/each}
+			</div>
+		{/if}
+		<FileUpload
+			accept="image/*,application/pdf,.doc,.docx,.txt"
+			maxSizeMB={10}
+			onUploadComplete={(file) => {
+				logger.debug('File uploaded', { file });
+				uploadedFiles = [...uploadedFiles, {
+					name: file.originalName,
+					url: file.url,
+					type: file.type
+				}];
+			}}
+		/>
 		<input
 			type="text"
 			bind:value={inputMessage}
@@ -541,12 +586,13 @@
 	.input-bar {
 		flex-shrink: 0;
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 12px;
 		padding: 12px 16px;
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
-		height: 60px;
+		min-height: 60px;
 		box-sizing: border-box;
 	}
 
@@ -603,6 +649,52 @@
 		opacity: 0.5;
 		cursor: not-allowed;
 		transform: none;
+	}
+
+	/* Uploaded Files Preview */
+	.uploaded-files-preview {
+		width: 100%;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		order: -1;
+	}
+
+	.file-chip {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 10px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		color: var(--text-primary);
+	}
+
+	.file-chip .file-name {
+		max-width: 120px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.remove-file-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		background: transparent;
+		border: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.remove-file-btn:active {
+		color: var(--danger);
 	}
 
 	/* Bottom Navigation - flex-shrink: 0 (DESIGN-SPEC pattern) */

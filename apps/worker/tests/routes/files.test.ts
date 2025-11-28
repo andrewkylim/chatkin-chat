@@ -71,7 +71,7 @@ describe('File Retrieval Endpoint', () => {
     const response = await handleFileRetrieval('nonexistent.txt', mockEnv, corsHeaders);
 
     expect(response.status).toBe(404);
-    const data = await response.json();
+    const data = await response.json() as { error?: string };
     expect(data.error).toBeDefined();
   });
 
@@ -177,7 +177,7 @@ describe('File Retrieval Endpoint', () => {
     const response = await handleFileRetrieval('test.txt', mockEnv, corsHeaders);
 
     expect(response.status).toBeGreaterThanOrEqual(400);
-    const data = await response.json();
+    const data = await response.json() as { error?: string };
     expect(data.error).toBeDefined();
   });
 

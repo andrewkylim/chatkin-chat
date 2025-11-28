@@ -2,13 +2,13 @@
 	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
 	import { logger } from '$lib/utils/logger';
+	import { handleError } from '$lib/utils/error-handler';
 
 	let email = '';
 	let password = '';
 	let error = '';
 	let loading = false;
 
-	import { handleError } from '$lib/utils/error-handler';
 	logger.debug('Login page script loaded');
 
 	async function handleEmailLogin(e: Event) {

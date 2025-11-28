@@ -1,4 +1,3 @@
-import { logger } from '$lib/utils/logger';
 import { handleError } from '$lib/utils/error-handler';
 import { supabase } from '$lib/supabase';
 import type { Note } from '@chatkin/types';

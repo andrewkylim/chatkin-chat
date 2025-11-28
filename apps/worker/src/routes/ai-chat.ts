@@ -12,6 +12,32 @@ import { parseAIResponse } from '../ai/response-handler';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 
+/**
+ * Helper function to fetch image from R2 and convert to base64
+ */
+async function fetchImageAsBase64(url: string, env: Env): Promise<{ data: string; mediaType: string }> {
+  // Extract filename from URL (format: /api/files/{filename})
+  const filename = url.split('/').pop();
+  if (!filename) {
+    throw new WorkerError('Invalid file URL', 400);
+  }
+
+  // Fetch from R2
+  const object = await env.CHATKIN_BUCKET.get(filename);
+  if (!object) {
+    throw new WorkerError('File not found in storage', 404);
+  }
+
+  // Convert to base64
+  const arrayBuffer = await object.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+  // Get media type from object metadata or Content-Type header
+  const mediaType = object.httpMetadata?.contentType || 'image/jpeg';
+
+  return { data: base64, mediaType };
+}
+
 export async function handleAIChat(
   request: Request,
   env: Env,
@@ -26,7 +52,7 @@ export async function handleAIChat(
 
   try {
     const body = await request.json() as ChatRequest;
-    const { message, conversationHistory, conversationSummary, workspaceContext, context } = body;
+    const { message, files, conversationHistory, conversationSummary, workspaceContext, context } = body;
 
     if (!message) {
       throw new WorkerError('Message is required', 400);
@@ -35,7 +61,10 @@ export async function handleAIChat(
     logger.debug('Processing AI chat request', {
       scope: context?.scope,
       messageLength: message.length,
-      hasHistory: !!conversationHistory?.length
+      hasHistory: !!conversationHistory?.length,
+      hasFiles: !!files,
+      filesCount: files?.length || 0,
+      files: files?.map(f => ({ name: f.name, type: f.type, url: f.url }))
     });
 
     // Build system prompt based on scope
@@ -64,17 +93,90 @@ export async function handleAIChat(
         // Skip the initial AI greeting if it's the first message
         if (apiMessages.length === 0 && msg.role === 'ai') continue;
 
-        apiMessages.push({
-          role: msg.role === 'ai' ? 'assistant' : 'user',
-          content: msg.content
-        });
+        // Handle messages with files (images)
+        if (msg.files && msg.files.length > 0) {
+          const imageContents = await Promise.all(
+            msg.files
+              .filter(f => f.type.startsWith('image/'))
+              .map(async (file) => {
+                const { data, mediaType } = await fetchImageAsBase64(file.url, env);
+                return {
+                  type: "image" as const,
+                  source: {
+                    type: "base64" as const,
+                    media_type: mediaType,
+                    data: data
+                  }
+                };
+              })
+          );
+
+          apiMessages.push({
+            role: msg.role === 'ai' ? 'assistant' : 'user',
+            content: [
+              { type: "text" as const, text: msg.content },
+              ...imageContents
+            ]
+          });
+        } else {
+          apiMessages.push({
+            role: msg.role === 'ai' ? 'assistant' : 'user',
+            content: msg.content
+          });
+        }
       }
     }
 
-    // Add the new user message
-    apiMessages.push({
-      role: 'user',
-      content: message
+    // Add the new user message with files if present
+    if (files && files.length > 0) {
+      logger.debug('Processing files for current message', {
+        fileCount: files.length,
+        imageCount: files.filter(f => f.type.startsWith('image/')).length
+      });
+
+      const imageContents = await Promise.all(
+        files
+          .filter(f => f.type.startsWith('image/'))
+          .map(async (file) => {
+            logger.debug('Fetching image as base64', { url: file.url, type: file.type });
+            const { data, mediaType } = await fetchImageAsBase64(file.url, env);
+            logger.debug('Image converted to base64', {
+              mediaType,
+              dataLength: data.length
+            });
+            return {
+              type: "image" as const,
+              source: {
+                type: "base64" as const,
+                media_type: mediaType,
+                data: data
+              }
+            };
+          })
+      );
+
+      apiMessages.push({
+        role: 'user',
+        content: [
+          { type: "text" as const, text: message },
+          ...imageContents
+        ]
+      });
+
+      logger.debug('Built message with images', {
+        contentBlocks: 1 + imageContents.length
+      });
+    } else {
+      apiMessages.push({
+        role: 'user',
+        content: message
+      });
+    }
+
+    logger.debug('Final message array before API call', {
+      messageCount: apiMessages.length,
+      lastMessageType: typeof apiMessages[apiMessages.length - 1]?.content,
+      lastMessageIsArray: Array.isArray(apiMessages[apiMessages.length - 1]?.content)
     });
 
     // Create non-streaming response with tools

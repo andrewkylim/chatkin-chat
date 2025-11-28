@@ -34,7 +34,8 @@ describe('AI Tools', () => {
     const proposeOperations = tools.find(t => t.name === 'propose_operations');
     const operationSchema = proposeOperations?.input_schema.properties.operations;
 
-    expect(operationSchema.items.properties.operation.enum).toEqual(['create', 'update', 'delete']);
-    expect(operationSchema.items.properties.type.enum).toEqual(['task', 'note', 'project']);
+    expect(operationSchema).toBeDefined();
+    expect(operationSchema!.items.properties.operation.enum).toEqual(['create', 'update', 'delete']);
+    expect(operationSchema!.items.properties.type.enum).toEqual(['task', 'note', 'project']);
   });
 });

@@ -25,7 +25,7 @@ export function playClick() {
 		if (clickSound) {
 			// Reset to start if already playing (for rapid clicks)
 			clickSound.currentTime = 0;
-			clickSound.play().catch((error) => {
+			clickSound.play().catch((error: unknown) => {
 				// Silently handle autoplay restrictions
 				console.debug('Audio play prevented:', error);
 			});

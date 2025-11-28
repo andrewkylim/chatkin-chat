@@ -7,7 +7,7 @@ describe('CORS Middleware', () => {
     ANTHROPIC_API_KEY: 'test-key',
     SUPABASE_URL: 'http://test',
     SUPABASE_ANON_KEY: 'test-key',
-    CHATKIN_BUCKET: {}
+    CHATKIN_BUCKET: {} as R2Bucket
   };
 
   describe('getCorsHeaders', () => {

@@ -41,7 +41,7 @@ export async function handleUpload(
     const fileName = `${timestamp}-${randomStr}.${fileExt}`;
 
     // Upload to R2
-    await env.CHATKIN_BUCKET.put(fileName, file.stream(), {
+    await env.CHATKIN_BUCKET.put(fileName, file.stream() as ReadableStream, {
       httpMetadata: {
         contentType: file.type,
       },

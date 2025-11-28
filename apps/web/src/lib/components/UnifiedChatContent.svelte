@@ -73,6 +73,7 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let messagesReady = false;
+	let uploadedFiles: Array<{ name: string; url: string; type: string }> = [];
 
 	async function scrollToBottom() {
 		// Wait for DOM to update, then scroll immediately (for new messages during session)
@@ -89,7 +90,11 @@
 		const userMessage = message || inputMessage.trim();
 		if (!userMessage || isStreaming || !conversation) return;
 
+		// Capture files to send
+		const filesToSend = [...uploadedFiles];
+
 		inputMessage = '';
+		uploadedFiles = [];
 
 		// Save user message to database
 		try {
@@ -98,8 +103,12 @@
 			logger.error('Error saving user message', error);
 		}
 
-		// Add user message to UI
-		messages = [...messages, { role: 'user', content: userMessage }];
+		// Add user message to UI (with files)
+		messages = [...messages, {
+			role: 'user',
+			content: userMessage,
+			files: filesToSend.length > 0 ? filesToSend : undefined
+		}];
 		scrollToBottom();
 
 		// Add placeholder for AI response
@@ -127,24 +136,34 @@
 
 			const conversationHistory = historyWithoutCurrent.map(m => ({
 				role: m.role,
-				content: m.content
+				content: m.content,
+				files: m.files
 			}));
+
+			const requestBody = {
+				message: userMessage,
+				files: filesToSend.length > 0 ? filesToSend : undefined,
+				conversationHistory: conversationHistory,
+				conversationSummary: conversation.conversation_summary,
+				workspaceContext: workspaceContextString,
+				context: {
+					scope,
+					projectId
+				}
+			};
+
+			logger.debug('Sending AI chat request', {
+				hasFiles: !!requestBody.files,
+				filesCount: filesToSend.length,
+				files: filesToSend
+			});
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({
-					message: userMessage,
-					conversationHistory: conversationHistory,
-					conversationSummary: conversation.conversation_summary,
-					workspaceContext: workspaceContextString,
-					context: {
-						scope,
-						projectId
-					}
-				}),
+				body: JSON.stringify(requestBody),
 			});
 
 			if (!response.ok) {
@@ -939,11 +958,46 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		</div>
 
 		<form class="input-container" onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+			{#if uploadedFiles.length > 0}
+				<div class="uploaded-files-preview">
+					{#each uploadedFiles as file, index}
+						<div class="file-chip">
+							<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+								{#if file.type.startsWith('image/')}
+									<rect x="3" y="3" width="14" height="14" rx="2"/>
+									<path d="M3 13l4-4 4 4 4-6"/>
+								{:else}
+									<path d="M6 2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+									<path d="M14 2v6h6"/>
+								{/if}
+							</svg>
+							<span class="file-name">{file.name}</span>
+							<button
+								type="button"
+								class="remove-file-btn"
+								onclick={() => {
+									uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+								}}
+								aria-label="Remove file"
+							>
+								<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M15 5L5 15M5 5l10 10"/>
+								</svg>
+							</button>
+						</div>
+					{/each}
+				</div>
+			{/if}
 			<FileUpload
 				accept="image/*,application/pdf,.doc,.docx,.txt"
 				maxSizeMB={10}
 				onUploadComplete={(file) => {
 					logger.debug('File uploaded', { file });
+				uploadedFiles = [...uploadedFiles, {
+					name: file.originalName,
+					url: file.url,
+					type: file.type
+				}];
 				}}
 			/>
 			<input
@@ -967,6 +1021,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		bind:this={mobileChatLayout}
 		{messages}
 		bind:inputMessage
+		bind:uploadedFiles
 		{isStreaming}
 		{messagesReady}
 		onSubmit={() => sendMessage()}
@@ -1379,8 +1434,9 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		padding-bottom: max(16px, env(safe-area-inset-bottom));
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
-		height: calc(76px + env(safe-area-inset-bottom));
+		min-height: calc(76px + env(safe-area-inset-bottom));
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 12px;
 		box-sizing: border-box;
@@ -1437,6 +1493,52 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	/* Uploaded Files Preview */
+	.uploaded-files-preview {
+		width: 100%;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		order: -1;
+	}
+
+	.file-chip {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 10px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		color: var(--text-primary);
+	}
+
+	.file-chip .file-name {
+		max-width: 150px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.remove-file-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		background: transparent;
+		border: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.remove-file-btn:hover {
+		color: var(--danger);
 	}
 
 	/* Inline Operations */

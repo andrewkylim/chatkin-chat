@@ -313,6 +313,7 @@ describe('Projects Database Operations', () => {
             })
           };
         }
+        throw new Error(`Unexpected table: ${table}`);
       });
       vi.mocked(supabase.from).mockImplementation(mockFrom as never);
 

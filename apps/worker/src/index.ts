@@ -3,7 +3,7 @@
  * Handles AI API calls, file uploads, and other serverless functions
  */
 
-import { withSentry } from '@sentry/cloudflare';
+// import { withSentry } from '@sentry/cloudflare';
 import type { Env } from './types';
 import { getCorsHeaders, handlePreflight } from './middleware/cors';
 import { handleHealth } from './routes/health';
@@ -13,7 +13,7 @@ import { handleFileRetrieval } from './routes/files';
 
 export { Env };
 
-const handler = {
+export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
@@ -51,12 +51,12 @@ const handler = {
   },
 };
 
-// Wrap handler with Sentry for error tracking and performance monitoring
-export default withSentry(
-  (env: Env) => ({
-    dsn: env.SENTRY_DSN,
-    environment: 'production',
-    tracesSampleRate: 0.1, // Sample 10% of transactions
-  }),
-  handler
-);
+// Sentry temporarily disabled for local development
+// export default withSentry(
+//   (env: Env) => ({
+//     dsn: env.SENTRY_DSN,
+//     environment: 'production',
+//     tracesSampleRate: 0.1,
+//   }),
+//   handler
+// );

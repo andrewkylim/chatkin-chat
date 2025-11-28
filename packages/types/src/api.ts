@@ -6,11 +6,13 @@
 export interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
+  files?: Array<{ name: string; url: string; type: string }>;
 }
 
 export interface ChatRequest {
   conversationId?: string;
   message: string;
+  files?: Array<{ name: string; url: string; type: string }>;
   conversationHistory?: ChatMessage[];
   conversationSummary?: string; // AI-generated summary of older messages
   workspaceContext?: string; // Formatted workspace context (projects, tasks, notes)
