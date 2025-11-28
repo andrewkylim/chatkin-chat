@@ -4,7 +4,6 @@
 	import { notificationCounts } from '$lib/stores/notifications';
 	import MobileUserMenu from './MobileUserMenu.svelte';
 	import FileUpload from './FileUpload.svelte';
-	import { logger } from '$lib/utils/logger';
 
 	interface AIQuestion {
 		question: string;

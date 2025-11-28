@@ -41,6 +41,7 @@ export interface ProjectSummary {
 	taskCount: number;
 	completedTaskCount: number;
 	noteCount: number;
+	fileCount: number;
 }
 
 export interface TaskSummary {
@@ -95,7 +96,7 @@ async function loadProjectsSummary(): Promise<ProjectSummary[]> {
 	const projectSummaries: ProjectSummary[] = [];
 
 	for (const project of projects) {
-		const [tasksResult, notesResult] = await Promise.all([
+		const [tasksResult, notesResult, filesResult] = await Promise.all([
 			supabase
 				.from('tasks')
 				.select('id, status')
@@ -103,11 +104,17 @@ async function loadProjectsSummary(): Promise<ProjectSummary[]> {
 			supabase
 				.from('notes')
 				.select('id')
+				.eq('project_id', project.id),
+			supabase
+				.from('files')
+				.select('id')
 				.eq('project_id', project.id)
+				.eq('is_hidden_from_library', false)
 		]);
 
 		const tasks = (tasksResult.data as TaskDBResponse[]) || [];
 		const notes = notesResult.data || [];
+		const files = filesResult.data || [];
 		const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
 		projectSummaries.push({
@@ -116,7 +123,8 @@ async function loadProjectsSummary(): Promise<ProjectSummary[]> {
 			description: project.description,
 			taskCount: tasks.length,
 			completedTaskCount: completedTasks,
-			noteCount: notes.length
+			noteCount: notes.length,
+			fileCount: files.length
 		});
 	}
 
@@ -195,7 +203,7 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 			if (project.description) {
 				formatted += `: ${project.description}`;
 			}
-			formatted += ` (${project.completedTaskCount}/${project.taskCount} tasks done, ${project.noteCount} notes)\n`;
+			formatted += ` (${project.completedTaskCount}/${project.taskCount} tasks done, ${project.noteCount} notes, ${project.fileCount} files)\n`;
 		}
 		formatted += '\n';
 	} else {

@@ -10,7 +10,8 @@
 	interface ProjectStats {
 		totalTasks: number;
 		completedTasks: number;
-		activeNotes: number;
+		totalNotes: number;
+		totalFiles: number;
 	}
 
 	let projects: Project[] = [];
@@ -187,7 +188,7 @@
 		{:else}
 			<div class="projects-grid">
 				{#each projects as project (project.id)}
-					{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0 }}
+					{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0, totalFiles: 0 }}
 					<div class="project-card">
 						<a href="/projects/{project.id}/chat" class="project-card-link">
 							<div class="project-header">
@@ -196,7 +197,7 @@
 								</div>
 								<div class="project-info">
 									<h3>{truncateProjectName(project.name)}</h3>
-									<p class="project-meta">{stats.totalTasks} tasks · {stats.totalNotes} notes</p>
+									<p class="project-meta">{stats.totalTasks} tasks · {stats.totalNotes} notes · {stats.totalFiles} files</p>
 								</div>
 							</div>
 							{#if project.description}

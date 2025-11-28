@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppLayout from './AppLayout.svelte';
 	import UnifiedChatContent from './UnifiedChatContent.svelte';
+	import type { Operation } from '$lib/types/chat';
 
 	// Re-export all props for pass-through
 	export let isEmbedded = false;
@@ -10,7 +11,7 @@
 	export let pageIcon: string | undefined = undefined;
 	export let pageSubtitle: string | undefined = undefined;
 	export let welcomeMessage: string = "Hi! I'm your AI assistant. What would you like to do?";
-	export let onOperationsComplete: ((operations: any[]) => Promise<void>) | undefined = undefined;
+	export let onOperationsComplete: ((operations: Operation[]) => Promise<void>) | undefined = undefined;
 	export let onDataChange: (() => Promise<void>) | undefined = undefined;
 </script>
 

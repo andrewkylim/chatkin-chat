@@ -13,6 +13,7 @@ import { handleFileRetrieval } from './routes/files';
 import { handleImageTransform } from './routes/image';
 import { handleTempFileRequest } from './routes/temp-files';
 import { handleSaveToLibrary } from './routes/save-to-library';
+import { handleDeleteFile } from './routes/delete-file';
 
 export { Env };
 
@@ -44,6 +45,10 @@ const handler = {
 
     if (url.pathname === '/api/save-to-library') {
       return handleSaveToLibrary(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/delete-file') {
+      return handleDeleteFile(request, env, corsHeaders);
     }
 
     if (url.pathname.startsWith('/api/temp-files/')) {

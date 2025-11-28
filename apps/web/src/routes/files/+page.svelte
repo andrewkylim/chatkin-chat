@@ -8,9 +8,10 @@
 	import ImageViewer from '$lib/components/ImageViewer.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { deleteFile, getUserStorageUsage, getLibraryFiles, createFile } from '$lib/db/files';
-	import type { File } from '@chatkin/types';
+	import type { File, Project } from '@chatkin/types';
 
 	let files: File[] = [];
+	let projects: Project[] = [];
 	let selectedFiles: Set<string> = new Set();
 	let searchQuery = '';
 	let viewMode: 'grid' | 'list' = 'grid'; // Default to grid
@@ -46,8 +47,18 @@
 
 		await loadFiles();
 		await loadStorageUsage();
+		await loadProjects();
 		setupInfiniteScroll();
 	});
+
+	async function loadProjects() {
+		try {
+			const { getProjects } = await import('$lib/db/projects');
+			projects = await getProjects();
+		} catch (error) {
+			console.error('Failed to load projects:', error);
+		}
+	}
 
 	async function loadFiles() {
 		loading = true;
@@ -161,6 +172,28 @@
 			await loadStorageUsage();
 		} catch (error) {
 			console.error('Failed to delete files:', error);
+		}
+	}
+
+	async function handleBulkAddToProject(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		const projectId = select.value === '__none__' ? null : select.value;
+
+		if (!projectId && select.value !== '__none__') return;
+
+		try {
+			const { bulkAddFilesToProject } = await import('$lib/db/files');
+			await bulkAddFilesToProject(Array.from(selectedFiles), projectId);
+
+			selectedFiles.clear();
+			selectedFiles = selectedFiles; // Trigger reactivity
+			await loadFiles();
+
+			// Reset select
+			select.value = '';
+		} catch (error) {
+			console.error('Failed to add files to project:', error);
+			alert('Failed to add files to project');
 		}
 	}
 
@@ -488,6 +521,15 @@
 					{selectedCount === filteredFiles.length ? 'Deselect all' : 'Select all'}
 				</button>
 				<span class="bulk-count">{selectedCount} selected</span>
+
+				<select class="bulk-project-select" on:change={handleBulkAddToProject} value="">
+					<option value="" disabled>Add to project...</option>
+					<option value="__none__">Remove from project</option>
+					{#each projects as project}
+						<option value={project.id}>{project.name}</option>
+					{/each}
+				</select>
+
 				<button class="bulk-delete-btn" on:click={handleBulkDelete}>
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 						<path
@@ -527,6 +569,7 @@
 					{#each filteredFiles as file (file.id)}
 						<FileCard
 							{file}
+							{projects}
 							selected={selectedFiles.has(file.id)}
 							on:toggle={() => toggleFileSelection(file.id)}
 							on:delete={loadFiles}
@@ -671,15 +714,20 @@
 
 	/* Desktop Header */
 	.page-header {
+		background: var(--bg-secondary);
+		border-bottom: 1px solid var(--border-color);
+		padding: 16px 20px;
+		height: 64px;
+		box-sizing: border-box;
+		display: flex;
+		align-items: center;
 		position: sticky;
 		top: 0;
 		z-index: 10;
-		background: var(--bg-primary);
-		padding: 24px 32px 16px;
-		border-bottom: 1px solid var(--border-color);
 	}
 
 	.header-content {
+		width: 100%;
 		max-width: 1200px;
 		margin: 0 auto;
 		display: flex;
@@ -694,9 +742,9 @@
 	}
 
 	.header-left h1 {
-		font-size: 1.875rem;
+		font-size: 1.5rem;
 		font-weight: 700;
-		color: var(--text-primary);
+		letter-spacing: -0.02em;
 		margin: 0;
 	}
 
@@ -892,6 +940,20 @@
 	}
 
 	.bulk-delete-btn:hover {
+		background: rgba(255, 255, 255, 0.3);
+	}
+
+	.bulk-project-select {
+		padding: 8px 12px;
+		background: rgba(255, 255, 255, 0.2);
+		color: white;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: var(--radius-md);
+		cursor: pointer;
+		font-size: 0.9rem;
+	}
+
+	.bulk-project-select:hover {
 		background: rgba(255, 255, 255, 0.3);
 	}
 

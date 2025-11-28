@@ -73,6 +73,7 @@ export interface File {
   note_id: string | null;
   conversation_id: string | null; // Link to chat conversation
   message_id: string | null; // Link to specific message
+  project_id: string | null; // Link to project (NULL = standalone file)
   filename: string;
   mime_type: string;
   size_bytes: number;

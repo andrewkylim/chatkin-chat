@@ -194,7 +194,10 @@
 				</svg>
 			</div>
 			<div class="drag-drop-text">
-				{#if uploading}
+				{#if error}
+					<p class="drag-drop-title error-text">Upload failed</p>
+					<p class="drag-drop-subtitle error-text">{error}</p>
+				{:else if uploading}
 					<p class="drag-drop-title">Uploading...</p>
 					<p class="drag-drop-subtitle">
 						{#if uploadProgress < 50}
@@ -234,10 +237,6 @@
 			</svg>
 		</button>
 	{/if}
-
-	{#if error}
-		<div class="upload-error">{error}</div>
-	{/if}
 </div>
 
 <style>
@@ -267,20 +266,6 @@
 	.upload-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-
-	.upload-error {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		margin-top: 4px;
-		padding: 4px 8px;
-		background: #ff4444;
-		color: white;
-		font-size: 0.75rem;
-		border-radius: 4px;
-		white-space: nowrap;
-		z-index: 10;
 	}
 
 	/* Drag and drop area */
@@ -340,6 +325,10 @@
 		font-size: 0.875rem;
 		color: var(--text-secondary);
 		margin: 0;
+	}
+
+	.error-text {
+		color: #ef4444 !important;
 	}
 
 	.drag-drop-progress {

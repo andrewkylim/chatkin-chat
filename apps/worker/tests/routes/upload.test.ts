@@ -2,6 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleUpload } from '../../src/routes/upload';
 import type { CorsHeaders, Env } from '../../src/types';
 
+// Test response types
+interface ErrorResponse {
+  error: string;
+}
+
+interface UploadSuccessResponse {
+  success: boolean;
+  file: {
+    name: string;
+    originalName: string;
+    url: string;
+    type: string;
+    size: number;
+    temporary?: boolean;
+  };
+}
+
 // Mock logger
 vi.mock('../../src/utils/logger', () => ({
   logger: {
@@ -84,7 +101,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(405);
-    const data = await response.json() as any;
+    const data = await response.json() as ErrorResponse;
     expect(data).toEqual({ error: 'Method not allowed' });
   });
 
@@ -100,7 +117,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(400);
-    const data = await response.json() as any;
+    const data = await response.json() as ErrorResponse;
     expect(data.error).toBeDefined();
   });
 
@@ -116,7 +133,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(400);
-    const data = await response.json() as any;
+    const data = await response.json() as ErrorResponse;
     expect(data.error).toBeDefined();
   });
 
@@ -138,7 +155,7 @@ describe('Upload Endpoint', () => {
     expect(response.status).toBe(200);
     expect(mockPut).toHaveBeenCalled();
 
-    const data = await response.json() as any;
+    const data = await response.json() as UploadSuccessResponse;
     expect(data.success).toBe(true);
     expect(data.file).toBeDefined();
     expect(data.file.originalName).toBe('test.txt');
@@ -180,7 +197,7 @@ describe('Upload Endpoint', () => {
     });
 
     const response = await handleUpload(request, mockEnv, corsHeaders);
-    const data = await response.json() as any;
+    const data = await response.json() as UploadSuccessResponse;
 
     expect(data.file.name).toMatch(/\.pdf$/);
   });
@@ -236,7 +253,7 @@ describe('Upload Endpoint', () => {
     });
 
     const response = await handleUpload(request, mockEnv, corsHeaders);
-    const data = await response.json() as any;
+    const data = await response.json() as UploadSuccessResponse;
 
     // Files without permanent=true go to temp bucket
     expect(data.file.url).toMatch(/^https:\/\/test\.chatkin\.ai\/api\/temp-files\/.+\.txt$/);
@@ -260,7 +277,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBeGreaterThanOrEqual(400);
-    const data = await response.json() as any;
+    const data = await response.json() as ErrorResponse;
     expect(data.error).toBeDefined();
   });
 
@@ -280,7 +297,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(200);
-    const data = await response.json() as any;
+    const data = await response.json() as UploadSuccessResponse;
     expect(data.file.originalName).toBe(longFileName);
   });
 
@@ -299,7 +316,7 @@ describe('Upload Endpoint', () => {
     const response = await handleUpload(request, mockEnv, corsHeaders);
 
     expect(response.status).toBe(200);
-    const data = await response.json() as any;
+    const data = await response.json() as UploadSuccessResponse;
     // Should generate a unique filename with timestamp
     expect(data.file.name).toBeDefined();
     expect(data.file.name).toMatch(/^\d+-[a-z0-9]+\.txt$/);

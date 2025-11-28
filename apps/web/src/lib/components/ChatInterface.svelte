@@ -12,7 +12,10 @@
 		Message,
 		MessageRole,
 		AIQuestion,
-		Operation
+		Operation,
+		TaskData,
+		NoteData,
+		ProjectData
 	} from '$lib/types/chat';
 	import { logger } from '$lib/utils/logger';
 	import { handleError } from '$lib/utils/error-handler';
@@ -215,17 +218,17 @@
 					if (!op.data) throw new Error('Missing data for create operation');
 
 					if (op.type === 'task') {
-						const taskData = op.data as any;
+						const taskData = op.data as TaskData;
 						await createTask({ ...taskData, project_id: taskData.project_id || projectId || null });
 						notificationCounts.incrementCount('tasks');
 						results.push(`✓ Created task: ${taskData.title}`);
 					} else if (op.type === 'note') {
-						const noteData = op.data as any;
+						const noteData = op.data as NoteData;
 						await createNote({ ...noteData, project_id: noteData.project_id || projectId || null });
 						notificationCounts.incrementCount('notes');
 						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
-						const projectData = op.data as any;
+						const projectData = op.data as ProjectData;
 						await createProject(projectData);
 						notificationCounts.incrementCount('projects');
 						results.push(`✓ Created project: ${projectData.name}`);
@@ -236,17 +239,17 @@
 					if (!op.changes) throw new Error('Missing changes for update operation');
 
 					if (op.type === 'task') {
-						await updateTask(op.id, op.changes as any);
+						await updateTask(op.id, op.changes as Partial<TaskData>);
 						results.push(`✓ Updated task`);
 					} else if (op.type === 'note') {
-						const { content, ...validChanges } = op.changes as any;
+						const { content, ...validChanges } = op.changes as Partial<NoteData>;
 						if (content) {
 							logger.warn('Ignoring content field in note update');
 						}
-						await updateNote(op.id, validChanges as any);
+						await updateNote(op.id, validChanges as Partial<NoteData>);
 						results.push(`✓ Updated note`);
 					} else if (op.type === 'project') {
-						await updateProject(op.id, op.changes as any);
+						await updateProject(op.id, op.changes as Partial<ProjectData>);
 						results.push(`✓ Updated project`);
 					}
 					successCount++;

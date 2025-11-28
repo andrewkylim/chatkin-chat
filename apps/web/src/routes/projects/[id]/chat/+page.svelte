@@ -46,7 +46,7 @@
 	// Get utilities and actions from helper modules
 	const taskHelpers = useProjectTasks();
 	const noteHelpers = useProjectNotes();
-	const { deleteProject, updateProject, toggleTaskComplete } = useProjectActions();
+	const { deleteProject, toggleTaskComplete } = useProjectActions();
 
 	// Destructure for convenience
 	const { truncateTitle, formatDueDate, categorizeTasks } = taskHelpers;
@@ -142,7 +142,7 @@
 			const completed = currentStatus !== 'completed';
 			await toggleTaskComplete(taskId, completed);
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by action
 		}
 	}

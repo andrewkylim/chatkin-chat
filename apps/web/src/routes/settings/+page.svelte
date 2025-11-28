@@ -97,7 +97,39 @@
 		try {
 			const user = $auth.user;
 
+			// First, get all files to retrieve r2_keys for deletion
+			deleteAllStatus = 'Deleting files from storage...';
+			const { data: files, error: filesQueryError } = await supabase
+				.from('files')
+				.select('id, r2_key')
+				.eq('user_id', user.id);
+
+			if (filesQueryError) throw new Error(`Failed to query files: ${filesQueryError.message}`);
+
+			// Delete all files from database
+			const { error: filesError } = await supabase
+				.from('files')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (filesError) throw new Error(`Failed to delete files: ${filesError.message}`);
+
+			// Delete files from R2 storage in parallel
+			if (files && files.length > 0) {
+				const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+				await Promise.allSettled(
+					files.map((file) =>
+						fetch(`${workerUrl}/api/delete-file`, {
+							method: 'DELETE',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ r2_key: file.r2_key }),
+						})
+					)
+				);
+			}
+
 			// Delete all projects (cascades to project conversations and messages)
+			deleteAllStatus = 'Deleting projects...';
 			const { error: projectsError } = await supabase
 				.from('projects')
 				.delete()
@@ -106,6 +138,7 @@
 			if (projectsError) throw new Error(`Failed to delete projects: ${projectsError.message}`);
 
 			// Delete all tasks
+			deleteAllStatus = 'Deleting tasks...';
 			const { error: tasksError } = await supabase
 				.from('tasks')
 				.delete()
@@ -113,7 +146,8 @@
 
 			if (tasksError) throw new Error(`Failed to delete tasks: ${tasksError.message}`);
 
-			// Delete all notes (cascades to note_blocks and files)
+			// Delete all notes (cascades to note_blocks)
+			deleteAllStatus = 'Deleting notes...';
 			const { error: notesError } = await supabase
 				.from('notes')
 				.delete()
@@ -221,6 +255,7 @@
 				<li>All projects and their conversations</li>
 				<li>All tasks (completed and incomplete)</li>
 				<li>All notes and attachments</li>
+				<li>All files and uploads from storage</li>
 			</ul>
 			<p class="warning-text">
 				<strong>This action cannot be undone.</strong>

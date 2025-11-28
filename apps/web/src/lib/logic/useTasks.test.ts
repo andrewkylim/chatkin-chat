@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
 	truncateTitle,
 	isToday,
 	isThisWeek,
 	formatDueDate,
-	categorizeTasks,
-	type CategorizedTasks
+	categorizeTasks
 } from './useTasks';
 import type { Task } from '@chatkin/types';
 

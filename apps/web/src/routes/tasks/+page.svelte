@@ -99,7 +99,7 @@
 
 			// Reload tasks
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by createTask action
 		}
 	}
@@ -108,7 +108,7 @@
 		try {
 			await toggleTask(taskId, currentStatus);
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by toggleTask action
 		}
 	}
@@ -132,7 +132,7 @@
 			showTaskDetailModal = false;
 			selectedTask = null;
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by deleteTask action
 		}
 	}
@@ -144,7 +144,7 @@
 			await updateTask(editingTask.id, updatedTask);
 			showEditTaskModal = false;
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by updateTask action
 			alert('Failed to update task');
 		}
@@ -158,7 +158,7 @@
 			showEditTaskModal = false;
 			editingTask = null;
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by deleteTask action
 		}
 	}

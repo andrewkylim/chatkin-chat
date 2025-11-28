@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { File } from '@chatkin/types';
-	import { deleteFile, updateFileMetadata } from '$lib/db/files';
+	import type { File, Project } from '@chatkin/types';
+	import { deleteFile } from '$lib/db/files';
 	import { getThumbnailUrl } from '$lib/utils/image-cdn';
+	import FileEditModal from './FileEditModal.svelte';
 
 	export let file: File;
 	export let selected: boolean = false;
+	export let projects: Project[] = [];
 
 	const dispatch = createEventDispatcher();
 
-	let editing = false;
-	let editTitle = file.title || file.filename;
-	let editDescription = file.description || '';
+	let showEditModal = false;
 	let showMenu = false;
 
 	// Format file size
@@ -38,17 +38,14 @@
 	// Check if file is an image
 	$: isImage = file.mime_type.startsWith('image/');
 
-	async function handleSaveEdit() {
-		try {
-			await updateFileMetadata(file.id, {
-				title: editTitle,
-				description: editDescription
-			});
-			editing = false;
-			dispatch('update');
-		} catch (error) {
-			console.error('Failed to update file:', error);
-		}
+	function handleOpenEdit() {
+		showEditModal = true;
+		showMenu = false;
+	}
+
+	function handleModalSave() {
+		showEditModal = false;
+		dispatch('update');
 	}
 
 	async function handleDelete() {
@@ -102,28 +99,14 @@
 
 	<!-- File Info -->
 	<div class="file-info">
-		{#if editing}
-			<input type="text" class="edit-title" bind:value={editTitle} placeholder="Title" />
-			<textarea
-				class="edit-description"
-				bind:value={editDescription}
-				placeholder="Description"
-				rows="2"
-			/>
-			<div class="edit-actions">
-				<button class="save-btn" on:click={handleSaveEdit}>Save</button>
-				<button class="cancel-btn" on:click={() => (editing = false)}>Cancel</button>
-			</div>
-		{:else}
-			<h3 class="file-title">{file.title || file.filename}</h3>
-			{#if file.description}
-				<p class="file-description">{file.description}</p>
-			{/if}
-			<div class="file-meta">
-				<span class="file-size">{formatSize(file.size_bytes)}</span>
-				<span class="file-date">{formatDate(file.created_at)}</span>
-			</div>
+		<h3 class="file-title">{file.title || file.filename}</h3>
+		{#if file.description}
+			<p class="file-description">{file.description}</p>
 		{/if}
+		<div class="file-meta">
+			<span class="file-size">{formatSize(file.size_bytes)}</span>
+			<span class="file-date">{formatDate(file.created_at)}</span>
+		</div>
 	</div>
 
 	<!-- Actions Menu -->
@@ -138,20 +121,22 @@
 
 		{#if showMenu}
 			<div class="action-menu" on:click|stopPropagation={() => (showMenu = false)}>
-				<button
-					on:click={() => {
-						editing = true;
-						showMenu = false;
-					}}
-				>
-					Edit
-				</button>
+				<button on:click={handleOpenEdit}> Edit </button>
 				<a href={file.r2_url} download={file.filename} target="_blank"> Download </a>
 				<button on:click={handleDelete} class="danger"> Delete </button>
 			</div>
 		{/if}
 	</div>
 </div>
+
+{#if showEditModal}
+	<FileEditModal
+		{file}
+		{projects}
+		on:save={handleModalSave}
+		on:close={() => (showEditModal = false)}
+	/>
+{/if}
 
 <style>
 	.file-card {
@@ -249,44 +234,6 @@
 		gap: 8px;
 		font-size: 0.75rem;
 		color: var(--text-muted);
-	}
-
-	.edit-title,
-	.edit-description {
-		width: 100%;
-		padding: 8px;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		margin-bottom: 8px;
-	}
-
-	.edit-actions {
-		display: flex;
-		gap: 8px;
-	}
-
-	.save-btn,
-	.cancel-btn {
-		flex: 1;
-		padding: 8px;
-		border-radius: var(--radius-md);
-		font-size: 0.875rem;
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	.save-btn {
-		background: var(--accent-primary);
-		color: white;
-		border: none;
-	}
-
-	.cancel-btn {
-		background: transparent;
-		border: 1px solid var(--border-color);
-		color: var(--text-secondary);
 	}
 
 	.file-actions {

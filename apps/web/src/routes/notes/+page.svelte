@@ -82,7 +82,7 @@
 			newNoteProjectId = null;
 			showNewNoteModal = false;
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by action
 		}
 	}
@@ -94,7 +94,7 @@
 			await deleteNote(deleteNoteId);
 			deleteNoteId = null;
 			await loadData();
-		} catch (error) {
+		} catch {
 			// Error already handled by action
 			alert('Failed to delete note');
 		}

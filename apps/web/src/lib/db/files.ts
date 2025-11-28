@@ -36,7 +36,11 @@ export async function createFile(file: Omit<FileInsert, 'user_id'>) {
 
 	const { data, error } = await supabase
 		.from('files')
-		.insert({ ...file, user_id: user.id })
+		.insert({
+			...file,
+			user_id: user.id,
+			project_id: file.project_id || null
+		})
 		.select()
 		.single();
 
@@ -45,12 +49,43 @@ export async function createFile(file: Omit<FileInsert, 'user_id'>) {
 }
 
 export async function deleteFile(id: string) {
-	const { error } = await supabase
+	// First, get the file to retrieve r2_key
+	const { data: file, error: fetchError } = await supabase
+		.from('files')
+		.select('r2_key, r2_url')
+		.eq('id', id)
+		.single();
+
+	if (fetchError) throw fetchError;
+	if (!file) throw new Error('File not found');
+
+	// Delete from database first
+	const { error: dbError } = await supabase
 		.from('files')
 		.delete()
 		.eq('id', id);
 
-	if (error) throw error;
+	if (dbError) throw dbError;
+
+	// Delete from R2 storage
+	try {
+		const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+		const response = await fetch(`${workerUrl}/api/delete-file`, {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ r2_key: file.r2_key }),
+		});
+
+		if (!response.ok) {
+			console.error('Failed to delete file from R2:', await response.text());
+			// Don't throw - database record is already deleted
+		}
+	} catch (error) {
+		console.error('Error deleting file from R2:', error);
+		// Don't throw - database record is already deleted
+	}
 }
 
 /**
@@ -116,10 +151,77 @@ export async function updateFileMetadata(
  * Bulk delete files
  */
 export async function bulkDeleteFiles(fileIds: string[]): Promise<void> {
-	const { error } = await supabase
+	// Get all files to retrieve r2_keys
+	const { data: files, error: fetchError } = await supabase
+		.from('files')
+		.select('id, r2_key')
+		.in('id', fileIds);
+
+	if (fetchError) throw fetchError;
+
+	// Delete from database
+	const { error: dbError } = await supabase
 		.from('files')
 		.delete()
 		.in('id', fileIds);
 
+	if (dbError) throw dbError;
+
+	// Delete from R2 in parallel
+	const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+	await Promise.allSettled(
+		(files || []).map((file) =>
+			fetch(`${workerUrl}/api/delete-file`, {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ r2_key: file.r2_key }),
+			})
+		)
+	);
+	// Use allSettled so failures don't stop other deletions
+}
+
+/**
+ * Update file project association
+ */
+export async function updateFileProject(
+	fileId: string,
+	projectId: string | null
+): Promise<void> {
+	const { error } = await supabase
+		.from('files')
+		.update({ project_id: projectId })
+		.eq('id', fileId);
+
 	if (error) throw error;
+}
+
+/**
+ * Bulk update multiple files to add to project
+ */
+export async function bulkAddFilesToProject(
+	fileIds: string[],
+	projectId: string | null
+): Promise<void> {
+	const { error } = await supabase
+		.from('files')
+		.update({ project_id: projectId })
+		.in('id', fileIds);
+
+	if (error) throw error;
+}
+
+/**
+ * Get all files for a specific project
+ */
+export async function getProjectFiles(projectId: string): Promise<FileType[]> {
+	const { data, error } = await supabase
+		.from('files')
+		.select('*')
+		.eq('project_id', projectId)
+		.eq('is_hidden_from_library', false)
+		.order('created_at', { ascending: false });
+
+	if (error) throw error;
+	return data as FileType[];
 }

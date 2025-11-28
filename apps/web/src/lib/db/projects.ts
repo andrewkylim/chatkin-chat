@@ -62,7 +62,7 @@ export async function deleteProject(id: string) {
 
 // Get project statistics
 export async function getProjectStats(projectId: string) {
-	const [tasksResult, notesResult] = await Promise.all([
+	const [tasksResult, notesResult, filesResult] = await Promise.all([
 		supabase
 			.from('tasks')
 			.select('id, status')
@@ -70,17 +70,24 @@ export async function getProjectStats(projectId: string) {
 		supabase
 			.from('notes')
 			.select('id')
+			.eq('project_id', projectId),
+		supabase
+			.from('files')
+			.select('id')
 			.eq('project_id', projectId)
+			.eq('is_hidden_from_library', false)
 	]);
 
 	const tasks = tasksResult.data || [];
 	const notes = notesResult.data || [];
+	const files = filesResult.data || [];
 
 	const completedTasks = tasks.filter((t: { status: string }) => t.status === 'completed').length;
 
 	return {
 		totalTasks: tasks.length,
 		completedTasks,
-		totalNotes: notes.length
+		totalNotes: notes.length,
+		totalFiles: files.length
 	};
 }

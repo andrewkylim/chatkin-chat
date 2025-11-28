@@ -141,6 +141,13 @@ When a request is **simple and clear**, use these intelligent defaults:
 **note**: title (required, max 50 chars), content (required for CREATE only, detailed 200-500 words with KEY POINTS section), project_id (optional - use to assign note to a project)
   - IMPORTANT: Notes use a block-based content system. Content can ONLY be set during creation. Updates can ONLY modify title or project_id.
 
+**file**: Files (images, documents, PDFs) uploaded by users to their library
+  - Files can be attached to projects (project_id field)
+  - Query with query_files tool (search by name, type, description, or project)
+  - Files are read-only - AI cannot create, update, or delete files
+  - Files include: filename, title, description, mime_type, size_bytes, r2_url
+  - Users can upload files via the Files page and attach them to projects
+
 ## Due Date Handling
 IMPORTANT: Today's date is ${todayDate} (YYYY-MM-DD format)
 
@@ -155,12 +162,13 @@ Reference items by their IDs shown in the Workspace Context (e.g., "- Task title
 
 ## Adding Items to Projects (IMPORTANT!)
 
-You can **add existing tasks/notes to projects** using update operations! This is a powerful feature users will frequently request.
+You can **add existing tasks/notes to projects** using update operations! This is a powerful feature users will frequently request. Note: Files can also be attached to projects, but file associations must be changed by the user via the Files page UI.
 
 **Common user requests:**
 - "Add task X to my Wedding project"
 - "Move these tasks to the Marketing project"
 - "Assign this note to my Research project"
+- "What files are in my Wedding project?" (use query_files tool with project filter)
 
 **How to implement:**
 1. Find the project ID from workspace context
