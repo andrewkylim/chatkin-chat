@@ -6,7 +6,6 @@
 	import FileCard from '$lib/components/FileCard.svelte';
 	import FileRow from '$lib/components/FileRow.svelte';
 	import ImageViewer from '$lib/components/ImageViewer.svelte';
-	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { deleteFile, getUserStorageUsage, getLibraryFiles, createFile } from '$lib/db/files';
 	import type { File, Project } from '@chatkin/types';
 
@@ -22,8 +21,8 @@
 	let viewingFile: File | null = null;
 	let imageFiles: File[] = [];
 	let sentinelElement: HTMLElement | null = null;
-	let showUploadModal = false;
-	let mobileFileInput: HTMLInputElement;
+	let fabFileInput: HTMLInputElement;
+	let desktopFileInput: HTMLInputElement;
 	let isDragging = false;
 	let dragCounter = 0;
 	let isUploading = false;
@@ -217,7 +216,6 @@
 
 	async function handleUploadComplete() {
 		// Reload files and storage usage after upload
-		showUploadModal = false;
 		await loadFiles();
 		await loadStorageUsage();
 	}
@@ -445,7 +443,7 @@
 						</div>
 					</div>
 					<!-- Upload Button -->
-					<button class="primary-btn" on:click={() => showUploadModal = true}>
+					<button class="primary-btn" on:click={() => desktopFileInput?.click()}>
 						<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 							<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
 							<path d="M7 7l3-3 3 3"/>
@@ -453,6 +451,13 @@
 						</svg>
 						Upload
 					</button>
+					<input
+						bind:this={desktopFileInput}
+						type="file"
+						accept="image/*,application/pdf,.doc,.docx,.txt"
+						style="display: none;"
+						on:change={handleMobileFileSelect}
+					/>
 				</div>
 			</div>
 		</header>
@@ -620,13 +625,18 @@
 
 		<!-- Floating Action Button (Mobile Only) -->
 		<div class="fab-container">
-			<button class="fab" on:click={() => showUploadModal = true} aria-label="Upload file">
-				<svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5">
-					<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
-					<path d="M7 7l3-3 3 3"/>
-					<path d="M10 4v10"/>
+			<button class="fab" on:click={() => fabFileInput?.click()} aria-label="Upload file">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+					<path d="M12 5v14M5 12h14"/>
 				</svg>
 			</button>
+			<input
+				bind:this={fabFileInput}
+				type="file"
+				accept="image/*,application/pdf,.doc,.docx,.txt"
+				style="display: none;"
+				on:change={handleMobileFileSelect}
+			/>
 		</div>
 	</div>
 </AppLayout>
@@ -641,72 +651,6 @@
 	/>
 {/if}
 
-<!-- Upload Modal -->
-{#if showUploadModal}
-	<div class="modal-overlay" on:click={() => showUploadModal = false}>
-		<div class="modal-content" on:click|stopPropagation>
-			<div class="modal-header">
-				<div class="modal-title-section">
-					<div class="modal-icon">
-						<svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
-							<path d="M7 7l3-3 3 3"/>
-							<path d="M10 4v10"/>
-						</svg>
-					</div>
-					<h2>Upload to Library</h2>
-				</div>
-				<button class="modal-close-btn" on:click={() => showUploadModal = false} aria-label="Close">
-					<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M15 5L5 15M5 5l10 10"/>
-					</svg>
-				</button>
-			</div>
-			<div class="modal-body">
-				<!-- Desktop: Drag and drop -->
-				<div class="upload-area desktop-upload">
-					<FileUpload
-						accept="image/*,application/pdf,.doc,.docx,.txt"
-						maxSizeMB={10}
-						permanent={true}
-						conversationId={null}
-						showDragDrop={true}
-						onUploadComplete={handleUploadComplete}
-					/>
-				</div>
-				<!-- Mobile: Simple tap to upload -->
-				<div class="upload-area mobile-upload" on:click={() => mobileFileInput?.click()}>
-					<div class="mobile-upload-content">
-						<div class="mobile-upload-icon">
-							<svg width="56" height="56" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
-								<path d="M7 7l3-3 3 3"/>
-								<path d="M10 4v10"/>
-							</svg>
-						</div>
-						<p class="mobile-upload-title">Tap to upload file</p>
-						<p class="mobile-upload-subtitle">Images, PDFs, and documents</p>
-					</div>
-					<input
-						bind:this={mobileFileInput}
-						type="file"
-						accept="image/*,application/pdf,.doc,.docx,.txt"
-						style="display: none;"
-						on:change={handleMobileFileSelect}
-					/>
-				</div>
-				<div class="upload-info">
-					<p class="upload-hint">
-						<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-							<path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
-						</svg>
-						Maximum file size: 10MB
-					</p>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
 
 <style>
 	.files-page {
@@ -1208,214 +1152,6 @@
 		font-size: 0.875rem;
 	}
 
-	/* Upload Modal */
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.6);
-		backdrop-filter: blur(4px);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: 20px;
-		animation: fadeIn 0.2s ease;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
-	}
-
-	.modal-content {
-		background: var(--bg-primary);
-		border-radius: var(--radius-lg);
-		max-width: 520px;
-		width: 100%;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-		border: 1px solid var(--border-color);
-		animation: slideUp 0.3s ease;
-	}
-
-	@keyframes slideUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	.modal-header {
-		padding: 24px 24px 20px;
-		border-bottom: 1px solid var(--border-color);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.modal-title-section {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.modal-icon {
-		width: 40px;
-		height: 40px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--accent-primary);
-		border-radius: var(--radius-md);
-		color: white;
-	}
-
-	.modal-header h2 {
-		font-size: 1.25rem;
-		font-weight: 600;
-		margin: 0;
-		color: var(--text-primary);
-	}
-
-	.modal-close-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 36px;
-		height: 36px;
-		padding: 0;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.modal-close-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.modal-body {
-		padding: 32px 24px 24px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-	}
-
-	.upload-area {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: 48px 32px;
-		background: var(--bg-secondary);
-		border: 2px dashed var(--border-color);
-		border-radius: var(--radius-lg);
-		transition: all 0.2s ease;
-		min-height: 200px;
-	}
-
-	.upload-area:hover {
-		border-color: var(--accent-primary);
-		background: var(--bg-tertiary);
-	}
-
-	/* Desktop upload (with drag and drop) */
-	.desktop-upload {
-		display: flex;
-	}
-
-	.mobile-upload {
-		display: none;
-	}
-
-	/* Mobile upload (tap to upload) */
-	.mobile-upload-content {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 16px;
-		width: 100%;
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.mobile-upload-icon {
-		color: var(--accent-primary);
-		opacity: 0.8;
-		transition: all 0.2s ease;
-	}
-
-	.mobile-upload-content:active .mobile-upload-icon {
-		transform: scale(0.95);
-		opacity: 1;
-	}
-
-	.mobile-upload-title {
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--text-primary);
-		margin: 0;
-	}
-
-	.mobile-upload-subtitle {
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-		margin: 0;
-	}
-
-	@media (max-width: 768px) {
-		.desktop-upload {
-			display: none;
-		}
-
-		.mobile-upload {
-			display: flex;
-		}
-
-		.upload-area {
-			padding: 56px 32px;
-		}
-
-		.modal-content {
-			max-width: 90%;
-		}
-	}
-
-	.upload-info {
-		padding: 16px;
-		background: var(--bg-secondary);
-		border-radius: var(--radius-md);
-		border: 1px solid var(--border-color);
-	}
-
-	.upload-hint {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-		margin: 0;
-		line-height: 1.5;
-	}
-
-	.upload-hint svg {
-		flex-shrink: 0;
-		opacity: 0.7;
-	}
 
 	/* Drag and Drop Overlay */
 	.drag-overlay {
