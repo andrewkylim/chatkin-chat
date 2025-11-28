@@ -1134,6 +1134,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				conversationId={conversation?.id || null}
 				bind:uploadStatus
 				onUploadComplete={(file) => {
+				console.log('Upload complete:', file);
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
 					url: file.url,
@@ -1141,6 +1142,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					size: file.size,
 					temporary: file.temporary
 				}];
+				console.log('Uploaded files:', uploadedFiles);
 				}}
 			/>
 			<input
@@ -1656,8 +1658,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	/* Match sidebar footer height on desktop for global chat */
 	@media (min-width: 1024px) {
 		.input-container.global-scope {
-			height: 76px;
 			min-height: 76px;
+			height: auto;
+			max-height: 200px;
+			overflow-y: auto;
 		}
 	}
 
