@@ -13,10 +13,19 @@ routes = [
 binding = "CHATKIN_BUCKET"
 bucket_name = "chatkin-files"
 
+[[env.production.r2_buckets]]
+binding = "CHATKIN_TEMP_BUCKET"
+bucket_name = "chatkin-files-temp"
+
 [[r2_buckets]]
 binding = "CHATKIN_BUCKET"
 bucket_name = "chatkin-files"
 preview_bucket_name = "chatkin-files-dev"
+
+[[r2_buckets]]
+binding = "CHATKIN_TEMP_BUCKET"
+bucket_name = "chatkin-files-temp"
+preview_bucket_name = "chatkin-files-temp-dev"
 
 # Environment variables (set via wrangler secret put)
 # ANTHROPIC_API_KEY

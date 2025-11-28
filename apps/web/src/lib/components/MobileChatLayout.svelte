@@ -49,7 +49,7 @@
 	}: {
 		messages: Message[];
 		inputMessage: string;
-		uploadedFiles: Array<{ name: string; url: string; type: string }>;
+		uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean }>;
 		isStreaming: boolean;
 		messagesReady: boolean;
 		onSubmit: () => void;
@@ -131,6 +131,30 @@
 							</div>
 						{:else}
 							<p>{message.content}</p>
+
+							{#if message.files && message.files.length > 0}
+								<!-- Inline files display -->
+								<div class="message-files">
+									{#each message.files as file}
+										{#if file.type.startsWith('image/')}
+											<!-- Inline image -->
+											<div class="message-image">
+												<img src={file.url} alt={file.name} />
+											</div>
+										{:else}
+											<!-- File attachment chip -->
+											<div class="message-file-chip">
+												<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+													<path d="M6 2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+													<path d="M14 2v6h6"/>
+												</svg>
+												<span>{file.name}</span>
+											</div>
+										{/if}
+									{/each}
+								</div>
+							{/if}
+
 							{#if message.questions && message.awaitingResponse}
 								<!-- Inline Questions Form -->
 								<div class="inline-questions">
@@ -270,30 +294,49 @@
 		{#if uploadedFiles.length > 0}
 			<div class="uploaded-files-preview">
 				{#each uploadedFiles as file, index}
-					<div class="file-chip">
-						<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-							{#if file.type.startsWith('image/')}
-								<rect x="3" y="3" width="14" height="14" rx="2"/>
-								<path d="M3 13l4-4 4 4 4-6"/>
-							{:else}
+					{#if file.type.startsWith('image/')}
+						<!-- Compact image preview for images -->
+						<div class="image-preview-compact">
+							<img src={file.url} alt={file.name} class="preview-thumbnail" />
+							<div class="preview-info">
+								<span class="preview-name">{file.name}</span>
+								<span class="preview-size">{(file.size / 1024).toFixed(1)} KB</span>
+							</div>
+							<button
+								type="button"
+								class="action-icon-btn remove"
+								onclick={() => {
+									uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+								}}
+								aria-label="Remove file"
+							>
+								<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M15 5L5 15M5 5l10 10"/>
+								</svg>
+							</button>
+						</div>
+					{:else}
+						<!-- File chip for documents -->
+						<div class="file-chip">
+							<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M6 2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
 								<path d="M14 2v6h6"/>
-							{/if}
-						</svg>
-						<span class="file-name">{file.name}</span>
-						<button
-							type="button"
-							class="remove-file-btn"
-							onclick={() => {
-								uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
-							}}
-							aria-label="Remove file"
-						>
-							<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M15 5L5 15M5 5l10 10"/>
 							</svg>
-						</button>
-					</div>
+							<span class="file-name">{file.name}</span>
+							<button
+								type="button"
+								class="remove-file-btn"
+								onclick={() => {
+									uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+								}}
+								aria-label="Remove file"
+							>
+								<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M15 5L5 15M5 5l10 10"/>
+								</svg>
+							</button>
+						</div>
+					{/if}
 				{/each}
 			</div>
 		{/if}
@@ -304,8 +347,12 @@
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
 					url: file.url,
-					type: file.type
+					type: file.type,
+					size: file.size,
+					temporary: file.temporary
 				}];
+			}}
+		/>
 			}}
 		/>
 		<input
@@ -537,6 +584,45 @@
 	.message.ai .message-bubble:has(.inline-questions) {
 		max-width: 95%;
 	}
+
+	/* Message Files Display */
+	.message-files {
+		margin-top: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.message-image {
+		max-width: 100%;
+		border-radius: var(--radius-md);
+		overflow: hidden;
+		border: 1px solid var(--border-color);
+	}
+
+	.message-image img {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+
+	.message-file-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 12px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		color: var(--text-primary);
+		width: fit-content;
+	}
+
+	.message-file-chip svg {
+		flex-shrink: 0;
+	}
+
 	/* Typing Indicator */
 	.typing-indicator {
 		display: flex;
@@ -652,6 +738,77 @@
 		flex-wrap: wrap;
 		gap: 8px;
 		order: -1;
+	}
+
+	/* Compact Image Preview */
+	.image-preview-compact {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		width: 100%;
+		max-width: 100%;
+	}
+
+	.preview-thumbnail {
+		width: 40px;
+		height: 40px;
+		flex-shrink: 0;
+		border-radius: var(--radius-sm);
+		object-fit: cover;
+		background: var(--bg-secondary);
+	}
+
+	.preview-info {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.preview-name {
+		font-size: 0.8125rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.preview-size {
+		font-size: 0.6875rem;
+		color: var(--text-secondary);
+	}
+
+	.action-icon-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		flex-shrink: 0;
+		padding: 0;
+		background: transparent;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.action-icon-btn:active {
+		background: var(--bg-secondary);
+		color: var(--accent-primary);
+		border-color: var(--accent-primary);
+	}
+
+	.action-icon-btn.remove:active {
+		color: var(--danger);
+		border-color: var(--danger);
 	}
 
 	.file-chip {

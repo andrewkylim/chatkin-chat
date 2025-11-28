@@ -7,10 +7,12 @@
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
 	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
+	import { createFile } from '$lib/db/files';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { logger } from '$lib/utils/logger';
+	import { supabase } from '$lib/supabase';
 
 	// Props for customization
 	export let scope: 'global' | 'tasks' | 'notes' | 'project' = 'global';
@@ -73,7 +75,7 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let messagesReady = false;
-	let uploadedFiles: Array<{ name: string; url: string; type: string }> = [];
+	let uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean }> = [];
 
 	async function scrollToBottom() {
 		// Wait for DOM to update, then scroll immediately (for new messages during session)
@@ -140,6 +142,9 @@
 				files: m.files
 			}));
 
+			// Get auth token for database queries
+			const { data: { session } } = await supabase.auth.getSession();
+
 			const requestBody = {
 				message: userMessage,
 				files: filesToSend.length > 0 ? filesToSend : undefined,
@@ -149,7 +154,8 @@
 				context: {
 					scope,
 					projectId
-				}
+				},
+				authToken: session?.access_token
 			};
 
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
@@ -574,6 +580,60 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		);
 	}
 
+	async function saveFileToLibrary(file: { name: string; url: string; type: string; size: number; temporary?: boolean }, index: number) {
+		try {
+			// Call backend to move file from temp to permanent and generate metadata
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/save-to-library`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					tempUrl: file.url,
+					originalName: file.name,
+					mimeType: file.type,
+					sizeBytes: file.size
+				})
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Failed to save file to library');
+			}
+
+			const result = await response.json();
+
+			if (result.success && result.file) {
+				// Create DB entry for permanent file
+				await createFile({
+					filename: result.file.originalName,
+					r2_key: result.file.name,
+					r2_url: result.file.url,
+					mime_type: result.file.type,
+					size_bytes: result.file.size,
+					note_id: null,
+					conversation_id: conversation?.id || null,
+					message_id: null,
+					is_hidden_from_library: false,
+					title: result.file.title || null,
+					description: result.file.description || null,
+					ai_generated_metadata: result.file.ai_generated_metadata || false
+				});
+
+				// Update uploadedFiles to mark as permanent with new URL
+				uploadedFiles[index] = {
+					...uploadedFiles[index],
+					temporary: false,
+					url: result.file.url
+				};
+				uploadedFiles = uploadedFiles; // Trigger reactivity
+
+				logger.debug('File saved to library', { filename: file.name });
+			}
+		} catch (error) {
+			logger.error('Failed to save file to library', error);
+			alert('Failed to save file to library. Please try again.');
+		}
+	}
+
 	onMount(async () => {
 		// Lock viewport to prevent elastic scroll on mobile
 		if (typeof document !== 'undefined') {
@@ -731,7 +791,29 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 							</div>
 						{:else}
 							<p>{message.content}</p>
-							<p style="background: yellow;">Q={message.questions?"Y":"N"} A={message.awaitingResponse?"Y":"N"}</p>
+
+							{#if message.files && message.files.length > 0}
+								<!-- Inline files display -->
+								<div class="message-files">
+									{#each message.files as file}
+										{#if file.type.startsWith('image/')}
+											<!-- Inline image -->
+											<div class="message-image">
+												<img src={file.url} alt={file.name} />
+											</div>
+										{:else}
+											<!-- File attachment chip -->
+											<div class="message-file-chip">
+												<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+													<path d="M6 2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+													<path d="M14 2v6h6"/>
+												</svg>
+												<span>{file.name}</span>
+											</div>
+										{/if}
+									{/each}
+								</div>
+							{/if}
 
 							{#if message.proposedActions && message.awaitingConfirmation}
 								<!-- Action Preview List (OLD format for backward compatibility) -->
@@ -942,41 +1024,94 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			{#if uploadedFiles.length > 0}
 				<div class="uploaded-files-preview">
 					{#each uploadedFiles as file, index}
-						<div class="file-chip">
-							<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-								{#if file.type.startsWith('image/')}
-									<rect x="3" y="3" width="14" height="14" rx="2"/>
-									<path d="M3 13l4-4 4 4 4-6"/>
-								{:else}
+						{#if file.type.startsWith('image/')}
+							<!-- Compact image preview for images -->
+							<div class="image-preview-compact">
+								<img src={file.url} alt={file.name} class="preview-thumbnail" />
+								<div class="preview-info">
+									<span class="preview-name">{file.name}</span>
+									<span class="preview-size">{(file.size / 1024).toFixed(1)} KB</span>
+								</div>
+								<div class="preview-actions-compact">
+									{#if file.temporary}
+										<button
+											type="button"
+											class="action-icon-btn"
+											onclick={async () => {
+												await saveFileToLibrary(file, index);
+											}}
+											title="Save to library"
+										>
+											<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M5 3v16l7-5 7 5V3a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/>
+											</svg>
+										</button>
+									{/if}
+									<button
+										type="button"
+										class="action-icon-btn remove"
+										onclick={() => {
+											uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+										}}
+										aria-label="Remove file"
+									>
+										<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M15 5L5 15M5 5l10 10"/>
+										</svg>
+									</button>
+								</div>
+							</div>
+						{:else}
+							<!-- File chip for documents -->
+							<div class="file-chip">
+								<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M6 2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
 									<path d="M14 2v6h6"/>
-								{/if}
-							</svg>
-							<span class="file-name">{file.name}</span>
-							<button
-								type="button"
-								class="remove-file-btn"
-								onclick={() => {
-									uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
-								}}
-								aria-label="Remove file"
-							>
-								<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M15 5L5 15M5 5l10 10"/>
 								</svg>
-							</button>
-						</div>
+								<span class="file-name">{file.name}</span>
+								{#if file.temporary}
+									<button
+										type="button"
+										class="save-chip-btn"
+										onclick={async () => {
+											await saveFileToLibrary(file, index);
+										}}
+										title="Save to library"
+									>
+										<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M5 3v16l7-5 7 5V3a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/>
+										</svg>
+									</button>
+								{/if}
+								<button
+									type="button"
+									class="remove-file-btn"
+									onclick={() => {
+										uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+									}}
+									aria-label="Remove file"
+								>
+									<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M15 5L5 15M5 5l10 10"/>
+									</svg>
+								</button>
+							</div>
+						{/if}
 					{/each}
 				</div>
 			{/if}
 			<FileUpload
 				accept="image/*,application/pdf,.doc,.docx,.txt"
 				maxSizeMB={10}
+				permanent={false}
+				conversationId={conversation?.id || null}
 				onUploadComplete={(file) => {
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
 					url: file.url,
-					type: file.type
+					type: file.type,
+					size: file.size,
+					temporary: file.temporary
 				}];
 				}}
 			/>
@@ -1261,6 +1396,44 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		max-width: 95%;
 	}
 
+	/* Message Files Display */
+	.message-files {
+		margin-top: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.message-image {
+		max-width: 400px;
+		border-radius: var(--radius-md);
+		overflow: hidden;
+		border: 1px solid var(--border-color);
+	}
+
+	.message-image img {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+
+	.message-file-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 12px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		font-size: 0.875rem;
+		color: var(--text-primary);
+		width: fit-content;
+	}
+
+	.message-file-chip svg {
+		flex-shrink: 0;
+	}
+
 	/* Actions Preview */
 	.actions-preview {
 		margin-top: 12px;
@@ -1519,6 +1692,101 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 	.remove-file-btn:hover {
 		color: var(--danger);
+	}
+
+	/* Compact Image Preview */
+	.image-preview-compact {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		max-width: 100%;
+	}
+
+	.preview-thumbnail {
+		width: 48px;
+		height: 48px;
+		flex-shrink: 0;
+		border-radius: var(--radius-sm);
+		object-fit: cover;
+		background: var(--bg-secondary);
+	}
+
+	.preview-info {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.preview-name {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.preview-size {
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+	}
+
+	.preview-actions-compact {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		flex-shrink: 0;
+	}
+
+	.action-icon-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		padding: 0;
+		background: transparent;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-sm);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.action-icon-btn:hover {
+		background: var(--bg-secondary);
+		color: var(--accent-primary);
+		border-color: var(--accent-primary);
+	}
+
+	.action-icon-btn.remove:hover {
+		color: var(--danger);
+		border-color: var(--danger);
+	}
+
+	.save-chip-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 20px;
+		padding: 0;
+		background: transparent;
+		border: none;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.save-chip-btn:hover {
+		color: var(--accent-primary);
+		transform: scale(1.1);
 	}
 
 	/* Inline Operations */

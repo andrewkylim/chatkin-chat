@@ -71,11 +71,17 @@ export interface File {
   id: string;
   user_id: string;
   note_id: string | null;
+  conversation_id: string | null; // Link to chat conversation
+  message_id: string | null; // Link to specific message
   filename: string;
   mime_type: string;
   size_bytes: number;
   r2_key: string; // Path in R2 bucket
   r2_url: string; // Public URL or signed URL
+  is_hidden_from_library: boolean; // Hide from library, keep in chat
+  title: string | null; // AI-generated or user-edited title
+  description: string | null; // AI-generated or user-edited description
+  ai_generated_metadata: boolean; // Track if AI generated title/desc
   created_at: string;
 }
 

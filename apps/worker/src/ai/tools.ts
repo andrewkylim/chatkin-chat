@@ -80,6 +80,118 @@ export function getTools() {
         },
         required: ['summary', 'operations']
       }
+    },
+    {
+      name: 'query_tasks',
+      description: 'Query the complete tasks database when the snapshot is insufficient. Use this when the user asks for "all tasks", filtered tasks, or tasks outside the snapshot scope.',
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          filters: {
+            type: 'object' as const,
+            properties: {
+              project_id: {
+                type: 'string' as const,
+                description: 'Filter by project ID'
+              },
+              status: {
+                type: 'string' as const,
+                enum: ['pending', 'in_progress', 'completed', 'archived'],
+                description: 'Filter by status'
+              },
+              search_query: {
+                type: 'string' as const,
+                description: 'Search in title and description'
+              }
+            }
+          },
+          limit: {
+            type: 'number' as const,
+            description: 'Max results (default 50, max 100)'
+          }
+        }
+      }
+    },
+    {
+      name: 'query_notes',
+      description: 'Query the complete notes database when the snapshot is insufficient. Use for "all notes", search queries, or notes outside snapshot.',
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          filters: {
+            type: 'object' as const,
+            properties: {
+              search_query: {
+                type: 'string' as const,
+                description: 'Search in title and content'
+              },
+              project_id: {
+                type: 'string' as const,
+                description: 'Filter by project'
+              }
+            }
+          },
+          limit: {
+            type: 'number' as const,
+            description: 'Max results (default 50, max 100)'
+          }
+        }
+      }
+    },
+    {
+      name: 'query_projects',
+      description: 'Query all projects. Use when user asks for project lists or project-specific information.',
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          include_archived: {
+            type: 'boolean' as const,
+            description: 'Include archived projects'
+          },
+          search_query: {
+            type: 'string' as const,
+            description: 'Search in name and description'
+          }
+        }
+      }
+    },
+    {
+      name: 'query_files',
+      description: 'Query files by name, type, description, or project. Files have title and description fields that can be searched.',
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          filters: {
+            type: 'object' as const,
+            properties: {
+              project_id: {
+                type: 'string' as const,
+                description: 'Filter by project'
+              },
+              conversation_id: {
+                type: 'string' as const,
+                description: 'Filter by conversation'
+              },
+              search_query: {
+                type: 'string' as const,
+                description: 'Search in filename, title, and description'
+              },
+              mime_type_prefix: {
+                type: 'string' as const,
+                description: 'Filter by MIME type (e.g., "image/", "application/pdf")'
+              },
+              is_hidden_from_library: {
+                type: 'boolean' as const,
+                description: 'Include hidden files'
+              }
+            }
+          },
+          limit: {
+            type: 'number' as const,
+            description: 'Max results (default 50, max 100)'
+          }
+        }
+      }
     }
   ];
 }

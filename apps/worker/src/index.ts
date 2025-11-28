@@ -10,6 +10,9 @@ import { handleHealth } from './routes/health';
 import { handleAIChat } from './routes/ai-chat';
 import { handleUpload } from './routes/upload';
 import { handleFileRetrieval } from './routes/files';
+import { handleImageTransform } from './routes/image';
+import { handleTempFileRequest } from './routes/temp-files';
+import { handleSaveToLibrary } from './routes/save-to-library';
 
 export { Env };
 
@@ -37,6 +40,24 @@ const handler = {
 
     if (url.pathname === '/api/upload') {
       return handleUpload(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/save-to-library') {
+      return handleSaveToLibrary(request, env, corsHeaders);
+    }
+
+    if (url.pathname.startsWith('/api/temp-files/')) {
+      return handleTempFileRequest(request, env, corsHeaders);
+    }
+
+    // Handle CDN image transformations: /cdn-cgi/image/<options>/<filename>
+    if (url.pathname.startsWith('/cdn-cgi/image/')) {
+      const pathParts = url.pathname.replace('/cdn-cgi/image/', '').split('/');
+      if (pathParts.length >= 2) {
+        const optionsString = pathParts[0];
+        const fileName = pathParts.slice(1).join('/');
+        return handleImageTransform(optionsString, fileName, env, corsHeaders);
+      }
     }
 
     if (url.pathname.startsWith('/api/files/')) {

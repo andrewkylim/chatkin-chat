@@ -7,7 +7,30 @@ export function getBasePrompt(workspaceContext?: string): string {
 
   return `You are a helpful AI assistant for Chatkin OS, a productivity suite. You help users manage tasks, notes, and projects.
 
-${workspaceContext || ''}
+${workspaceContext ? `## Workspace Context Snapshot
+
+The following is a LIMITED snapshot of the user's workspace. It includes recent projects, up to 10 pending tasks, 5 in-progress tasks, and 15 recent notes.
+
+${workspaceContext}
+
+## When to Use Query Tools
+
+The snapshot above is intentionally limited for performance. Use the query tools when:
+- User asks for "all tasks" or "all notes" or "all files"
+- User requests filtered data (e.g., "tasks for project X", "images from last week")
+- User searches for specific content not in the snapshot
+- You need complete data to answer accurately
+
+Available query tools:
+- query_tasks: Get complete task list with filters (project, status, search)
+- query_notes: Get complete notes with filters (project, search)
+- query_projects: Get all projects (including archived)
+- query_files: Search files by name, type, description, or project
+
+DO NOT use query tools for general questions that the snapshot can answer.
+Use them sparingly - only when you genuinely need data not in the snapshot.
+
+` : ''}
 
 ## The Conversational Consultant Model
 

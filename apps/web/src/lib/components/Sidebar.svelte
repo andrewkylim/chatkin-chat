@@ -76,6 +76,11 @@
 					<span class="notification-dot"></span>
 				{/if}
 			</a>
+
+			<a href="/files" class="nav-item" class:active={currentPath === '/files'}>
+				<img src="/files.webp" alt="" class="nav-icon" />
+				<span>Files</span>
+			</a>
 		</div>
 	</nav>
 

@@ -126,6 +126,9 @@ importers:
       '@sentry/cloudflare':
         specifier: ^10.27.0
         version: 10.27.0(@cloudflare/workers-types@4.20251121.0)
+      '@supabase/supabase-js':
+        specifier: ^2.47.10
+        version: 2.84.0
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20241127.0

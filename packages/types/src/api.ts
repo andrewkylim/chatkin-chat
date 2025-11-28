@@ -21,6 +21,7 @@ export interface ChatRequest {
     taskIds?: string[];
     scope?: 'global' | 'tasks' | 'notes' | 'project';
   };
+  authToken?: string; // User's auth token for database queries (RLS)
 }
 
 export interface ChatResponse {
@@ -45,6 +46,9 @@ export interface GenerateResponse {
 export interface UploadRequest {
   file: File;
   noteId?: string;
+  conversationId?: string; // Link file to conversation
+  messageId?: string; // Link file to specific message
+  hideFromLibrary?: boolean; // If true, hide from Files library (keep in chat)
 }
 
 export interface UploadResponse {
@@ -53,6 +57,9 @@ export interface UploadResponse {
   r2Key: string;
   filename: string;
   sizeBytes: number;
+  isHiddenFromLibrary: boolean; // Indicates if file is hidden from library
+  title?: string; // AI-generated or user-edited title
+  description?: string; // AI-generated or user-edited description
 }
 
 // Error Response

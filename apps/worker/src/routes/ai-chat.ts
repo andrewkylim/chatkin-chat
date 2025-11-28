@@ -11,6 +11,7 @@ import { getTools } from '../ai/tools';
 import { parseAIResponse } from '../ai/response-handler';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
+import { executeQueryTool } from '../ai/query-handlers';
 
 /**
  * Helper function to fetch image from R2 and convert to base64
@@ -67,11 +68,14 @@ export async function handleAIChat(
 
   try {
     const body = await request.json() as ChatRequest;
-    const { message, files, conversationHistory, conversationSummary, workspaceContext, context } = body;
+    const { message, files, conversationHistory, conversationSummary, workspaceContext, context, authToken } = body;
 
     if (!message) {
       throw new WorkerError('Message is required', 400);
     }
+
+    // Auth token required for query tools (but optional for non-query use)
+    const hasAuth = !!authToken;
 
     logger.debug('Processing AI chat request', {
       scope: context?.scope,
@@ -179,26 +183,128 @@ export async function handleAIChat(
       });
     }
 
-    // Create non-streaming response with tools
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: apiMessages,
-      tools: tools,
-    });
+    // Tool use loop - handle query tools
+    const MAX_ITERATIONS = 5;
+    let iterations = 0;
+    let currentMessages = [...apiMessages];
 
-    logger.debug('AI response generated', {
-      stopReason: response.stop_reason,
-      contentBlocks: response.content.length
-    });
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
 
-    // Parse and format response
-    const parsedResponse = parseAIResponse(response);
+      logger.debug('Tool use loop iteration', { iteration: iterations });
 
-    return new Response(JSON.stringify(parsedResponse), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+      // Create non-streaming response with tools
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: currentMessages,
+        tools: tools,
+      });
+
+      logger.debug('AI response generated', {
+        stopReason: response.stop_reason,
+        contentBlocks: response.content.length,
+        iteration: iterations
+      });
+
+      // If AI is done (no tool calls), return response
+      if (response.stop_reason === 'end_turn') {
+        const parsedResponse = parseAIResponse(response);
+        return new Response(JSON.stringify(parsedResponse), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // If AI wants to use tools
+      if (response.stop_reason === 'tool_use') {
+        // Add assistant's response to messages
+        currentMessages.push({
+          role: 'assistant',
+          content: response.content
+        });
+
+        // Execute all tool calls
+        const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> = [];
+
+        for (const block of response.content) {
+          if (block.type === 'tool_use') {
+            const { id, name, input } = block;
+
+            logger.debug('Executing tool', { toolName: name, toolId: id });
+
+            try {
+              let result: string;
+
+              // Check if it's a query tool
+              if (['query_tasks', 'query_notes', 'query_projects', 'query_files'].includes(name)) {
+                // Require auth for query tools
+                if (!hasAuth) {
+                  result = JSON.stringify({
+                    error: true,
+                    message: 'Authentication required to query database. Please ensure you are logged in.'
+                  });
+                } else {
+                  result = await executeQueryTool(name, input as { filters?: Record<string, unknown>; limit?: number }, authToken!, env);
+                }
+              } else {
+                // Non-query tools (ask_questions, propose_operations) handled normally
+                // The parseAIResponse function will handle these in the final response
+                result = JSON.stringify({
+                  error: false,
+                  message: 'Non-query tool will be handled in final response'
+                });
+              }
+
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: id,
+                content: result
+              });
+            } catch (error) {
+              // Enhanced error handling
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              logger.error('Tool execution error', { toolName: name, error: errorMessage });
+
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: id,
+                content: JSON.stringify({
+                  error: true,
+                  message: `I encountered an error while processing your request: ${errorMessage}. Please try again.`
+                }),
+                is_error: true
+              });
+            }
+          }
+        }
+
+        // Add tool results to messages
+        currentMessages.push({
+          role: 'user',
+          content: toolResults
+        });
+
+        // Continue loop - AI will process results
+        continue;
+      }
+
+      // Unexpected stop reason
+      logger.error('Unexpected stop reason', { stopReason: response.stop_reason });
+      return new Response(
+        JSON.stringify({ error: `Unexpected stop reason: ${response.stop_reason}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Max iterations reached
+    logger.warn('Max tool use iterations reached', { iterations: MAX_ITERATIONS });
+    return new Response(
+      JSON.stringify({
+        error: 'The AI made too many tool calls. Please try rephrasing your request or breaking it into smaller questions.'
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     return handleError(error, 'AI chat request failed', corsHeaders);
