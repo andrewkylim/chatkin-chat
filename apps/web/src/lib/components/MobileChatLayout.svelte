@@ -547,6 +547,10 @@
 				<span class="notification-dot"></span>
 			{/if}
 		</a>
+
+		<a href="/files" class="nav-item" class:active={currentPath === '/files'}>
+			<span>Files</span>
+		</a>
 	</nav>
 </div>
 
