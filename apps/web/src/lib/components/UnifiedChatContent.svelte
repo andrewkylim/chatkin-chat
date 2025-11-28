@@ -178,6 +178,7 @@
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${session?.access_token}`
 				},
 				body: JSON.stringify(requestBody),
 			});
@@ -424,28 +425,60 @@
 		let successCount = 0;
 		let errorCount = 0;
 		const results: string[] = [];
+		let lastCreatedProjectId: string | null = null;
 
 		for (const op of operations) {
 			try {
 				if (op.operation === 'create') {
+					if (!op.data) throw new Error('Missing data for create operation');
+
 					if (op.type === 'task') {
+						const taskData = op.data as TaskData;
+						// Smart project assignment: use explicit project_id, or context projectId, or the one we just created
+						const targetProjectId = taskData.project_id || lastCreatedProjectId || projectId || null;
+						
+						// Sanitize task data to ensure only valid fields are sent to DB
+						const { title, description, priority, status, due_date } = taskData;
+						
 						await createTask({
-							...op.data,
-							project_id: op.data.project_id || null
+							title,
+							description: description || null,
+							priority: priority || 'medium',
+							status: status || 'todo',
+							due_date: due_date || null,
+							project_id: targetProjectId,
+							is_recurring: false,
+							recurrence_pattern: null,
+							parent_task_id: null,
+							recurrence_end_date: null
 						});
 						notificationCounts.incrementCount('tasks');
-						results.push(`✓ Created task: ${op.data.title}`);
+						results.push(`✓ Created task: ${taskData.title}`);
 					} else if (op.type === 'note') {
-						await createNote({
-							...op.data,
-							project_id: op.data.project_id || null
+						const noteData = op.data as NoteData;
+						// Smart project assignment
+						const targetProjectId = noteData.project_id || lastCreatedProjectId || projectId || null;
+						
+						// Sanitize note data
+						const { title: noteTitle, content } = noteData;
+						
+						await createNote({ 
+							title: noteTitle,
+							content: content || '',
+							project_id: targetProjectId 
 						});
 						notificationCounts.incrementCount('notes');
-						results.push(`✓ Created note: ${op.data.title}`);
+						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
-						await createProject(op.data);
+						const projectData = op.data as ProjectData;
+						const newProject = await createProject({ ...projectData, description: projectData.description || null });
+						// Capture the new project ID for subsequent items in this batch
+						if (newProject && newProject.id) {
+							lastCreatedProjectId = newProject.id;
+							logger.debug('Captured new project ID for smart assignment', { id: lastCreatedProjectId });
+						}
 						notificationCounts.incrementCount('projects');
-						results.push(`✓ Created project: ${op.data.name}`);
+						results.push(`✓ Created project: ${projectData.name}`);
 					}
 					successCount++;
 				} else if (op.operation === 'update') {
@@ -629,10 +662,16 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			// Use local worker URL in development
 			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
 
+			// Get auth token
+			const { data: { session } } = await supabase.auth.getSession();
+
 			// Call backend to move file from temp to permanent and generate metadata
 			const response = await fetch(`${workerUrl}/api/save-to-library`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${session?.access_token}`
+				},
 				body: JSON.stringify({
 					tempUrl: file.url,
 					originalName: file.name,
@@ -697,7 +736,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			// Call backend to move file from temp to permanent and generate metadata
 			const response = await fetch(`${workerUrl}/api/save-to-library`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${session?.access_token}`
+				},
 				body: JSON.stringify({
 					tempUrl: file.url,
 					originalName: file.name,

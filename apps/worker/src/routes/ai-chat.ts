@@ -227,6 +227,27 @@ export async function handleAIChat(
 
       // If AI wants to use tools
       if (response.stop_reason === 'tool_use') {
+        // CRITICAL: Check if any tool is a client-side tool first
+        // Client-side tools must be returned immediately to the client
+        const clientSideTools = ['ask_questions', 'propose_operations'];
+        const hasClientSideTool = response.content.some(
+          block => block.type === 'tool_use' && clientSideTools.includes((block as any).name)
+        );
+
+        if (hasClientSideTool) {
+          logger.debug('Client-side tool detected, returning response immediately', {
+            iteration: iterations,
+            tools: response.content
+              .filter(block => block.type === 'tool_use')
+              .map(block => (block as any).name)
+          });
+
+          const parsedResponse = parseAIResponse(response);
+          return new Response(JSON.stringify(parsedResponse), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
         // Add assistant's response to messages
         currentMessages.push({
           role: 'assistant',
@@ -257,12 +278,9 @@ export async function handleAIChat(
                   result = await executeQueryTool(name, input as { filters?: Record<string, unknown>; limit?: number }, authToken!, env);
                 }
               } else {
-                // Non-query tools (ask_questions, propose_operations) handled normally
-                // The parseAIResponse function will handle these in the final response
-                result = JSON.stringify({
-                  error: false,
-                  message: 'Non-query tool will be handled in final response'
-                });
+                // Unknown tool - this should never be reached due to client-side tool check above
+                logger.warn('Unknown tool encountered in execution loop', { toolName: name });
+                throw new Error(`Unknown tool: ${name}`);
               }
 
               toolResults.push({

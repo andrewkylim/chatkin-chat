@@ -219,7 +219,14 @@
 
 					if (op.type === 'task') {
 						const taskData = op.data as TaskData;
-						await createTask({ ...taskData, project_id: taskData.project_id || projectId || null });
+						await createTask({
+							...taskData,
+							project_id: taskData.project_id || projectId || null,
+							is_recurring: false,
+							recurrence_pattern: null,
+							parent_task_id: null,
+							recurrence_end_date: null
+						});
 						notificationCounts.incrementCount('tasks');
 						results.push(`✓ Created task: ${taskData.title}`);
 					} else if (op.type === 'note') {
@@ -229,7 +236,7 @@
 						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
 						const projectData = op.data as ProjectData;
-						await createProject(projectData);
+						await createProject({ ...projectData, description: projectData.description || null });
 						notificationCounts.incrementCount('projects');
 						results.push(`✓ Created project: ${projectData.name}`);
 					}
