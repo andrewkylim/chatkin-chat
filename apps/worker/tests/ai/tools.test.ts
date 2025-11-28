@@ -6,7 +6,7 @@ describe('AI Tools', () => {
     const tools = getTools();
 
     expect(Array.isArray(tools)).toBe(true);
-    expect(tools.length).toBe(2);
+    expect(tools.length).toBe(6); // ask_questions, propose_operations, query_tasks, query_notes, query_projects, query_files
   });
 
   it('should include ask_questions tool', () => {
