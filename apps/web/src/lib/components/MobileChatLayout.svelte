@@ -181,7 +181,6 @@
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={() => {
-										logger.debug('Mobile Submit clicked');
 										if (!onQuestionSubmit) return;
 										const answers = {};
 										message.questions.forEach((q, qIdx) => {
@@ -196,7 +195,6 @@
 												}
 											}
 										});
-										logger.debug('Mobile answers submitted', { answers });
 										if (Object.keys(answers).length === 0) {
 											alert('Please select an answer for each question');
 											return;
@@ -204,7 +202,6 @@
 										onQuestionSubmit(index, answers);
 									}}>Submit</button>
 									<button class="cancel-btn" type="button" onclick={() => {
-										logger.debug('Mobile Cancel clicked');
 										if (onQuestionCancel) onQuestionCancel(index);
 									}}>Cancel</button>
 								</div>
@@ -250,13 +247,11 @@
 								<!-- Confirmation Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={() => {
-										logger.debug('Mobile Operation Confirm clicked');
 										if (onOperationConfirm) onOperationConfirm(index);
 									}}>
 										Confirm
 									</button>
 									<button class="cancel-btn" type="button" onclick={() => {
-										logger.debug('Mobile Operation Cancel clicked');
 										if (onOperationCancel) onOperationCancel(index);
 									}}>
 										Cancel
@@ -306,7 +301,6 @@
 			accept="image/*,application/pdf,.doc,.docx,.txt"
 			maxSizeMB={10}
 			onUploadComplete={(file) => {
-				logger.debug('File uploaded', { file });
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
 					url: file.url,

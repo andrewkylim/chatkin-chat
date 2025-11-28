@@ -15,7 +15,10 @@ import { logger } from '../utils/logger';
 /**
  * Helper function to fetch image from R2 and convert to base64
  */
-async function fetchImageAsBase64(url: string, env: Env): Promise<{ data: string; mediaType: string }> {
+async function fetchImageAsBase64(
+  url: string,
+  env: Env
+): Promise<{ data: string; mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' }> {
   // Extract filename from URL (format: /api/files/{filename})
   const filename = url.split('/').pop();
   if (!filename) {
@@ -40,7 +43,12 @@ async function fetchImageAsBase64(url: string, env: Env): Promise<{ data: string
   const base64 = btoa(binary);
 
   // Get media type from object metadata or Content-Type header
-  const mediaType = object.httpMetadata?.contentType || 'image/jpeg';
+  const contentType = object.httpMetadata?.contentType || 'image/jpeg';
+  // Ensure it's a valid image media type
+  const mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' =
+    contentType === 'image/png' || contentType === 'image/gif' || contentType === 'image/webp'
+      ? contentType
+      : 'image/jpeg';
 
   return { data: base64, mediaType };
 }
@@ -145,12 +153,7 @@ export async function handleAIChat(
         files
           .filter(f => f.type.startsWith('image/'))
           .map(async (file) => {
-            logger.debug('Fetching image as base64', { url: file.url, type: file.type });
             const { data, mediaType } = await fetchImageAsBase64(file.url, env);
-            logger.debug('Image converted to base64', {
-              mediaType,
-              dataLength: data.length
-            });
             return {
               type: "image" as const,
               source: {
@@ -169,22 +172,12 @@ export async function handleAIChat(
           ...imageContents
         ]
       });
-
-      logger.debug('Built message with images', {
-        contentBlocks: 1 + imageContents.length
-      });
     } else {
       apiMessages.push({
         role: 'user',
         content: message
       });
     }
-
-    logger.debug('Final message array before API call', {
-      messageCount: apiMessages.length,
-      lastMessageType: typeof apiMessages[apiMessages.length - 1]?.content,
-      lastMessageIsArray: Array.isArray(apiMessages[apiMessages.length - 1]?.content)
-    });
 
     // Create non-streaming response with tools
     const response = await anthropic.messages.create({

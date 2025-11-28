@@ -152,12 +152,6 @@
 				}
 			};
 
-			logger.debug('Sending AI chat request', {
-				hasFiles: !!requestBody.files,
-				filesCount: filesToSend.length,
-				files: filesToSend
-			});
-
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
 				method: 'POST',
 				headers: {
@@ -171,9 +165,6 @@
 			}
 
 			const data = await response.json();
-
-			// Debug logging
-			logger.debug('Received AI response', { data });
 
 			// Handle structured response from worker
 			if (data.type === 'actions' && Array.isArray(data.actions)) {
@@ -217,7 +208,6 @@
 					scrollToBottom();
 				} else {
 					// Old actions format (backward compatibility)
-					logger.debug('Using old actions format', { actions: data.actions });
 					// Count proposed items
 					const projectCount = data.actions.filter((a: AIAction) => a.type === 'project').length;
 					const taskCount = data.actions.filter((a: AIAction) => a.type === 'task').length;
@@ -230,8 +220,6 @@
 					if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 
 					const previewMessage = `I'll create ${parts.join(', ')} for you:`;
-					logger.debug('Preview message', { previewMessage });
-					logger.debug('Setting proposedActions', { actions: data.actions });
 
 					// Save AI response with proposed actions
 					try {
@@ -249,7 +237,6 @@
 							awaitingConfirmation: true
 						} : msg
 					);
-					logger.debug('Updated message', { message: messages[aiMessageIndex] });
 					scrollToBottom();
 				}
 			} else if (data.type === 'questions' && Array.isArray(data.questions)) {
@@ -272,8 +259,6 @@
 						awaitingResponse: true
 					} : msg
 				);
-				logger.debug('After setting questions', { aiMessageIndex, message: messages[aiMessageIndex] });
-				logger.debug('Total messages count', { count: messages.length });
 			} else if (data.type === 'message') {
 				// Save conversational AI response
 				try {
@@ -907,12 +892,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={(e) => {
-										logger.debug('Submit button clicked', { event: e });
 										const answers = {};
 										message.questions.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
 											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
-											logger.debug('Question answered', { question: q.question, selected });
 											if (selected) {
 												if (selected.value === '__other__') {
 													const otherInput = document.getElementById(`${questionId}_other_text`) as HTMLInputElement;
@@ -922,7 +905,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 												}
 											}
 										});
-										logger.debug('Submitting answers', { answers });
 										if (Object.keys(answers).length === 0) {
 											alert('Please select an answer for each question');
 											return;
@@ -932,7 +914,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 										Submit
 									</button>
 									<button class="cancel-btn" type="button" onclick={() => {
-										logger.debug('Cancel button clicked');
 										handleInlineQuestionCancel(index);
 									}}>
 										Cancel
@@ -992,7 +973,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				accept="image/*,application/pdf,.doc,.docx,.txt"
 				maxSizeMB={10}
 				onUploadComplete={(file) => {
-					logger.debug('File uploaded', { file });
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
 					url: file.url,
