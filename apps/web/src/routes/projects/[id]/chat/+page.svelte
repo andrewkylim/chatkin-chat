@@ -1222,6 +1222,7 @@
 		gap: 16px;
 		text-decoration: none;
 		color: var(--text-primary);
+		min-width: 0; /* Allow flex shrinking */
 	}
 
 	.task-content.completed .task-title {
@@ -1243,6 +1244,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		max-width: 100%; /* Ensure it doesn't exceed parent width */
 	}
 
 	.task-meta {
