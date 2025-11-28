@@ -28,9 +28,16 @@ async function fetchImageAsBase64(url: string, env: Env): Promise<{ data: string
     throw new WorkerError('File not found in storage', 404);
   }
 
-  // Convert to base64
+  // Convert to base64 using chunking to avoid call stack overflow with large files
   const arrayBuffer = await object.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binary = '';
+  const chunkSize = 0x8000; // 32KB chunks
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  const base64 = btoa(binary);
 
   // Get media type from object metadata or Content-Type header
   const mediaType = object.httpMetadata?.contentType || 'image/jpeg';
