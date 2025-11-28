@@ -19,6 +19,14 @@ interface UploadSuccessResponse {
   };
 }
 
+// Mock authentication
+vi.mock('../../src/middleware/auth', () => ({
+  requireAuth: vi.fn().mockResolvedValue({
+    userId: 'test-user-id',
+    email: 'test@example.com'
+  })
+}));
+
 // Mock logger
 vi.mock('../../src/utils/logger', () => ({
   logger: {

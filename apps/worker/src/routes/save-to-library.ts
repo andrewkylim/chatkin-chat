@@ -8,6 +8,7 @@ import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createAnthropicClient } from '../ai/client';
 import { generateImageMetadata, generateDocumentMetadata } from '../utils/file-metadata';
+import { requireAuth } from '../middleware/auth';
 
 interface SaveToLibraryRequest {
   tempUrl: string; // URL to temp file
@@ -29,6 +30,10 @@ export async function handleSaveToLibrary(
   }
 
   try {
+    // Require authentication
+    const user = await requireAuth(request, env);
+    logger.debug('Authenticated save to library request', { userId: user.userId });
+
     const body = await request.json() as SaveToLibraryRequest;
     const { tempUrl, originalName, mimeType, sizeBytes } = body;
 

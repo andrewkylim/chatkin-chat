@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
 import { moderateImageContent } from '../utils/moderation';
 import { generateImageMetadata, generateDocumentMetadata } from '../utils/file-metadata';
 import { createAnthropicClient } from '../ai/client';
+import { requireAuth } from '../middleware/auth';
 
 // File upload constraints
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
@@ -38,6 +39,10 @@ export async function handleUpload(
   }
 
   try {
+    // Require authentication
+    const user = await requireAuth(request, env);
+    logger.debug('Authenticated file upload request', { userId: user.userId });
+
     const formData = await request.formData();
     const fileEntry = formData.get('file');
     const permanent = formData.get('permanent') === 'true'; // If true, save to permanent bucket with DB entry

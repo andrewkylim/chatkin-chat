@@ -3,11 +3,19 @@ main = "src/index.ts"
 compatibility_date = "2024-11-22"
 compatibility_flags = ["nodejs_compat"]
 
+# Production routes - applies to default deployment
+routes = [
+  { pattern = "chatkin.ai/api/health", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/ai/*", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/upload", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/save-to-library", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/delete-file", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/temp-files/*", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/files/*", zone_name = "chatkin.ai" }
+]
+
 [env.production]
 name = "chatkin-os-worker"
-routes = [
-  { pattern = "chatkin.ai/api/*", zone_name = "chatkin.ai" }
-]
 
 [[env.production.r2_buckets]]
 binding = "CHATKIN_BUCKET"

@@ -12,6 +12,7 @@ import { parseAIResponse } from '../ai/response-handler';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { executeQueryTool } from '../ai/query-handlers';
+import { requireAuth } from '../middleware/auth';
 
 /**
  * Helper function to fetch image from R2 and convert to base64
@@ -71,6 +72,10 @@ export async function handleAIChat(
   }
 
   try {
+    // Require authentication for ALL chat requests
+    const user = await requireAuth(request, env);
+    logger.debug('Authenticated AI chat request', { userId: user.userId });
+
     const body = await request.json() as ChatRequest;
     const { message, files, conversationHistory, conversationSummary, workspaceContext, context, authToken } = body;
 
@@ -78,7 +83,7 @@ export async function handleAIChat(
       throw new WorkerError('Message is required', 400);
     }
 
-    // Auth token required for query tools (but optional for non-query use)
+    // Use the auth token from body for database queries (it should match the request auth)
     const hasAuth = !!authToken;
 
     logger.debug('Processing AI chat request', {

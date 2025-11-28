@@ -987,11 +987,12 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 						title={talkModeActive ? 'Turn off Talk Mode' : 'Turn on Talk Mode'}
 						onclick={toggleTalkMode}
 					>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-						<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-						<line x1="12" y1="19" x2="12" y2="23"/>
-						<line x1="8" y1="23" x2="16" y2="23"/>
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+						<line x1="4" y1="14" x2="4" y2="10"/>
+						<line x1="8" y1="16" x2="8" y2="8"/>
+						<line x1="12" y1="18" x2="12" y2="6"/>
+						<line x1="16" y1="16" x2="16" y2="8"/>
+						<line x1="20" y1="14" x2="20" y2="10"/>
 						</svg>
 						<span class="talk-mode-label">
 							{#if isPlayingAudio}

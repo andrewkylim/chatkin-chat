@@ -6,6 +6,7 @@
 import type { Env, CorsHeaders } from '../types';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
+import { requireAuth } from '../middleware/auth';
 
 export async function handleDeleteFile(
   request: Request,
@@ -20,6 +21,10 @@ export async function handleDeleteFile(
   }
 
   try {
+    // Require authentication
+    const user = await requireAuth(request, env);
+    logger.debug('Authenticated file deletion request', { userId: user.userId });
+
     const body = await request.json() as { r2_key?: string };
     const { r2_key } = body;
 

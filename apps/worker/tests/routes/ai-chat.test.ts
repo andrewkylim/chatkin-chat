@@ -4,6 +4,13 @@ import type { CorsHeaders, Env } from '../../src/types';
 import type { ChatRequest } from '@chatkin/types/api';
 
 // Mock dependencies
+vi.mock('../../src/middleware/auth', () => ({
+  requireAuth: vi.fn().mockResolvedValue({
+    userId: 'test-user-id',
+    email: 'test@example.com'
+  })
+}));
+
 vi.mock('../../src/ai/client', () => ({
   createAnthropicClient: vi.fn(() => ({
     messages: {
