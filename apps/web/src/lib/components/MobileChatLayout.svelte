@@ -28,7 +28,7 @@
 		selectedOperations?: Operation[];
 		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: unknown }>;
 		awaitingConfirmation?: boolean;
-		files?: Array<{ name: string; url: string; type: string }>;
+		files?: Array<{ name: string; url: string; type: string; temporary?: boolean }>;
 	}
 
 	let {
@@ -42,13 +42,14 @@
 		onQuestionCancel,
 		onOperationConfirm,
 		onOperationCancel,
+		onSaveFileToLibrary,
 		title = 'Chat',
 		subtitle = null,
 		backUrl = null
 	}: {
 		messages: Message[];
 		inputMessage: string;
-		uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean }>;
+		uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; addedToLibrary?: boolean; saving?: boolean }>;
 		isStreaming: boolean;
 		messagesReady: boolean;
 		onSubmit: () => void;
@@ -56,6 +57,7 @@
 		onQuestionCancel?: (messageIndex: number) => void;
 		onOperationConfirm?: (messageIndex: number) => void;
 		onOperationCancel?: (messageIndex: number) => void;
+		onSaveFileToLibrary?: (file: any, index: number) => Promise<void>;
 		title?: string;
 		subtitle?: string | null;
 		backUrl?: string | null;
@@ -134,11 +136,33 @@
 							{#if message.files && message.files.length > 0}
 								<!-- Inline files display -->
 								<div class="message-files">
-									{#each message.files as file}
+									{#each message.files as file, fileIndex}
 										{#if file.type.startsWith('image/')}
 											<!-- Inline image -->
 											<div class="message-image">
 												<img src={file.url} alt={file.name} />
+												{#if file.temporary}
+													<button
+														type="button"
+														class="message-save-btn"
+														onclick={async () => {
+															if (onSaveFileToLibrary) {
+																await onSaveFileToLibrary(file, fileIndex);
+																// Update the file in the message to mark it as permanent
+																if (message.files && message.files[fileIndex]) {
+																	message.files[fileIndex] = {
+																		...message.files[fileIndex],
+																		temporary: false
+																	};
+																	messages = messages;
+																}
+															}
+														}}
+														title="Save to library"
+													>
+														Save
+													</button>
+												{/if}
 											</div>
 										{:else}
 											<!-- File attachment chip -->
@@ -301,18 +325,43 @@
 								<span class="preview-name">{file.name}</span>
 								<span class="preview-size">{(file.size / 1024).toFixed(1)} KB</span>
 							</div>
-							<button
-								type="button"
-								class="action-icon-btn remove"
-								onclick={() => {
-									uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
-								}}
-								aria-label="Remove file"
-							>
-								<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M15 5L5 15M5 5l10 10"/>
-								</svg>
-							</button>
+							<div class="preview-actions-compact">
+								{#if file.temporary || file.addedToLibrary}
+									<button
+										type="button"
+										class="add-to-library-btn"
+										class:added={file.addedToLibrary}
+										class:saving={file.saving}
+										disabled={file.addedToLibrary || file.saving}
+										onclick={async () => {
+											if (onSaveFileToLibrary) {
+												await onSaveFileToLibrary(file, index);
+											}
+										}}
+									>
+										{#if file.saving}
+											<span class="spinner-small"></span>
+											Saving...
+										{:else if file.addedToLibrary}
+											Added
+										{:else}
+											Add to library
+										{/if}
+									</button>
+								{/if}
+								<button
+									type="button"
+									class="action-icon-btn remove"
+									onclick={() => {
+										uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+									}}
+									aria-label="Remove file"
+								>
+									<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M15 5L5 15M5 5l10 10"/>
+									</svg>
+								</button>
+							</div>
 						</div>
 					{:else}
 						<!-- File chip for documents -->
@@ -342,6 +391,7 @@
 		<FileUpload
 			accept="image/*,application/pdf,.doc,.docx,.txt"
 			maxSizeMB={10}
+			permanent={false}
 			onUploadComplete={(file) => {
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
@@ -350,8 +400,6 @@
 					size: file.size,
 					temporary: file.temporary
 				}];
-			}}
-		/>
 			}}
 		/>
 		<input
@@ -593,6 +641,7 @@
 	}
 
 	.message-image {
+		position: relative;
 		max-width: 100%;
 		border-radius: var(--radius-md);
 		overflow: hidden;
@@ -603,6 +652,33 @@
 		width: 100%;
 		height: auto;
 		display: block;
+	}
+
+	.message-save-btn {
+		position: absolute;
+		bottom: 8px;
+		right: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 6px 12px;
+		background: rgba(199, 124, 92, 0.6);
+		backdrop-filter: blur(8px);
+		border: none;
+		border-radius: var(--radius-md);
+		color: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		font-size: 0.6875rem;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.message-save-btn:active {
+		background: rgba(199, 124, 92, 0.85);
+		transform: scale(0.95);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
 	.message-file-chip {
@@ -663,6 +739,7 @@
 
 	/* Input Bar - flex-shrink: 0 (DESIGN-SPEC pattern) */
 	.input-bar {
+		position: relative;
 		flex-shrink: 0;
 		display: flex;
 		flex-wrap: wrap;
@@ -732,19 +809,27 @@
 
 	/* Uploaded Files Preview */
 	.uploaded-files-preview {
-		width: 100%;
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 16px;
+		right: 16px;
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		order: -1;
+		padding: 12px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+		z-index: 10;
 	}
 
 	/* Compact Image Preview */
 	.image-preview-compact {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 6px;
+		gap: 10px;
+		padding: 8px;
 		background: var(--bg-tertiary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
@@ -808,6 +893,61 @@
 	.action-icon-btn.remove:active {
 		color: var(--danger);
 		border-color: var(--danger);
+	}
+
+	.preview-actions-compact {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex-shrink: 0;
+		margin-left: auto;
+	}
+
+	.add-to-library-btn {
+		padding: 6px 12px;
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-sm);
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		white-space: nowrap;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.add-to-library-btn:active:not(:disabled) {
+		background: var(--accent-hover);
+		transform: scale(0.95);
+	}
+
+	.add-to-library-btn.added {
+		background: #4caf50;
+		cursor: default;
+	}
+
+	.add-to-library-btn.saving {
+		cursor: wait;
+	}
+
+	.add-to-library-btn:disabled {
+		opacity: 1;
+	}
+
+	.spinner-small {
+		width: 12px;
+		height: 12px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin-small 0.6s linear infinite;
+	}
+
+	@keyframes spin-small {
+		to { transform: rotate(360deg); }
 	}
 
 	.file-chip {

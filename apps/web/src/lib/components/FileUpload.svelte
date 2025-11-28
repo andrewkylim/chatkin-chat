@@ -226,6 +226,7 @@
 		<button
 			type="button"
 			class="upload-btn"
+			class:uploading
 			on:click={triggerFileSelect}
 			disabled={uploading}
 			aria-label="Upload file"
@@ -266,6 +267,26 @@
 	.upload-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	.upload-btn.uploading {
+		opacity: 1;
+		cursor: not-allowed;
+	}
+
+	.upload-btn.uploading svg {
+		animation: flash-orange 2s ease-in-out infinite;
+	}
+
+	@keyframes flash-orange {
+		0%, 100% {
+			color: var(--text-primary);
+			opacity: 1;
+		}
+		50% {
+			color: #ff6b00;
+			opacity: 1;
+		}
 	}
 
 	/* Drag and drop area */

@@ -7,10 +7,20 @@
 
 	let showUserMenu = false;
 	let userButton: HTMLDivElement;
+	let imageLoadFailed = false;
 
 	$: currentPath = $page.url.pathname;
 	$: userName = $auth.user?.user_metadata?.name || $auth.user?.email || 'User';
 	$: userInitial = userName.charAt(0).toUpperCase();
+
+	// Reset imageLoadFailed when avatar URL changes
+	$: if ($auth.user?.user_metadata?.avatar_url) {
+		imageLoadFailed = false;
+	}
+
+	function handleImageError() {
+		imageLoadFailed = true;
+	}
 
 	function toggleUserMenu() {
 		showUserMenu = !showUserMenu;
@@ -85,10 +95,10 @@
 	</nav>
 
 	<div class="sidebar-footer">
-		<div class="user-profile" bind:this={userButton} on:click={toggleUserMenu}>
-			<div class="user-avatar" class:has-image={$auth.user?.user_metadata?.avatar_url}>
-				{#if $auth.user?.user_metadata?.avatar_url}
-					<img src={$auth.user.user_metadata.avatar_url} alt="User" />
+		<div class="user-profile" bind:this={userButton} onclick={toggleUserMenu}>
+			<div class="user-avatar" class:has-image={$auth.user?.user_metadata?.avatar_url && !imageLoadFailed}>
+				{#if $auth.user?.user_metadata?.avatar_url && !imageLoadFailed}
+					<img src={$auth.user.user_metadata.avatar_url} alt="User" onerror={handleImageError} />
 				{:else}
 					<span class="user-initial">{userInitial}</span>
 				{/if}
@@ -107,7 +117,7 @@
 					</svg>
 					Settings
 				</a>
-				<button class="menu-item" on:click={handleSignOut}>
+				<button class="menu-item" onclick={handleSignOut}>
 					<svg class="item-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
 						<path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M11 11l3-3-3-3M14 8H6"/>
 					</svg>

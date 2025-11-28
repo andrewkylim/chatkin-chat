@@ -75,7 +75,7 @@
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
 	let messagesReady = false;
-	let uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean }> = [];
+	let uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; addedToLibrary?: boolean; saving?: boolean }> = [];
 	let uploadStatus: string = '';
 
 	async function scrollToBottom() {
@@ -587,6 +587,13 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	}
 
 	async function saveFileToLibrary(file: { name: string; url: string; type: string; size: number; temporary?: boolean }, index: number) {
+		// Set saving state
+		uploadedFiles[index] = {
+			...uploadedFiles[index],
+			saving: true
+		};
+		uploadedFiles = uploadedFiles;
+
 		try {
 			// Use local worker URL in development
 			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
@@ -627,10 +634,12 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					ai_generated_metadata: result.file.ai_generated_metadata || false
 				});
 
-				// Update uploadedFiles to mark as permanent with new URL
+				// Update uploadedFiles to mark as added to library
 				uploadedFiles[index] = {
 					...uploadedFiles[index],
 					temporary: false,
+					addedToLibrary: true,
+					saving: false,
 					url: result.file.url
 				};
 				uploadedFiles = uploadedFiles; // Trigger reactivity
@@ -640,6 +649,12 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		} catch (error) {
 			logger.error('Failed to save file to library', error);
 			alert('Failed to save file to library. Please try again.');
+			// Clear saving state on error
+			uploadedFiles[index] = {
+				...uploadedFiles[index],
+				saving: false
+			};
+			uploadedFiles = uploadedFiles;
 		}
 	}
 
@@ -827,9 +842,6 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 														}}
 														title="Save to library"
 													>
-														<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-															<path d="M5 3v16l7-5 7 5V3a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/>
-														</svg>
 														Save
 													</button>
 												{/if}
@@ -1066,18 +1078,25 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 									<span class="preview-size">{(file.size / 1024).toFixed(1)} KB</span>
 								</div>
 								<div class="preview-actions-compact">
-									{#if file.temporary}
+									{#if file.temporary || file.addedToLibrary}
 										<button
 											type="button"
-											class="action-icon-btn"
+											class="add-to-library-btn"
+											class:added={file.addedToLibrary}
+											class:saving={file.saving}
+											disabled={file.addedToLibrary || file.saving}
 											onclick={async () => {
 												await saveFileToLibrary(file, index);
 											}}
-											title="Save to library"
 										>
-											<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-												<path d="M5 3v16l7-5 7 5V3a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/>
-											</svg>
+											{#if file.saving}
+												<span class="spinner-small"></span>
+												Saving...
+											{:else if file.addedToLibrary}
+												Added
+											{:else}
+												Add to library
+											{/if}
 										</button>
 									{/if}
 									<button
@@ -1178,6 +1197,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		onQuestionCancel={handleInlineQuestionCancel}
 		onOperationConfirm={handleInlineOperationConfirm}
 		onOperationCancel={handleInlineOperationCancel}
+		onSaveFileToLibrary={saveFileToLibrary}
 		title={pageTitle}
 		subtitle={pageSubtitle}
 		backUrl={scope === 'tasks' ? '/tasks' : scope === 'notes' ? '/notes' : scope === 'project' && projectId ? `/projects/${projectId}/chat` : null}
@@ -1454,29 +1474,29 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 	.message-save-btn {
 		position: absolute;
-		top: 8px;
+		bottom: 8px;
 		right: 8px;
 		display: flex;
 		align-items: center;
-		gap: 4px;
-		padding: 6px 10px;
-		background: rgba(0, 0, 0, 0.75);
+		justify-content: center;
+		padding: 6px 12px;
+		background: rgba(199, 124, 92, 0.6);
 		backdrop-filter: blur(8px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
+		border: none;
 		border-radius: var(--radius-md);
 		color: white;
-		font-size: 0.75rem;
-		font-weight: 500;
 		cursor: pointer;
 		transition: all 0.2s ease;
-		opacity: 0.9;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		font-size: 0.6875rem;
+		font-weight: 500;
+		white-space: nowrap;
 	}
 
 	.message-save-btn:hover {
-		background: rgba(0, 0, 0, 0.85);
-		border-color: rgba(255, 255, 255, 0.3);
-		transform: translateY(-1px);
-		opacity: 1;
+		background: rgba(199, 124, 92, 0.85);
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
 	.message-file-chip {
@@ -1644,6 +1664,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 	/* Input Container */
 	.input-container {
+		position: relative;
 		flex-shrink: 0;
 		padding: 16px;
 		padding-bottom: max(16px, env(safe-area-inset-bottom));
@@ -1662,10 +1683,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	/* Match sidebar footer height on desktop for global chat */
 	@media (min-width: 1024px) {
 		.input-container.global-scope {
+			height: 76px;
 			min-height: 76px;
-			height: auto;
-			max-height: 200px;
-			overflow-y: auto;
+			max-height: 76px;
+			overflow-y: visible;
 		}
 	}
 
@@ -1722,11 +1743,19 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 	/* Uploaded Files Preview */
 	.uploaded-files-preview {
-		width: 100%;
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 16px;
+		right: 16px;
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		order: -1;
+		padding: 12px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+		z-index: 10;
 	}
 
 	.file-chip {
@@ -1775,7 +1804,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		background: var(--bg-tertiary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
-		max-width: 100%;
+		width: 100%;
 	}
 
 	.preview-thumbnail {
@@ -1840,6 +1869,57 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	.action-icon-btn.remove:hover {
 		color: var(--danger);
 		border-color: var(--danger);
+	}
+
+	.add-to-library-btn {
+		padding: 6px 12px;
+		background: var(--accent-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-sm);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		white-space: nowrap;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.add-to-library-btn:hover:not(:disabled) {
+		background: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+
+	.add-to-library-btn:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
+	.add-to-library-btn.added {
+		background: #4caf50;
+		cursor: default;
+	}
+
+	.add-to-library-btn.saving {
+		cursor: wait;
+	}
+
+	.add-to-library-btn:disabled {
+		opacity: 1;
+	}
+
+	.spinner-small {
+		width: 12px;
+		height: 12px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.6s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
 
 	.save-chip-btn {

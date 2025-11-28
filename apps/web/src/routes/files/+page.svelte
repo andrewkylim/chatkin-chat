@@ -911,10 +911,16 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 		white-space: nowrap;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.bulk-select-btn:hover {
 		background: rgba(255, 255, 255, 0.3);
+	}
+
+	.bulk-select-btn:active {
+		background: rgba(255, 255, 255, 0.3);
+		opacity: 1;
 	}
 
 	.bulk-count {
@@ -951,10 +957,20 @@
 		border-radius: var(--radius-md);
 		cursor: pointer;
 		font-size: 0.9rem;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
 	}
 
 	.bulk-project-select:hover {
 		background: rgba(255, 255, 255, 0.3);
+	}
+
+	.bulk-project-select option {
+		background: var(--bg-secondary);
+		color: var(--text-primary);
 	}
 
 	/* File Display */
