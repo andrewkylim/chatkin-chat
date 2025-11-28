@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
@@ -8,7 +7,7 @@
 	import FileRow from '$lib/components/FileRow.svelte';
 	import ImageViewer from '$lib/components/ImageViewer.svelte';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import { getFiles, deleteFile, getUserStorageUsage, getLibraryFiles, createFile } from '$lib/db/files';
+	import { deleteFile, getUserStorageUsage, getLibraryFiles, createFile } from '$lib/db/files';
 	import type { File } from '@chatkin/types';
 
 	let files: File[] = [];
@@ -24,6 +23,9 @@
 	let sentinelElement: HTMLElement | null = null;
 	let showUploadModal = false;
 	let mobileFileInput: HTMLInputElement;
+	let isDragging = false;
+	let dragCounter = 0;
+	let isUploading = false;
 
 	const PAGE_SIZE = 50;
 
@@ -243,10 +245,151 @@
 			target.value = '';
 		}
 	}
+
+	// Drag and drop handlers
+	function handleDragEnter(e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		dragCounter++;
+		if (e.dataTransfer?.types.includes('Files')) {
+			isDragging = true;
+		}
+	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = 'copy';
+		}
+	}
+
+	function handleDragLeave(e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		dragCounter--;
+		if (dragCounter === 0) {
+			isDragging = false;
+		}
+	}
+
+	async function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		isDragging = false;
+		dragCounter = 0;
+
+		const files = e.dataTransfer?.files;
+		if (!files || files.length === 0) return;
+
+		// Only handle single file for now
+		const file = files[0];
+
+		// Validate file size
+		const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+		if (file.size > maxSizeBytes) {
+			alert('File size must be less than 10MB');
+			return;
+		}
+
+		// Validate file type
+		const allowedTypes = [
+			'image/jpeg',
+			'image/png',
+			'image/gif',
+			'image/webp',
+			'application/pdf',
+			'text/plain',
+			'application/msword',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+		];
+
+		if (!allowedTypes.includes(file.type)) {
+			alert('File type not supported. Please upload images, PDFs, or documents.');
+			return;
+		}
+
+		isUploading = true;
+
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			formData.append('permanent', 'true');
+
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/upload`, {
+				method: 'POST',
+				body: formData,
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
+			}
+
+			const result = await response.json();
+
+			if (result.success && result.file) {
+				// Create DB entry for permanent file
+				await createFile({
+					filename: result.file.originalName,
+					r2_key: result.file.name,
+					r2_url: result.file.url,
+					mime_type: result.file.type,
+					size_bytes: result.file.size,
+					note_id: null,
+					conversation_id: null,
+					message_id: null,
+					is_hidden_from_library: false,
+					title: result.file.title || null,
+					description: result.file.description || null,
+					ai_generated_metadata: !!(result.file.title || result.file.description),
+				});
+
+				await loadFiles();
+				await loadStorageUsage();
+			}
+		} catch (error) {
+			console.error('Upload failed:', error);
+			alert('Failed to upload file. Please try again.');
+		} finally {
+			isUploading = false;
+		}
+	}
 </script>
 
 <AppLayout>
-	<div class="files-page">
+	<div
+		class="files-page"
+		on:dragenter={handleDragEnter}
+		on:dragover={handleDragOver}
+		on:dragleave={handleDragLeave}
+		on:drop={handleDrop}
+	>
+		<!-- Drag Overlay -->
+		{#if isDragging}
+			<div class="drag-overlay">
+				<div class="drag-overlay-content">
+					<svg width="80" height="80" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
+						<path d="M7 7l3-3 3 3"/>
+						<path d="M10 4v10"/>
+					</svg>
+					<h2>Drop file to upload</h2>
+					<p>Maximum 10MB • Images, PDFs, and documents</p>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Upload Progress Overlay -->
+		{#if isUploading}
+			<div class="upload-progress-overlay">
+				<div class="upload-progress-content">
+					<div class="spinner"></div>
+					<p>Uploading...</p>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Desktop Header -->
 		<header class="page-header">
 			<div class="header-content">
@@ -1193,5 +1336,115 @@
 	.upload-hint svg {
 		flex-shrink: 0;
 		opacity: 0.7;
+	}
+
+	/* Drag and Drop Overlay */
+	.drag-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(199, 124, 92, 0.95);
+		backdrop-filter: blur(8px);
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: fadeIn 0.2s ease;
+		pointer-events: none;
+	}
+
+	.drag-overlay-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		color: white;
+		text-align: center;
+		padding: 48px;
+		border: 3px dashed rgba(255, 255, 255, 0.5);
+		border-radius: var(--radius-xl);
+		background: rgba(0, 0, 0, 0.2);
+		max-width: 500px;
+	}
+
+	.drag-overlay-content h2 {
+		font-size: 2rem;
+		font-weight: 700;
+		margin: 0;
+		letter-spacing: -0.02em;
+	}
+
+	.drag-overlay-content p {
+		font-size: 1rem;
+		margin: 0;
+		opacity: 0.9;
+	}
+
+	.drag-overlay-content svg {
+		opacity: 0.9;
+		animation: bounce 1s ease infinite;
+	}
+
+	@keyframes bounce {
+		0%, 100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-10px);
+		}
+	}
+
+	/* Upload Progress Overlay */
+	.upload-progress-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.6);
+		backdrop-filter: blur(4px);
+		z-index: 9998;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: fadeIn 0.2s ease;
+	}
+
+	.upload-progress-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 20px;
+		padding: 40px;
+		background: var(--bg-primary);
+		border-radius: var(--radius-xl);
+		border: 1px solid var(--border-color);
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+	}
+
+	.upload-progress-content p {
+		font-size: 1.125rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0;
+	}
+
+	.spinner {
+		width: 48px;
+		height: 48px;
+		border: 4px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>
