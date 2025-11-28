@@ -98,9 +98,11 @@
 		inputMessage = '';
 		uploadedFiles = [];
 
-		// Save user message to database
+		// Save user message to database (with files in metadata)
 		try {
-			await addMessage(conversation.id, 'user', userMessage);
+			await addMessage(conversation.id, 'user', userMessage, {
+				files: filesToSend.length > 0 ? filesToSend : undefined
+			});
 		} catch (error) {
 			logger.error('Error saving user message', error);
 		}
@@ -659,7 +661,8 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				messages = dbMessages.map(msg => ({
 					role: msg.role === 'assistant' ? 'ai' : 'user',
 					content: msg.content,
-					proposedActions: msg.metadata?.proposedActions
+					proposedActions: msg.metadata?.proposedActions,
+					files: msg.metadata?.files
 				}));
 			} else {
 				// Show welcome message if no history
@@ -795,11 +798,36 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 							{#if message.files && message.files.length > 0}
 								<!-- Inline files display -->
 								<div class="message-files">
-									{#each message.files as file}
+									{#each message.files as file, fileIndex}
 										{#if file.type.startsWith('image/')}
 											<!-- Inline image -->
 											<div class="message-image">
 												<img src={file.url} alt={file.name} />
+												{#if file.temporary}
+													<button
+														type="button"
+														class="message-save-btn"
+														onclick={async () => {
+															// Create a temporary array entry for this message file
+															const tempFiles = message.files || [];
+															await saveFileToLibrary(file, fileIndex);
+															// Update the file in the message to mark it as permanent
+															if (message.files && message.files[fileIndex]) {
+																message.files[fileIndex] = {
+																	...message.files[fileIndex],
+																	temporary: false
+																};
+																messages = messages;
+															}
+														}}
+														title="Save to library"
+													>
+														<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+															<path d="M5 3v16l7-5 7 5V3a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/>
+														</svg>
+														Save
+													</button>
+												{/if}
 											</div>
 										{:else}
 											<!-- File attachment chip -->
@@ -1405,6 +1433,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	}
 
 	.message-image {
+		position: relative;
 		max-width: 400px;
 		border-radius: var(--radius-md);
 		overflow: hidden;
@@ -1415,6 +1444,33 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		width: 100%;
 		height: auto;
 		display: block;
+	}
+
+	.message-save-btn {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		padding: 6px 10px;
+		background: rgba(0, 0, 0, 0.75);
+		backdrop-filter: blur(8px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: var(--radius-md);
+		color: white;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		opacity: 0.9;
+	}
+
+	.message-save-btn:hover {
+		background: rgba(0, 0, 0, 0.85);
+		border-color: rgba(255, 255, 255, 0.3);
+		transform: translateY(-1px);
+		opacity: 1;
 	}
 
 	.message-file-chip {
