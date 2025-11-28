@@ -292,6 +292,11 @@ describe('Projects Database Operations', () => {
         { id: 'note-1' },
         { id: 'note-2' }
       ];
+      const mockFiles = [
+        { id: 'file-1' },
+        { id: 'file-2' },
+        { id: 'file-3' }
+      ];
 
       const mockFrom = vi.fn().mockImplementation((table: string) => {
         if (table === 'tasks') {
@@ -312,6 +317,15 @@ describe('Projects Database Operations', () => {
               })
             })
           };
+        } else if (table === 'files') {
+          return {
+            select: vi.fn().mockReturnValue({
+              match: vi.fn().mockResolvedValue({
+                data: mockFiles,
+                error: null
+              })
+            })
+          };
         }
         throw new Error(`Unexpected table: ${table}`);
       });
@@ -322,7 +336,8 @@ describe('Projects Database Operations', () => {
       expect(stats).toEqual({
         totalTasks: 3,
         completedTasks: 2,
-        totalNotes: 2
+        totalNotes: 2,
+        totalFiles: 3
       });
     });
 
@@ -337,7 +352,7 @@ describe('Projects Database Operations', () => {
               })
             })
           };
-        } else {
+        } else if (table === 'notes') {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockResolvedValue({
@@ -346,7 +361,17 @@ describe('Projects Database Operations', () => {
               })
             })
           };
+        } else if (table === 'files') {
+          return {
+            select: vi.fn().mockReturnValue({
+              match: vi.fn().mockResolvedValue({
+                data: [{ id: 'file-1' }],
+                error: null
+              })
+            })
+          };
         }
+        throw new Error(`Unexpected table: ${table}`);
       });
       vi.mocked(supabase.from).mockImplementation(mockFrom as never);
 
@@ -355,6 +380,7 @@ describe('Projects Database Operations', () => {
       expect(stats.totalTasks).toBe(0);
       expect(stats.completedTasks).toBe(0);
       expect(stats.totalNotes).toBe(1);
+      expect(stats.totalFiles).toBe(1);
     });
 
     it('should handle missing notes', async () => {
@@ -368,7 +394,7 @@ describe('Projects Database Operations', () => {
               })
             })
           };
-        } else {
+        } else if (table === 'notes') {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockResolvedValue({
@@ -377,7 +403,17 @@ describe('Projects Database Operations', () => {
               })
             })
           };
+        } else if (table === 'files') {
+          return {
+            select: vi.fn().mockReturnValue({
+              match: vi.fn().mockResolvedValue({
+                data: [{ id: 'file-1' }],
+                error: null
+              })
+            })
+          };
         }
+        throw new Error(`Unexpected table: ${table}`);
       });
       vi.mocked(supabase.from).mockImplementation(mockFrom as never);
 
@@ -386,6 +422,7 @@ describe('Projects Database Operations', () => {
       expect(stats.totalTasks).toBe(1);
       expect(stats.completedTasks).toBe(0);
       expect(stats.totalNotes).toBe(0);
+      expect(stats.totalFiles).toBe(1);
     });
   });
 });
