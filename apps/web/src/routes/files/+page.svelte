@@ -571,6 +571,7 @@
 							{file}
 							{projects}
 							selected={selectedFiles.has(file.id)}
+							selectMode={selectedCount > 0}
 							on:toggle={() => toggleFileSelection(file.id)}
 							on:delete={loadFiles}
 							on:update={loadFiles}

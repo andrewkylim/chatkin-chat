@@ -8,6 +8,7 @@
 	export let file: File;
 	export let selected: boolean = false;
 	export let projects: Project[] = [];
+	export let selectMode: boolean = false; // Are we in selection mode?
 
 	const dispatch = createEventDispatcher();
 
@@ -59,25 +60,45 @@
 		}
 	}
 
-	function handleToggle() {
+	function handleToggle(e?: Event) {
 		dispatch('toggle');
+	}
+
+	function handleThumbnailClick(e: MouseEvent) {
+		// In select mode, let the click bubble up to toggle selection
+		// Otherwise, open the viewer if it's an image
+		if (!selectMode && isImage) {
+			e.stopPropagation();
+			dispatch('view');
+		}
+		// If in select mode, don't stop propagation - let card handle it
+	}
+
+	function handleCheckboxClick(e: MouseEvent) {
+		e.stopPropagation();
+	}
+
+	function handleMenuToggle(e: MouseEvent) {
+		e.stopPropagation();
+		showMenu = !showMenu;
 	}
 </script>
 
-<div class="file-card" class:selected>
+<div class="file-card" class:selected onclick={handleToggle}>
 	<!-- Checkbox -->
 	<input
 		type="checkbox"
 		class="file-checkbox"
 		checked={selected}
-		on:change={handleToggle}
+		onchange={handleToggle}
+		onclick={handleCheckboxClick}
 	/>
 
 	<!-- Thumbnail -->
 	<div
 		class="file-thumbnail"
 		class:clickable={isImage}
-		on:click={() => isImage && dispatch('view')}
+		onclick={handleThumbnailClick}
 		role={isImage ? 'button' : undefined}
 		tabindex={isImage ? 0 : undefined}
 	>
@@ -111,7 +132,7 @@
 
 	<!-- Actions Menu -->
 	<div class="file-actions">
-		<button class="action-btn" on:click={() => (showMenu = !showMenu)}>
+		<button class="action-btn" onclick={handleMenuToggle}>
 			<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
 				<circle cx="10" cy="4" r="1.5" />
 				<circle cx="10" cy="10" r="1.5" />
@@ -120,10 +141,10 @@
 		</button>
 
 		{#if showMenu}
-			<div class="action-menu" on:click|stopPropagation={() => (showMenu = false)}>
-				<button on:click={handleOpenEdit}> Edit </button>
+			<div class="action-menu" onclick={(e) => { e.stopPropagation(); showMenu = false; }}>
+				<button onclick={handleOpenEdit}> Edit </button>
 				<a href={file.r2_url} download={file.filename} target="_blank"> Download </a>
-				<button on:click={handleDelete} class="danger"> Delete </button>
+				<button onclick={handleDelete} class="danger"> Delete </button>
 			</div>
 		{/if}
 	</div>

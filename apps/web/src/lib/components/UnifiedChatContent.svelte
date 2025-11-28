@@ -6,7 +6,7 @@
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
 	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
-	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
+	import { getOrCreateConversation, getRecentMessages, addMessage, updateMessageMetadata } from '$lib/db/conversations';
 	import { createFile } from '$lib/db/files';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
@@ -28,9 +28,10 @@
 	export let onDataChange: (() => Promise<void>) | undefined = undefined;
 
 	interface Message {
+		id?: string; // Database message ID for updating metadata
 		role: 'user' | 'ai';
 		content: string;
-		files?: Array<{ name: string; url: string; type: string }>;
+		files?: Array<{ name: string; url: string; type: string; temporary?: boolean; saving?: boolean; saved?: boolean }>;
 		proposedActions?: AIAction[];
 		awaitingConfirmation?: boolean;
 		isTyping?: boolean;
@@ -587,7 +588,14 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	}
 
 	async function saveFileToLibrary(file: { name: string; url: string; type: string; size: number; temporary?: boolean }, index: number) {
-		// Set saving state
+		// Check if this is being called for uploadedFiles (input area) or message files
+		// If index is out of bounds for uploadedFiles, it's a message file
+		if (index >= uploadedFiles.length) {
+			// This is a message file, use the message-specific function
+			return saveMessageFileToLibrary(file);
+		}
+
+		// Set saving state for uploadedFiles
 		uploadedFiles[index] = {
 			...uploadedFiles[index],
 			saving: true
@@ -658,6 +666,55 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		}
 	}
 
+	async function saveMessageFileToLibrary(file: { name: string; url: string; type: string; size: number; temporary?: boolean }) {
+		try {
+			// Use local worker URL in development
+			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+
+			// Call backend to move file from temp to permanent and generate metadata
+			const response = await fetch(`${workerUrl}/api/save-to-library`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					tempUrl: file.url,
+					originalName: file.name,
+					mimeType: file.type,
+					sizeBytes: file.size
+				})
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.error || 'Failed to save file to library');
+			}
+
+			const result = await response.json();
+
+			if (result.success && result.file) {
+				// Create DB entry for permanent file
+				await createFile({
+					filename: result.file.originalName,
+					r2_key: result.file.name,
+					r2_url: result.file.url,
+					mime_type: result.file.type,
+					size_bytes: result.file.size,
+					note_id: null,
+					conversation_id: conversation?.id || null,
+					message_id: null,
+					is_hidden_from_library: false,
+					title: result.file.title || null,
+					description: result.file.description || null,
+					ai_generated_metadata: result.file.ai_generated_metadata || false
+				});
+
+				logger.debug('File saved to library', { filename: file.name });
+			}
+		} catch (error) {
+			logger.error('Failed to save file to library', error);
+			throw error;
+		}
+	}
+
 	onMount(async () => {
 		// Lock viewport to prevent elastic scroll on mobile
 		if (typeof document !== 'undefined') {
@@ -681,6 +738,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			// Convert DB messages to UI messages
 			if (dbMessages.length > 0) {
 				messages = dbMessages.map(msg => ({
+					id: msg.id, // Preserve message ID for updating metadata
 					role: msg.role === 'assistant' ? 'ai' : 'user',
 					content: msg.content,
 					proposedActions: msg.metadata?.proposedActions,
@@ -821,28 +879,70 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 								<!-- Inline files display -->
 								<div class="message-files">
 									{#each message.files as file, fileIndex}
-										{#if file.type.startsWith('image/')}
+										{#if file && file.type && file.type.startsWith('image/')}
 											<!-- Inline image -->
 											<div class="message-image">
 												<img src={file.url} alt={file.name} />
-												{#if file.temporary}
+												{#if file.temporary || file.saved}
 													<button
 														type="button"
 														class="message-save-btn"
+														class:saving={file.saving}
+														class:saved={file.saved}
+														disabled={file.saving || file.saved}
 														onclick={async () => {
-															await saveFileToLibrary(file, fileIndex);
-															// Update the file in the message to mark it as permanent
+															// Set saving state
 															if (message.files && message.files[fileIndex]) {
 																message.files[fileIndex] = {
 																	...message.files[fileIndex],
-																	temporary: false
+																	saving: true
 																};
 																messages = messages;
+															}
+
+															try {
+																await saveMessageFileToLibrary(file);
+
+																// Update the file to saved state
+																if (message.files && message.files[fileIndex]) {
+																	message.files[fileIndex] = {
+																		...message.files[fileIndex],
+																		saving: false,
+																		saved: true,
+																		temporary: false
+																	};
+																	messages = messages;
+
+																	// Persist saved state to database
+																	if (message.id && message.files) {
+																		const updatedFiles = [...message.files];
+																		await updateMessageMetadata(message.id, {
+																			files: updatedFiles
+																		});
+																	}
+																}
+															} catch (error) {
+																console.error('Failed to save file:', error);
+																// Reset saving state on error
+																if (message.files && message.files[fileIndex]) {
+																	message.files[fileIndex] = {
+																		...message.files[fileIndex],
+																		saving: false
+																	};
+																	messages = messages;
+																}
 															}
 														}}
 														title="Save to library"
 													>
-														Save
+														{#if file.saving}
+															<span class="spinner-small"></span>
+															Saving...
+														{:else if file.saved}
+															✓ Saved!
+														{:else}
+															Save
+														{/if}
 													</button>
 												{/if}
 											</div>
@@ -1066,10 +1166,19 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		</div>
 
 		<form class="input-container" class:global-scope={scope === 'global' && !isEmbedded} onsubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+			<!-- Character counter -->
+			{#if inputMessage.length > 8000}
+				<div class="char-counter-container">
+					<div class="char-counter" class:warning={inputMessage.length > 9500}>
+						{inputMessage.length} / 10,000 characters
+					</div>
+				</div>
+			{/if}
+
 			{#if uploadedFiles.length > 0}
 				<div class="uploaded-files-preview">
 					{#each uploadedFiles as file, index}
-						{#if file.type.startsWith('image/')}
+						{#if file && file.type && file.type.startsWith('image/')}
 							<!-- Compact image preview for images -->
 							<div class="image-preview-compact">
 								<img src={file.url} alt={file.name} class="preview-thumbnail" />
@@ -1171,6 +1280,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			<input
 				type="text"
 				bind:value={inputMessage}
+				maxlength="10000"
 				placeholder={uploadStatus || "Ask me anything..."}
 				class="message-input"
 				disabled={isStreaming}
@@ -1187,7 +1297,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	<!-- Mobile: Header + full-screen chat -->
 	<MobileChatLayout
 		bind:this={mobileChatLayout}
-		{messages}
+		bind:messages
 		bind:inputMessage
 		bind:uploadedFiles
 		{isStreaming}
@@ -1198,6 +1308,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		onOperationConfirm={handleInlineOperationConfirm}
 		onOperationCancel={handleInlineOperationCancel}
 		onSaveFileToLibrary={saveFileToLibrary}
+		{updateMessageMetadata}
 		title={pageTitle}
 		subtitle={pageSubtitle}
 		backUrl={scope === 'tasks' ? '/tasks' : scope === 'notes' ? '/notes' : scope === 'project' && projectId ? `/projects/${projectId}/chat` : null}
@@ -1479,6 +1590,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		gap: 4px;
 		padding: 6px 12px;
 		background: rgba(199, 124, 92, 0.6);
 		backdrop-filter: blur(8px);
@@ -1497,6 +1609,21 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		background: rgba(199, 124, 92, 0.85);
 		transform: translateY(-2px);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.message-save-btn.saving {
+		cursor: wait;
+		background: rgba(199, 124, 92, 0.6);
+	}
+
+	.message-save-btn.saved {
+		background: rgba(76, 175, 80, 0.85);
+		cursor: default;
+	}
+
+	.message-save-btn.saved:hover {
+		background: rgba(76, 175, 80, 0.85);
+		transform: none;
 	}
 
 	.message-file-chip {
@@ -1705,6 +1832,33 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		outline: none;
 		border-color: var(--accent-primary);
 		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+	}
+
+	/* Character counter */
+	.char-counter-container {
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 16px;
+		right: 16px;
+		z-index: 10;
+	}
+
+	.char-counter {
+		display: inline-block;
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+		background: var(--bg-secondary);
+		padding: 4px 10px;
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-color);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	}
+
+	.char-counter.warning {
+		color: #ef4444;
+		background: #fef2f2;
+		border-color: #fecaca;
+		font-weight: 600;
 	}
 
 	.send-btn {

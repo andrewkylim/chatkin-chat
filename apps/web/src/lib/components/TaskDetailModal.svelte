@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Task, Project } from '@chatkin/types';
+	import { formatRecurrencePattern } from '$lib/db/tasks';
 
 	export let show = false;
 	export let task: Task | null = null;
@@ -78,6 +79,32 @@
 					<div class="detail-section">
 						<label>Project</label>
 						<p class="detail-text">{getProjectName(task.project_id)}</p>
+					</div>
+				{/if}
+
+				{#if task.is_recurring && task.recurrence_pattern}
+					<div class="detail-section recurrence-info">
+						<label>
+							<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="display: inline; margin-right: 4px;">
+								<path d="M11 3.5a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0z M6.5 10v2.5M9 12.5 6.5 10 4 12.5"/>
+							</svg>
+							Repeats
+						</label>
+						<p class="detail-text recurrence-pattern">
+							{formatRecurrencePattern(task.recurrence_pattern)}
+						</p>
+						{#if task.recurrence_end_date}
+							<p class="detail-text recurrence-end">
+								Until {new Date(task.recurrence_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+							</p>
+						{/if}
+					</div>
+				{/if}
+
+				{#if task.parent_task_id}
+					<div class="detail-section">
+						<label>Recurring Task Instance</label>
+						<p class="detail-text">This is part of a recurring task series</p>
 					</div>
 				{/if}
 			</div>
@@ -198,6 +225,24 @@
 	.due-status {
 		color: var(--text-secondary);
 		font-size: 0.875rem;
+	}
+
+	.recurrence-info {
+		background: var(--bg-tertiary);
+		padding: 12px;
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-color);
+	}
+
+	.recurrence-pattern {
+		font-weight: 500;
+		color: var(--accent-primary);
+	}
+
+	.recurrence-end {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		margin-top: 4px;
 	}
 
 	.modal-actions {

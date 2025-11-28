@@ -13,6 +13,15 @@ export interface Project {
   updated_at: string;
 }
 
+export interface RecurrencePattern {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval: number; // e.g., 2 for "every 2 weeks"
+  days_of_week?: number[]; // [0-6] for weekly (0=Sunday, 6=Saturday)
+  day_of_month?: number; // 1-31 for monthly
+  month_of_year?: number; // 1-12 for yearly
+  custom_rule?: string; // For complex patterns
+}
+
 export interface Task {
   id: string;
   project_id: string | null; // NULL = standalone task
@@ -23,6 +32,10 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   due_date: string | null; // ISO date string
   completed_at: string | null;
+  is_recurring: boolean; // Whether this task repeats
+  recurrence_pattern: RecurrencePattern | null; // Recurrence configuration
+  parent_task_id: string | null; // For instances of recurring tasks
+  recurrence_end_date: string | null; // When to stop repeating
   created_at: string;
   updated_at: string;
 }

@@ -4,10 +4,11 @@
 	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
+	import RecurrencePatternPicker from '$lib/components/RecurrencePatternPicker.svelte';
 	import { getTasks, deleteOldCompletedTasks } from '$lib/db/tasks';
 	import { getProjects } from '$lib/db/projects';
 	import { useTasks } from '$lib/logic/useTasks';
-	import type { Task, Project } from '@chatkin/types';
+	import type { Task, Project, RecurrencePattern } from '@chatkin/types';
 	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { goto } from '$app/navigation';
@@ -23,6 +24,12 @@
 	let newTaskPriority = 'medium';
 	let newTaskDueDate = '';
 	let newTaskProjectId: string | null = null;
+	let newTaskIsRecurring = false;
+	let newTaskRecurrencePattern: RecurrencePattern = {
+		frequency: 'daily',
+		interval: 1
+	};
+	let newTaskRecurrenceEndDate = '';
 	let showCompletedTasks = false;
 
 	// Task detail modal state
@@ -86,7 +93,11 @@
 				priority: newTaskPriority as 'low' | 'medium' | 'high',
 				due_date: newTaskDueDate || null,
 				project_id: newTaskProjectId,
-				status: 'todo'
+				status: 'todo',
+				is_recurring: newTaskIsRecurring,
+				recurrence_pattern: newTaskIsRecurring ? newTaskRecurrencePattern : null,
+				recurrence_end_date: newTaskIsRecurring && newTaskRecurrenceEndDate ? newTaskRecurrenceEndDate : null,
+				parent_task_id: null
 			});
 
 			// Reset form
@@ -95,6 +106,12 @@
 			newTaskPriority = 'medium';
 			newTaskDueDate = '';
 			newTaskProjectId = null;
+			newTaskIsRecurring = false;
+			newTaskRecurrencePattern = {
+				frequency: 'daily',
+				interval: 1
+			};
+			newTaskRecurrenceEndDate = '';
 			showNewTaskModal = false;
 
 			// Reload tasks
@@ -578,6 +595,33 @@
 							{/each}
 						</select>
 					</div>
+
+					<!-- Recurrence Options -->
+					<div class="form-group">
+						<label class="checkbox-label">
+							<input
+								type="checkbox"
+								bind:checked={newTaskIsRecurring}
+							/>
+							<span>Repeat this task</span>
+						</label>
+					</div>
+
+					{#if newTaskIsRecurring}
+						<div class="recurrence-section">
+							<RecurrencePatternPicker bind:pattern={newTaskRecurrencePattern} />
+
+							<div class="form-group">
+								<label for="new-task-recurrence-end-date">End date (optional)</label>
+								<input
+									type="date"
+									id="new-task-recurrence-end-date"
+									bind:value={newTaskRecurrenceEndDate}
+								/>
+							</div>
+						</div>
+					{/if}
+
 					<div class="modal-actions">
 						<button type="button" class="secondary-btn" on:click={() => showNewTaskModal = false}>
 							Cancel
@@ -1301,6 +1345,41 @@
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	.checkbox-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 16px;
+		cursor: pointer;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+		accent-color: var(--accent-primary);
+		margin: 0;
+		margin-right: 4px;
+		padding: 0;
+		flex-shrink: 0;
+		vertical-align: middle;
+	}
+
+	.checkbox-label span {
+		line-height: 1.2;
+		padding-left: 2px;
+	}
+
+	.recurrence-section {
+		padding: 16px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		margin-bottom: 16px;
 	}
 
 	/* Mobile Responsive */

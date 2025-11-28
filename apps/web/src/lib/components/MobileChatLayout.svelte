@@ -18,6 +18,7 @@
 	}
 
 	interface Message {
+		id?: string; // Database message ID for updating metadata
 		role: 'user' | 'ai';
 		content: string;
 		isTyping?: boolean;
@@ -28,11 +29,11 @@
 		selectedOperations?: Operation[];
 		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: unknown }>;
 		awaitingConfirmation?: boolean;
-		files?: Array<{ name: string; url: string; type: string; temporary?: boolean }>;
+		files?: Array<{ name: string; url: string; type: string; temporary?: boolean; saving?: boolean; saved?: boolean }>;
 	}
 
 	let {
-		messages = [],
+		messages = $bindable([]),
 		inputMessage = $bindable(''),
 		uploadedFiles = $bindable([]),
 		isStreaming = false,
@@ -43,6 +44,7 @@
 		onOperationConfirm,
 		onOperationCancel,
 		onSaveFileToLibrary,
+		updateMessageMetadata,
 		title = 'Chat',
 		subtitle = null,
 		backUrl = null
@@ -58,6 +60,7 @@
 		onOperationConfirm?: (messageIndex: number) => void;
 		onOperationCancel?: (messageIndex: number) => void;
 		onSaveFileToLibrary?: (file: any, index: number) => Promise<void>;
+		updateMessageMetadata?: (messageId: string, metadata: Record<string, unknown>) => Promise<void>;
 		title?: string;
 		subtitle?: string | null;
 		backUrl?: string | null;
@@ -137,22 +140,57 @@
 								<!-- Inline files display -->
 								<div class="message-files">
 									{#each message.files as file, fileIndex}
-										{#if file.type.startsWith('image/')}
+										{#if file && file.type && file.type.startsWith('image/')}
 											<!-- Inline image -->
 											<div class="message-image">
 												<img src={file.url} alt={file.name} />
-												{#if file.temporary}
+												{#if file.temporary || file.saved}
 													<button
 														type="button"
 														class="message-save-btn"
+														class:saving={file.saving}
+														class:saved={file.saved}
+														disabled={file.saving || file.saved}
 														onclick={async () => {
-															if (onSaveFileToLibrary) {
-																await onSaveFileToLibrary(file, fileIndex);
-																// Update the file in the message to mark it as permanent
+															// Set saving state
+															if (message.files && message.files[fileIndex]) {
+																message.files[fileIndex] = {
+																	...message.files[fileIndex],
+																	saving: true
+																};
+																messages = messages;
+															}
+
+															try {
+																if (onSaveFileToLibrary) {
+																	await onSaveFileToLibrary(file, fileIndex);
+																}
+
+																// Update to saved state
 																if (message.files && message.files[fileIndex]) {
 																	message.files[fileIndex] = {
 																		...message.files[fileIndex],
+																		saving: false,
+																		saved: true,
 																		temporary: false
+																	};
+																	messages = messages;
+
+																	// Persist saved state to database
+																	if (message.id && updateMessageMetadata) {
+																		const updatedFiles = [...message.files];
+																		await updateMessageMetadata(message.id, {
+																			files: updatedFiles
+																		});
+																	}
+																}
+															} catch (error) {
+																console.error('Failed to save file:', error);
+																// Reset saving state on error
+																if (message.files && message.files[fileIndex]) {
+																	message.files[fileIndex] = {
+																		...message.files[fileIndex],
+																		saving: false
 																	};
 																	messages = messages;
 																}
@@ -160,7 +198,14 @@
 														}}
 														title="Save to library"
 													>
-														Save
+														{#if file.saving}
+															<span class="spinner-small"></span>
+															Saving...
+														{:else if file.saved}
+															✓ Saved!
+														{:else}
+															Save
+														{/if}
 													</button>
 												{/if}
 											</div>
@@ -314,10 +359,19 @@
 
 	<!-- Input Bar: flex-shrink: 0 (NOT position: fixed) -->
 	<form class="input-bar" onsubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+		<!-- Character counter -->
+		{#if inputMessage.length > 8000}
+			<div class="char-counter-container">
+				<div class="char-counter" class:warning={inputMessage.length > 9500}>
+					{inputMessage.length} / 10,000 characters
+				</div>
+			</div>
+		{/if}
+
 		{#if uploadedFiles.length > 0}
 			<div class="uploaded-files-preview">
 				{#each uploadedFiles as file, index}
-					{#if file.type.startsWith('image/')}
+					{#if file && file.type && file.type.startsWith('image/')}
 						<!-- Compact image preview for images -->
 						<div class="image-preview-compact">
 							<img src={file.url} alt={file.name} class="preview-thumbnail" />
@@ -405,6 +459,7 @@
 		<input
 			type="text"
 			bind:value={inputMessage}
+			maxlength="10000"
 			placeholder="Ask me anything..."
 			class="message-input"
 			disabled={isStreaming}
@@ -661,6 +716,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		gap: 4px;
 		padding: 6px 12px;
 		background: rgba(199, 124, 92, 0.6);
 		backdrop-filter: blur(8px);
@@ -679,6 +735,21 @@
 		background: rgba(199, 124, 92, 0.85);
 		transform: scale(0.95);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.message-save-btn.saving {
+		cursor: wait;
+		background: rgba(199, 124, 92, 0.6);
+	}
+
+	.message-save-btn.saved {
+		background: rgba(76, 175, 80, 0.85);
+		cursor: default;
+	}
+
+	.message-save-btn.saved:active {
+		background: rgba(76, 175, 80, 0.85);
+		transform: none;
 	}
 
 	.message-file-chip {
@@ -775,6 +846,33 @@
 	.message-input:disabled {
 		opacity: 0.7;
 		cursor: not-allowed;
+	}
+
+	/* Character counter */
+	.char-counter-container {
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 12px;
+		right: 12px;
+		z-index: 10;
+	}
+
+	.char-counter {
+		display: inline-block;
+		font-size: 0.75rem;
+		color: var(--text-secondary);
+		background: var(--bg-secondary);
+		padding: 4px 10px;
+		border-radius: var(--radius-md);
+		border: 1px solid var(--border-color);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	}
+
+	.char-counter.warning {
+		color: #ef4444;
+		background: #fef2f2;
+		border-color: #fecaca;
+		font-weight: 600;
 	}
 
 	.send-btn {

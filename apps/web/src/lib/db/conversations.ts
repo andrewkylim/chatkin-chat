@@ -115,6 +115,23 @@ export async function addMessage(
 }
 
 /**
+ * Update metadata for a specific message
+ * @param messageId - Message ID
+ * @param metadata - Updated metadata object
+ */
+export async function updateMessageMetadata(
+	messageId: string,
+	metadata: Record<string, unknown>
+) {
+	const { error } = await supabase
+		.from('messages')
+		.update({ metadata })
+		.eq('id', messageId);
+
+	if (error) throw error;
+}
+
+/**
  * Generate and save a summary of old messages for a conversation
  * This should be called when message_count exceeds a threshold (e.g., 60 messages)
  * @param conversationId - Conversation ID

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Task, Project } from '@chatkin/types';
+	import type { Task, Project, RecurrencePattern } from '@chatkin/types';
+	import RecurrencePatternPicker from './RecurrencePatternPicker.svelte';
 
 	export let show = false;
 	export let task: Task | null = null;
@@ -13,6 +14,12 @@
 	let editTaskPriority = 'medium';
 	let editTaskDueDate = '';
 	let editTaskProjectId: string | null = null;
+	let isRecurring = false;
+	let recurrencePattern: RecurrencePattern = {
+		frequency: 'daily',
+		interval: 1
+	};
+	let recurrenceEndDate = '';
 
 	$: if (show && task) {
 		editTaskTitle = task.title;
@@ -20,6 +27,12 @@
 		editTaskPriority = task.priority;
 		editTaskDueDate = task.due_date || '';
 		editTaskProjectId = task.project_id;
+		isRecurring = task.is_recurring || false;
+		recurrencePattern = task.recurrence_pattern || {
+			frequency: 'daily',
+			interval: 1
+		};
+		recurrenceEndDate = task.recurrence_end_date || '';
 	}
 
 	function handleSubmit() {
@@ -28,7 +41,10 @@
 			description: editTaskDescription || null,
 			priority: editTaskPriority,
 			due_date: editTaskDueDate || null,
-			project_id: editTaskProjectId
+			project_id: editTaskProjectId,
+			is_recurring: isRecurring,
+			recurrence_pattern: isRecurring ? recurrencePattern : null,
+			recurrence_end_date: isRecurring && recurrenceEndDate ? recurrenceEndDate : null
 		});
 	}
 </script>
@@ -85,6 +101,33 @@
 						{/each}
 					</select>
 				</div>
+
+				<!-- Recurrence Options -->
+				<div class="form-group">
+					<label class="checkbox-label">
+						<input
+							type="checkbox"
+							bind:checked={isRecurring}
+						/>
+						<span>Repeat this task</span>
+					</label>
+				</div>
+
+				{#if isRecurring}
+					<div class="recurrence-section">
+						<RecurrencePatternPicker bind:pattern={recurrencePattern} />
+
+						<div class="form-group">
+							<label for="recurrence-end-date">End date (optional)</label>
+							<input
+								type="date"
+								id="recurrence-end-date"
+								bind:value={recurrenceEndDate}
+							/>
+						</div>
+					</div>
+				{/if}
+
 				<div class="modal-actions">
 					<button type="button" class="delete-btn" on:click={onDelete}>
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
@@ -245,5 +288,38 @@
 
 	.delete-btn:hover {
 		background: rgba(239, 68, 68, 0.1);
+	}
+
+	.checkbox-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		cursor: pointer;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+		accent-color: var(--accent-primary);
+		margin: 0;
+		padding: 0;
+		flex-shrink: 0;
+		vertical-align: middle;
+	}
+
+	.checkbox-label span {
+		line-height: 1.2;
+	}
+
+	.recurrence-section {
+		padding: 16px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		margin-bottom: 16px;
 	}
 </style>

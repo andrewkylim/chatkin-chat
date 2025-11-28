@@ -55,14 +55,22 @@
 		}
 	}
 
-	function handleToggle() {
+	function handleToggle(e?: Event) {
 		dispatch('toggle');
+	}
+
+	function handleCheckboxClick(e: MouseEvent) {
+		e.stopPropagation();
+	}
+
+	function handleActionClick(e: MouseEvent) {
+		e.stopPropagation();
 	}
 </script>
 
-<div class="file-row" class:selected>
+<div class="file-row" class:selected onclick={handleToggle}>
 	<!-- Checkbox -->
-	<input type="checkbox" class="file-checkbox" checked={selected} on:change={handleToggle} />
+	<input type="checkbox" class="file-checkbox" checked={selected} onchange={handleToggle} onclick={handleCheckboxClick} />
 
 	<!-- Thumbnail -->
 	<div class="file-thumbnail">
@@ -85,12 +93,13 @@
 	<!-- File Info -->
 	<div class="file-info">
 		{#if editing}
-			<input type="text" class="edit-title" bind:value={editTitle} placeholder="Title" />
+			<input type="text" class="edit-title" bind:value={editTitle} placeholder="Title" onclick={handleActionClick} />
 			<input
 				type="text"
 				class="edit-description"
 				bind:value={editDescription}
 				placeholder="Description"
+				onclick={handleActionClick}
 			/>
 		{:else}
 			<h4 class="file-title">{file.title || file.filename}</h4>
@@ -109,14 +118,14 @@
 	<!-- Actions -->
 	<div class="file-actions">
 		{#if editing}
-			<button class="icon-btn" on:click={handleSaveEdit} title="Save">
+			<button class="icon-btn" onclick={(e) => { e.stopPropagation(); handleSaveEdit(); }} title="Save">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 					<path
 						d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
 					/>
 				</svg>
 			</button>
-			<button class="icon-btn" on:click={() => (editing = false)} title="Cancel">
+			<button class="icon-btn" onclick={(e) => { e.stopPropagation(); editing = false; }} title="Cancel">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 					<path
 						d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"
@@ -124,7 +133,7 @@
 				</svg>
 			</button>
 		{:else}
-			<button class="icon-btn" on:click={() => (editing = true)} title="Edit">
+			<button class="icon-btn" onclick={(e) => { e.stopPropagation(); editing = true; }} title="Edit">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 					<path
 						d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"
@@ -137,6 +146,7 @@
 				target="_blank"
 				class="icon-btn"
 				title="Download"
+				onclick={handleActionClick}
 			>
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 					<path
@@ -147,7 +157,7 @@
 					/>
 				</svg>
 			</a>
-			<button class="icon-btn danger" on:click={handleDelete} title="Delete">
+			<button class="icon-btn danger" onclick={(e) => { e.stopPropagation(); handleDelete(); }} title="Delete">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 					<path
 						d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"
