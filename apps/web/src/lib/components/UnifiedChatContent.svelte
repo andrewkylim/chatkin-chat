@@ -161,7 +161,10 @@
 				authToken: session?.access_token
 			};
 
-			const response = await fetch(`${PUBLIC_WORKER_URL}/api/ai/chat`, {
+			// Use local worker URL in development
+			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+
+			const response = await fetch(`${workerUrl}/api/ai/chat`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -585,8 +588,11 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 	async function saveFileToLibrary(file: { name: string; url: string; type: string; size: number; temporary?: boolean }, index: number) {
 		try {
+			// Use local worker URL in development
+			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+
 			// Call backend to move file from temp to permanent and generate metadata
-			const response = await fetch(`${PUBLIC_WORKER_URL}/api/save-to-library`, {
+			const response = await fetch(`${workerUrl}/api/save-to-library`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
