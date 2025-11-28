@@ -42,6 +42,7 @@
 		onOperationConfirm,
 		onOperationCancel,
 		title = 'Chat',
+		subtitle = null,
 		backUrl = null
 	}: {
 		messages: Message[];
@@ -54,6 +55,7 @@
 		onOperationConfirm?: (messageIndex: number) => void;
 		onOperationCancel?: (messageIndex: number) => void;
 		title?: string;
+		subtitle?: string | null;
 		backUrl?: string | null;
 	} = $props();
 
@@ -97,7 +99,12 @@
 					<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
 				</button>
 			{/if}
-			<h1>{title}</h1>
+			<div class="header-title-group">
+				<h1>{title}</h1>
+				{#if subtitle}
+					<span class="header-subtitle">{subtitle}</span>
+				{/if}
+			</div>
 		</div>
 		<MobileUserMenu />
 	</header>
@@ -379,11 +386,30 @@
 		transform: scale(0.95);
 	}
 
+	.header-title-group {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+	}
+
 	.chat-header h1 {
 		font-size: 1.5rem;
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		margin: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.header-subtitle {
+		font-size: 0.875rem;
+		font-weight: 400;
+		color: var(--text-secondary);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	/* Messages Area - flex: 1 (DESIGN-SPEC pattern) */

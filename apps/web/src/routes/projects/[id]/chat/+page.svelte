@@ -501,7 +501,7 @@
 			<UnifiedChatPage
 				scope="project"
 				{projectId}
-				pageTitle="Project Chat"
+				pageTitle="Projects AI"
 				pageIcon="/projects.webp"
 				pageSubtitle="Plan and organize your project"
 				welcomeMessage="Hi! I can help you manage tasks and notes for this project. What would you like to work on?"
@@ -880,14 +880,14 @@
 					</svg>
 					<span>Add Note</span>
 				</button>
-				<button class="fab-menu-item" onclick={() => { showFabMenu = false; }}>
+				<a class="fab-menu-item" href={`/projects/${projectId}/chat/mobile`}>
 					<svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
 						<path d="M10 2l1.5 3.5L15 7l-3.5 1.5L10 12l-1.5-3.5L5 7l3.5-1.5L10 2z"/>
 						<path d="M5 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
-					<path d="M15 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
+						<path d="M15 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
 					</svg>
 					<span>Create with AI</span>
-				</button>
+				</a>
 			</div>
 		{/if}
 		<button class="fab" onclick={() => showFabMenu = !showFabMenu} aria-label="Create options">
@@ -1961,6 +1961,7 @@
 			font-size: 0.9375rem;
 			font-weight: 500;
 			text-align: left;
+			text-decoration: none;
 		}
 
 		.fab-menu-item:last-child {

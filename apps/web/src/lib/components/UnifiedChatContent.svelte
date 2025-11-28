@@ -974,6 +974,9 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		onQuestionCancel={handleInlineQuestionCancel}
 		onOperationConfirm={handleInlineOperationConfirm}
 		onOperationCancel={handleInlineOperationCancel}
+		title={pageTitle}
+		subtitle={pageSubtitle}
+		backUrl={scope === 'tasks' ? '/tasks' : scope === 'notes' ? '/notes' : scope === 'project' && projectId ? `/projects/${projectId}/chat` : null}
 	/>
 </div>
 

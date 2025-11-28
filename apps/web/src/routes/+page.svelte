@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { dev } from '$app/environment';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
 	// Get version from environment variable set during build
 	const version = dev ? 'dev' : (import.meta.env.VITE_APP_VERSION || 'unknown');
+
+	// Redirect logged-in users to chat
+	onMount(() => {
+		if ($auth.user) {
+			goto('/chat');
+		}
+	});
 </script>
 
 <div class="landing">
