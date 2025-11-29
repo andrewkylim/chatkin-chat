@@ -1098,11 +1098,8 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					files: msg.metadata?.files
 				}));
 			} else {
-				// Show welcome message if no history
-				messages = [{
-					role: 'ai',
-					content: welcomeMessage
-				}];
+				// No history, start empty
+				messages = [];
 			}
 
 			// Load workspace context
@@ -1113,11 +1110,8 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			messagesReady = true;
 		} catch (error) {
 			logger.error('Error loading conversation', error);
-			// Show welcome message as fallback
-			messages = [{
-				role: 'ai',
-				content: welcomeMessage
-			}];
+			// Error loading, start empty
+			messages = [];
 			await scrollToBottom();
 			messagesReady = true;
 		}
@@ -1175,9 +1169,9 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 							{#if isPlayingAudio}
 								Speaking...
 							{:else if talkModeActive}
-								Talk Mode
+								Talk
 							{:else}
-								Talk Mode
+								Talk
 							{/if}
 						</span>
 					</button>
