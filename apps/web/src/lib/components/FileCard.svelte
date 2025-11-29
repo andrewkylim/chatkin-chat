@@ -60,18 +60,14 @@
 		}
 	}
 
-	function handleToggle(e?: Event) {
-		dispatch('toggle');
-	}
-
-	function handleThumbnailClick(e: MouseEvent) {
-		// In select mode, let the click bubble up to toggle selection
-		// Otherwise, open the viewer if it's an image
-		if (!selectMode && isImage) {
-			e.stopPropagation();
+	function handleCardClick(e: MouseEvent) {
+		// If in select mode, toggle selection
+		if (selectMode) {
+			dispatch('toggle');
+		} else {
+			// Otherwise open viewer
 			dispatch('view');
 		}
-		// If in select mode, don't stop propagation - let card handle it
 	}
 
 	function handleCheckboxClick(e: MouseEvent) {
@@ -84,7 +80,7 @@
 	}
 </script>
 
-<div class="file-card" class:selected onclick={handleToggle}>
+<div class="file-card" class:selected onclick={handleCardClick}>
 	<!-- Checkbox -->
 	<input
 		type="checkbox"
@@ -97,10 +93,6 @@
 	<!-- Thumbnail -->
 	<div
 		class="file-thumbnail"
-		class:clickable={isImage}
-		onclick={handleThumbnailClick}
-		role={isImage ? 'button' : undefined}
-		tabindex={isImage ? 0 : undefined}
 	>
 		{#if isImage}
 			<img
@@ -206,11 +198,6 @@
 
 	.file-thumbnail.clickable {
 		cursor: pointer;
-	}
-
-	.file-thumbnail.clickable:hover {
-		transform: scale(1.02);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
 
 	.file-thumbnail img {
