@@ -53,10 +53,36 @@ export function parseImageOptions(optionsString: string): ImageTransformOptions 
 }
 
 /**
- * Build image transformation request options
+ * Cloudflare Image Resizing options structure
+ * This matches the format expected by fetch() cf property
  */
-export function buildTransformOptions(options: ImageTransformOptions): Record<string, unknown> {
-	const image: Record<string, string | number> = {
+export interface CloudflareImageOptions {
+	width?: number;
+	height?: number;
+	fit?: 'scale-down' | 'contain' | 'cover' | 'crop' | 'pad';
+	format?: 'auto' | 'webp' | 'avif' | 'json' | 'jpeg' | 'png';
+	quality?: number;
+	metadata?: 'keep' | 'copyright' | 'none';
+}
+
+export interface CloudflareFetchOptions {
+	cf: {
+		image: CloudflareImageOptions;
+	};
+}
+
+/**
+ * Build Cloudflare Image Resizing fetch options
+ *
+ * IMPORTANT: These options must be passed to fetch() to trigger image transformation.
+ * Cloudflare Image Resizing does NOT work when attaching cf to Response.
+ *
+ * @example
+ * const options = buildTransformOptions({ width: 400, format: 'auto' });
+ * const response = await fetch(imageUrl, { cf: options.cf });
+ */
+export function buildTransformOptions(options: ImageTransformOptions): CloudflareFetchOptions {
+	const image: CloudflareImageOptions = {
 		fit: options.fit || 'scale-down',
 		format: options.format || 'auto',
 		quality: options.quality || 85,

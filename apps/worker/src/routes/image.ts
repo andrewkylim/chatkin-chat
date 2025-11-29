@@ -1,6 +1,10 @@
 /**
  * Image transformation endpoint using Cloudflare Image Resizing
- * Format: /cdn-cgi/image/<options>/<filename>
+ * Format: /img/<options>/<filename>
+ *
+ * IMPORTANT: Cloudflare Image Resizing only works when you pass `cf: { image: {...} }`
+ * to a fetch() request, NOT when returning a Response with cf property.
+ * We fetch the original image URL with cf options to trigger the transformation.
  */
 
 import type { Env, CorsHeaders } from '../types';
@@ -24,33 +28,50 @@ export async function handleImageTransform(
     // Parse transformation options from URL
     const options = parseImageOptions(optionsString);
 
-    // Get the original file from R2
-    const object = await env.CHATKIN_BUCKET.get(fileName);
+    // Build Cloudflare Image Resizing fetch options
+    const cfOptions = buildTransformOptions(options);
 
-    if (!object) {
-      throw new WorkerError('File not found', 404);
+    // Construct the URL to the original file
+    // Image Resizing works by fetching the original image with cf options
+    const imageUrl = `${env.PUBLIC_WORKER_URL}/api/files/${fileName}`;
+
+    logger.info('Fetching image with transformation options', {
+      imageUrl,
+      cfOptions: JSON.stringify(cfOptions)
+    });
+
+    // Fetch the image with Cloudflare Image Resizing options
+    // This is the correct way to use Image Resizing - pass cf options to fetch()
+    // @ts-expect-error - Cloudflare Workers extend fetch with cf property
+    const response = await fetch(imageUrl, cfOptions);
+
+    if (!response.ok) {
+      logger.error('Failed to fetch/transform image', {
+        status: response.status,
+        statusText: response.statusText,
+        imageUrl
+      });
+      throw new WorkerError(`Failed to fetch image: ${response.statusText}`, response.status);
     }
 
-    // Check if file is an image
-    const contentType = object.httpMetadata?.contentType || '';
-    if (!contentType.startsWith('image/')) {
-      throw new WorkerError('File is not an image', 400);
-    }
+    // Get the content type from the transformed response
+    // Cloudflare will set this to the output format (e.g., image/webp)
+    const contentType = response.headers.get('Content-Type') || 'image/jpeg';
 
-    // Build Cloudflare Image Resizing request
-    const transformOptions = buildTransformOptions(options);
+    logger.info('Image transformation successful', {
+      fileName,
+      outputContentType: contentType,
+      originalOptions: optionsString
+    });
 
-    // Return the R2 object directly with CF image transformation options
-    // Cloudflare will apply the transformations at the edge
-    return new Response(object.body, {
+    // Return the transformed image with proper caching headers
+    return new Response(response.body, {
       headers: {
         ...corsHeaders,
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Vary': 'Accept',
       },
-      // @ts-ignore - CF-specific property
-      cf: transformOptions.cf
     });
   } catch (error) {
     return handleError(error, 'Image transformation failed', corsHeaders);
