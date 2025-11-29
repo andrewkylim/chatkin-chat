@@ -12,7 +12,7 @@ import { getProjectPrompt } from './project';
 export function buildSystemPrompt(
   context: ChatRequest['context'],
   workspaceContext?: string,
-  mode: 'chat' | 'action' = 'chat'
+  mode: 'chat' | 'action' = 'action'
 ): string {
   // Use mode-specific base prompt
   let systemPrompt = mode === 'chat'
