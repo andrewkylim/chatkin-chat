@@ -121,7 +121,7 @@ export async function handleUpload(
       // Generate unique filename
       const timestamp = Date.now();
       const randomStr = Math.random().toString(36).substring(2, 15);
-      const fileName = `${timestamp}-${randomStr}.${fileExt}`;
+      const fileName = `${timestamp}-${randomStr}${fileExt}`;
 
       // Generate AI metadata if saving to permanent library
       let metadata: { title?: string; description?: string } = {};
