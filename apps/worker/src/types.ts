@@ -10,6 +10,7 @@ export interface Env {
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string; // For cron jobs (admin access)
   PUBLIC_WORKER_URL: string; // Public Worker URL for file URLs
+  INTERNAL_WORKER_URL?: string; // Internal Worker URL for self-fetching (e.g. workers.dev)
   CHATKIN_BUCKET: R2Bucket; // R2Bucket type from Cloudflare Workers (permanent files)
   CHATKIN_TEMP_BUCKET: R2Bucket; // R2Bucket type for temporary files (24hr auto-delete)
   ALLOWED_ORIGINS?: string; // Comma-separated list of allowed origins

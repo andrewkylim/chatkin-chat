@@ -36,12 +36,14 @@ crons = ["0 * * * *"]  # Run every hour
 
 [vars]
 PUBLIC_WORKER_URL = "https://chatkin.ai"
+INTERNAL_WORKER_URL = "https://chatkin-os-worker.andrewkylim.workers.dev"
 
 [env.production]
 name = "chatkin-os-worker"
 
 [env.production.vars]
 PUBLIC_WORKER_URL = "https://chatkin.ai"
+INTERNAL_WORKER_URL = "https://chatkin-os-worker.andrewkylim.workers.dev"
 
 [[env.production.r2_buckets]]
 binding = "CHATKIN_BUCKET"

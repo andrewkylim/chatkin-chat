@@ -67,7 +67,7 @@ const handler = {
       if (pathParts.length >= 2) {
         const optionsString = pathParts[0];
         const fileName = pathParts.slice(1).join('/');
-        return handleImageTransform(optionsString, fileName, env, corsHeaders);
+        return handleImageTransform(request, optionsString, fileName, env, corsHeaders);
       }
     }
 
