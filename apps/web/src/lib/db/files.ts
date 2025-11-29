@@ -1,5 +1,6 @@
 import { supabase } from '$lib/supabase';
 import type { File as FileType } from '@chatkin/types';
+import { PUBLIC_WORKER_URL } from '$env/static/public';
 
 type FileInsert = Omit<FileType, 'id' | 'created_at'>;
 
@@ -48,7 +49,7 @@ export async function createFile(file: Omit<FileInsert, 'user_id'>) {
 	return data as FileType;
 }
 
-export async function deleteFile(id: string) {
+export async function deleteFile(id: string, accessToken?: string) {
 	// First, get the file to retrieve r2_key
 	const { data: file, error: fetchError } = await supabase
 		.from('files')
@@ -69,11 +70,12 @@ export async function deleteFile(id: string) {
 
 	// Delete from R2 storage
 	try {
-		const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+		const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
 		const response = await fetch(`${workerUrl}/api/delete-file`, {
 			method: 'DELETE',
 			headers: {
 				'Content-Type': 'application/json',
+				...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
 			},
 			body: JSON.stringify({ r2_key: file.r2_key }),
 		});
@@ -150,7 +152,7 @@ export async function updateFileMetadata(
 /**
  * Bulk delete files
  */
-export async function bulkDeleteFiles(fileIds: string[]): Promise<void> {
+export async function bulkDeleteFiles(fileIds: string[], accessToken?: string): Promise<void> {
 	// Get all files to retrieve r2_keys
 	const { data: files, error: fetchError } = await supabase
 		.from('files')
@@ -168,12 +170,15 @@ export async function bulkDeleteFiles(fileIds: string[]): Promise<void> {
 	if (dbError) throw dbError;
 
 	// Delete from R2 in parallel
-	const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+	const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
 	await Promise.allSettled(
 		(files || []).map((file) =>
 			fetch(`${workerUrl}/api/delete-file`, {
 				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+				},
 				body: JSON.stringify({ r2_key: file.r2_key }),
 			})
 		)

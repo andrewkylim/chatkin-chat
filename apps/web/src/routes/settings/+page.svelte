@@ -233,6 +233,10 @@
 		try {
 			const user = $auth.user;
 
+			// Get session for authentication
+			const { data: { session } } = await supabase.auth.getSession();
+			const accessToken = session?.access_token;
+
 			// First, get all files to retrieve r2_keys for deletion
 			deleteAllStatus = 'Deleting files from storage...';
 			const { data: files, error: filesQueryError } = await supabase
@@ -252,12 +256,15 @@
 
 			// Delete files from R2 storage in parallel
 			if (files && files.length > 0) {
-				const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+				const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : 'https://chatkin.ai';
 				await Promise.allSettled(
 					files.map((file) =>
 						fetch(`${workerUrl}/api/delete-file`, {
 							method: 'DELETE',
-							headers: { 'Content-Type': 'application/json' },
+							headers: {
+								'Content-Type': 'application/json',
+								...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+							},
 							body: JSON.stringify({ r2_key: file.r2_key }),
 						})
 					)

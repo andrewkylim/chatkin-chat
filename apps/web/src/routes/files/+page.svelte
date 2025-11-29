@@ -166,7 +166,8 @@
 		if (!confirm(`Delete ${selectedCount} file(s)?`)) return;
 
 		try {
-			await Promise.all(Array.from(selectedFiles).map((id) => deleteFile(id)));
+			const { data: { session } } = await supabase.auth.getSession();
+			await Promise.all(Array.from(selectedFiles).map((id) => deleteFile(id, session?.access_token)));
 			selectedFiles.clear();
 			await loadFiles();
 			await loadStorageUsage();

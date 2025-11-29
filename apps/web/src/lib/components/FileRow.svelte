@@ -3,6 +3,7 @@
 	import type { File } from '@chatkin/types';
 	import { deleteFile, updateFileMetadata } from '$lib/db/files';
 	import { getThumbnailUrl } from '$lib/utils/image-cdn';
+	import { supabase } from '$lib/supabase';
 
 	export let file: File;
 	export let selected: boolean = false;
@@ -48,7 +49,8 @@
 		if (!confirm('Delete this file?')) return;
 
 		try {
-			await deleteFile(file.id);
+			const { data: { session } } = await supabase.auth.getSession();
+			await deleteFile(file.id, session?.access_token);
 			dispatch('delete');
 		} catch (error) {
 			console.error('Failed to delete file:', error);
