@@ -221,7 +221,7 @@
 
 					// Send AI proposal notification
 					try {
-						const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+						const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
 						const { data: { session } } = await supabase.auth.getSession();
 
 						if (session?.access_token) {
@@ -325,7 +325,7 @@
 				// Send AI insight notification if detected
 				if (isInsight) {
 					try {
-						const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+						const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
 						const { data: { session } } = await supabase.auth.getSession();
 
 						if (session?.access_token) {
