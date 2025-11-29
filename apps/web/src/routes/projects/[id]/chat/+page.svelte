@@ -1364,10 +1364,15 @@
 		-webkit-overflow-scrolling: touch;
 		padding: 20px;
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.task-group {
 		margin-bottom: 32px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.group-title {
@@ -1414,6 +1419,7 @@
 		border-radius: var(--radius-md);
 		margin-bottom: 8px;
 		transition: all 0.2s ease;
+		min-width: 0;
 	}
 
 	.task-item:hover {
