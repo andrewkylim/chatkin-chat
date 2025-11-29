@@ -52,7 +52,9 @@
 		backUrl = null,
 		talkModeActive = false,
 		isPlayingAudio = false,
-		toggleTalkMode = undefined
+		toggleTalkMode = undefined,
+		aiMode = 'chat',
+		toggleAiMode = undefined
 	}: {
 		messages: Message[];
 		inputMessage: string;
@@ -72,6 +74,8 @@
 		talkModeActive?: boolean;
 		isPlayingAudio?: boolean;
 		toggleTalkMode?: () => Promise<void>;
+		aiMode?: 'chat' | 'action';
+		toggleAiMode?: () => void;
 	} = $props();
 
 	let messagesContainer: HTMLDivElement;
@@ -490,6 +494,24 @@
 			}}
 		/>
 		<div class="input-wrapper">
+			{#if toggleAiMode}
+				<button
+					type="button"
+					class="mode-toggle-btn {aiMode}"
+					onclick={toggleAiMode}
+					aria-label={aiMode === 'chat' ? 'Switch to Action Mode' : 'Switch to Chat Mode'}
+				>
+					{#if aiMode === 'chat'}
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+						</svg>
+					{:else}
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+						</svg>
+					{/if}
+				</button>
+			{/if}
 			<input
 				type="text"
 				bind:value={inputMessage}
@@ -930,11 +952,12 @@
 		width: 100%;
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
-		padding: 10px 48px 10px 14px;
+		padding: 10px 40px 10px 44px; /* Increased left padding for toggle */
 		background: var(--bg-tertiary);
 		color: var(--text-primary);
 		font-size: 0.9375rem;
 		font-family: 'Inter', sans-serif;
+		-webkit-appearance: none; /* Remove iOS shadow */
 		height: 40px;
 		/* Touch optimization */
 		touch-action: manipulation;
@@ -1020,7 +1043,46 @@
 	.send-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-		transform: none;
+		background: var(--bg-tertiary);
+		color: var(--text-muted);
+	}
+
+	/* Mode Toggle */
+	.mode-toggle-btn {
+		position: absolute;
+		left: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		padding: 0;
+		z-index: 5;
+	}
+
+	.mode-toggle-btn:hover {
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+	}
+
+	.mode-toggle-btn.action {
+		color: var(--accent-primary);
+	}
+	
+	.mode-toggle-btn.action:hover {
+		background: rgba(199, 124, 92, 0.1);
+	}
+
+	.mode-toggle-btn svg {
+		flex-shrink: 0;
 	}
 
 	/* Uploaded Files Preview */

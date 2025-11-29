@@ -1683,6 +1683,8 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		{talkModeActive}
 		{isPlayingAudio}
 		{toggleTalkMode}
+		{aiMode}
+		toggleAiMode={toggleMode}
 	/>
 </div>
 
