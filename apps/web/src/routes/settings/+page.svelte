@@ -3,6 +3,9 @@
 	import { supabase } from '$lib/supabase';
 	import { auth } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import { getNotificationPreferences, updateNotificationPreferences } from '$lib/db/notification-preferences';
+	import { browserNotifications } from '$lib/services/browser-notifications';
+	import type { UserNotificationPreferences } from '@chatkin/types';
 
 	let status = '';
 	let cleaning = false;
@@ -15,15 +18,33 @@
 	// Theme state
 	let theme: 'light' | 'dark' = 'light';
 
+	// Notification preferences state
+	let notificationPrefs: UserNotificationPreferences | null = null;
+	let loadingPrefs = true;
+	let savingPrefs = false;
+	let prefsStatus = '';
+	let browserPermissionStatus: NotificationPermission = 'default';
+
 	$: userEmail = $auth.user?.email || '';
 	$: canDeleteAll = deleteConfirmText.toLowerCase() === 'delete';
 
-	onMount(() => {
+	onMount(async () => {
 		// Load theme preference from localStorage
 		const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
 		if (savedTheme) {
 			theme = savedTheme;
 			applyTheme(savedTheme);
+		}
+
+		// Load notification preferences
+		try {
+			notificationPrefs = await getNotificationPreferences();
+			browserPermissionStatus = Notification.permission;
+		} catch (error) {
+			console.error('Failed to load notification preferences:', error);
+			prefsStatus = 'Failed to load preferences';
+		} finally {
+			loadingPrefs = false;
 		}
 	});
 
@@ -40,6 +61,93 @@
 		theme = newTheme;
 		applyTheme(newTheme);
 		localStorage.setItem('theme', newTheme);
+	}
+
+	async function toggleEmailNotification(type: 'task_due_soon' | 'ai_proposals' | 'ai_insights') {
+		if (!notificationPrefs) return;
+
+		savingPrefs = true;
+		try {
+			const field = `email_${type}` as keyof UserNotificationPreferences;
+			const newValue = !notificationPrefs[field];
+
+			notificationPrefs = await updateNotificationPreferences({
+				[field]: newValue
+			});
+
+			prefsStatus = 'Saved';
+			setTimeout(() => (prefsStatus = ''), 2000);
+		} catch (error) {
+			prefsStatus = 'Error saving preferences';
+		} finally {
+			savingPrefs = false;
+		}
+	}
+
+	async function toggleBrowserNotification(type: 'task_due_soon' | 'ai_proposals' | 'ai_insights') {
+		if (!notificationPrefs) return;
+
+		// Check browser permission first
+		if (browserPermissionStatus !== 'granted') {
+			const granted = await browserNotifications.requestPermission();
+			browserPermissionStatus = granted ? 'granted' : 'denied';
+
+			if (!granted) {
+				prefsStatus = 'Browser notification permission denied';
+				setTimeout(() => (prefsStatus = ''), 3000);
+				return;
+			}
+		}
+
+		savingPrefs = true;
+		try {
+			const field = `browser_${type}` as keyof UserNotificationPreferences;
+			const newValue = !notificationPrefs[field];
+
+			notificationPrefs = await updateNotificationPreferences({
+				[field]: newValue
+			});
+
+			prefsStatus = 'Saved';
+			setTimeout(() => (prefsStatus = ''), 2000);
+		} catch (error) {
+			prefsStatus = 'Error saving preferences';
+		} finally {
+			savingPrefs = false;
+		}
+	}
+
+	async function toggleReminderTime(hours: number, enabled: boolean) {
+		if (!notificationPrefs) return;
+
+		savingPrefs = true;
+		try {
+			let times = [...notificationPrefs.task_reminder_times];
+
+			if (enabled) {
+				if (!times.includes(hours)) {
+					times.push(hours);
+				}
+			} else {
+				times = times.filter(h => h !== hours);
+			}
+
+			// Ensure at least one reminder time
+			if (times.length === 0) {
+				times = [24];
+			}
+
+			notificationPrefs = await updateNotificationPreferences({
+				task_reminder_times: times
+			});
+
+			prefsStatus = 'Saved';
+			setTimeout(() => (prefsStatus = ''), 2000);
+		} catch (error) {
+			prefsStatus = 'Error saving preferences';
+		} finally {
+			savingPrefs = false;
+		}
 	}
 
 	async function clearChatHistory() {
@@ -236,6 +344,176 @@
 							<span class="theme-text">{theme === 'light' ? 'Light' : 'Dark'}</span>
 						</button>
 					</div>
+				</div>
+			</div>
+
+			<div class="settings-section">
+				<div class="section-header">
+					<h2>Notifications</h2>
+				</div>
+				<div class="section-content">
+					{#if loadingPrefs}
+						<p>Loading preferences...</p>
+					{:else if notificationPrefs}
+						<div class="notification-category">
+							<h3>Task Reminders</h3>
+							<p class="section-description">Get notified when tasks are due soon</p>
+
+							<div class="notification-toggle-row">
+								<div class="toggle-label">
+									<span>Email notifications</span>
+									<p class="toggle-description">Receive email reminders</p>
+								</div>
+								<button
+									class="toggle-switch"
+									class:active={notificationPrefs.email_task_due_soon}
+									on:click={() => toggleEmailNotification('task_due_soon')}
+									disabled={savingPrefs}
+								>
+									<div class="toggle-track" class:active={notificationPrefs.email_task_due_soon}>
+										<div class="toggle-thumb"></div>
+									</div>
+								</button>
+							</div>
+
+							<div class="notification-toggle-row">
+								<div class="toggle-label">
+									<span>Browser notifications</span>
+									<p class="toggle-description">Receive browser push notifications</p>
+								</div>
+								<button
+									class="toggle-switch"
+									class:active={notificationPrefs.browser_task_due_soon}
+									on:click={() => toggleBrowserNotification('task_due_soon')}
+									disabled={savingPrefs}
+								>
+									<div class="toggle-track" class:active={notificationPrefs.browser_task_due_soon}>
+										<div class="toggle-thumb"></div>
+									</div>
+								</button>
+							</div>
+
+							<div class="reminder-timing">
+								<label>Send reminders</label>
+								<p class="reminder-description">Select when to receive task reminders</p>
+								<div class="reminder-options">
+									<label class="reminder-checkbox">
+										<input
+											type="checkbox"
+											checked={notificationPrefs.task_reminder_times.includes(1)}
+											on:change={(e) => toggleReminderTime(1, e.currentTarget.checked)}
+											disabled={savingPrefs}
+										/>
+										<span>1 hour before</span>
+									</label>
+									<label class="reminder-checkbox">
+										<input
+											type="checkbox"
+											checked={notificationPrefs.task_reminder_times.includes(24)}
+											on:change={(e) => toggleReminderTime(24, e.currentTarget.checked)}
+											disabled={savingPrefs}
+										/>
+										<span>1 day before</span>
+									</label>
+									<label class="reminder-checkbox">
+										<input
+											type="checkbox"
+											checked={notificationPrefs.task_reminder_times.includes(168)}
+											on:change={(e) => toggleReminderTime(168, e.currentTarget.checked)}
+											disabled={savingPrefs}
+										/>
+										<span>1 week before</span>
+									</label>
+								</div>
+							</div>
+						</div>
+
+						<div class="notification-divider"></div>
+
+						<div class="notification-category">
+							<h3>AI Proposals</h3>
+							<p class="section-description">Get notified when AI suggests actions</p>
+
+							<div class="notification-toggle-row">
+								<div class="toggle-label">
+									<span>Email notifications</span>
+								</div>
+								<button
+									class="toggle-switch"
+									class:active={notificationPrefs.email_ai_proposals}
+									on:click={() => toggleEmailNotification('ai_proposals')}
+									disabled={savingPrefs}
+								>
+									<div class="toggle-track" class:active={notificationPrefs.email_ai_proposals}>
+										<div class="toggle-thumb"></div>
+									</div>
+								</button>
+							</div>
+
+							<div class="notification-toggle-row">
+								<div class="toggle-label">
+									<span>Browser notifications</span>
+								</div>
+								<button
+									class="toggle-switch"
+									class:active={notificationPrefs.browser_ai_proposals}
+									on:click={() => toggleBrowserNotification('ai_proposals')}
+									disabled={savingPrefs}
+								>
+									<div class="toggle-track" class:active={notificationPrefs.browser_ai_proposals}>
+										<div class="toggle-thumb"></div>
+									</div>
+								</button>
+							</div>
+						</div>
+
+						<div class="notification-divider"></div>
+
+						<div class="notification-category">
+							<h3>AI Insights</h3>
+							<p class="section-description">Get notified about AI-generated insights</p>
+
+							<div class="notification-toggle-row">
+								<div class="toggle-label">
+									<span>Email notifications</span>
+								</div>
+								<button
+									class="toggle-switch"
+									class:active={notificationPrefs.email_ai_insights}
+									on:click={() => toggleEmailNotification('ai_insights')}
+									disabled={savingPrefs}
+								>
+									<div class="toggle-track" class:active={notificationPrefs.email_ai_insights}>
+										<div class="toggle-thumb"></div>
+									</div>
+								</button>
+							</div>
+
+							<div class="notification-toggle-row">
+								<div class="toggle-label">
+									<span>Browser notifications</span>
+								</div>
+								<button
+									class="toggle-switch"
+									class:active={notificationPrefs.browser_ai_insights}
+									on:click={() => toggleBrowserNotification('ai_insights')}
+									disabled={savingPrefs}
+								>
+									<div class="toggle-track" class:active={notificationPrefs.browser_ai_insights}>
+										<div class="toggle-thumb"></div>
+									</div>
+								</button>
+							</div>
+						</div>
+
+						{#if prefsStatus}
+							<div class="status" class:success={prefsStatus === 'Saved'} class:error={prefsStatus.includes('Error')}>
+								{prefsStatus}
+							</div>
+						{/if}
+					{:else}
+						<p class="error">Failed to load notification preferences</p>
+					{/if}
 				</div>
 			</div>
 
@@ -679,5 +957,116 @@
 		.modal-actions button {
 			width: 100%;
 		}
+	}
+
+	/* Notification Settings */
+	.notification-category {
+		margin-bottom: 24px;
+	}
+
+	.notification-category h3 {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0 0 8px 0;
+	}
+
+	.notification-toggle-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 12px 0;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.notification-toggle-row:last-child {
+		border-bottom: none;
+	}
+
+	.toggle-label {
+		flex: 1;
+	}
+
+	.toggle-label span {
+		display: block;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		margin-bottom: 2px;
+	}
+
+	.toggle-description {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.toggle-switch {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.toggle-switch:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.notification-divider {
+		height: 1px;
+		background: var(--border-color);
+		margin: 24px 0;
+		opacity: 0.5;
+	}
+
+	.reminder-timing {
+		margin-top: 16px;
+		padding: 16px 0;
+	}
+
+	.reminder-timing > label {
+		display: block;
+		font-size: 0.875rem;
+		color: var(--text-primary);
+		margin-bottom: 4px;
+		font-weight: 500;
+	}
+
+	.reminder-description {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		margin: 0 0 12px 0;
+	}
+
+	.reminder-options {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.reminder-checkbox {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 0;
+		cursor: pointer;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+	}
+
+	.reminder-checkbox input[type="checkbox"] {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+		accent-color: var(--accent-primary);
+	}
+
+	.reminder-checkbox input[type="checkbox"]:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	.reminder-checkbox span {
+		user-select: none;
 	}
 </style>

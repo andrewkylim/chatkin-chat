@@ -218,6 +218,32 @@
 						logger.error('Error saving AI message', error);
 					}
 
+					// Send AI proposal notification
+					try {
+						const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+						const { data: { session } } = await supabase.auth.getSession();
+
+						if (session?.access_token) {
+							fetch(`${workerUrl}/api/send-notification`, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${session.access_token}`
+								},
+								body: JSON.stringify({
+									notification_type: 'ai_proposal',
+									channels: ['email', 'browser'],
+									title: 'AI Proposal',
+									body: data.summary || previewMessage,
+									action_url: window.location.href,
+									operation_count: operations.length
+								})
+							}).catch(err => logger.error('Failed to send notification', err));
+						}
+					} catch (error) {
+						logger.error('Error sending AI proposal notification', error);
+					}
+
 					// Show operations inline
 					messages = messages.map((msg, idx) =>
 						idx === aiMessageIndex ? {
@@ -288,6 +314,38 @@
 					await addMessage(conversation!.id, 'assistant', data.message);
 				} catch (error) {
 					logger.error('Error saving AI message', error);
+				}
+
+				// Check if this message contains insights (heuristic detection)
+				const messageText = data.message || '';
+				const isInsight = messageText.length > 100 &&
+					/\b(insight|notice|found that|discovered|analyzed|pattern|trend|recommend|suggest)\b/i.test(messageText);
+
+				// Send AI insight notification if detected
+				if (isInsight) {
+					try {
+						const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
+						const { data: { session } } = await supabase.auth.getSession();
+
+						if (session?.access_token) {
+							fetch(`${workerUrl}/api/send-notification`, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${session.access_token}`
+								},
+								body: JSON.stringify({
+									notification_type: 'ai_insight',
+									channels: ['email', 'browser'],
+									title: 'AI Insight',
+									body: messageText.substring(0, 200) + (messageText.length > 200 ? '...' : ''),
+									action_url: window.location.href
+								})
+							}).catch(err => logger.error('Failed to send notification', err));
+						}
+					} catch (error) {
+						logger.error('Error sending AI insight notification', error);
+					}
 				}
 
 				// Conversational response

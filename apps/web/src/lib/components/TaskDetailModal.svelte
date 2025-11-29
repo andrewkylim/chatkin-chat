@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Task, Project } from '@chatkin/types';
 	import { formatRecurrencePattern } from '$lib/db/tasks';
+	import { formatDueDateTime } from '$lib/utils/formatters';
 
 	export let show = false;
 	export let task: Task | null = null;
@@ -66,6 +67,9 @@
 					{#if task.due_date}
 						<p class="detail-text">
 							{new Date(task.due_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+							{#if !task.is_all_day && task.due_time}
+								<span class="due-time">at {formatDueDateTime(task.due_date, task.due_time, task.is_all_day).split(' at ')[1]}</span>
+							{/if}
 							{#if formatDueDate(task.due_date) !== 'No due date'}
 								<span class="due-status">({formatDueDate(task.due_date)})</span>
 							{/if}
@@ -225,6 +229,12 @@
 	.due-status {
 		color: var(--text-secondary);
 		font-size: 0.875rem;
+	}
+
+	.due-time {
+		color: var(--text-primary);
+		font-weight: 500;
+		margin-left: 4px;
 	}
 
 	.recurrence-info {

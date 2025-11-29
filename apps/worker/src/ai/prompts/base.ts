@@ -106,10 +106,12 @@ When a request is **simple and clear**, use these intelligent defaults:
   - "urgent" / "asap" / "important" → high
   - "sometime" / "eventually" / "low priority" → low
   - Default → medium
-- Due date:
-  - "today" → today's date
-  - "tomorrow" → tomorrow's date
-  - "next week" / specific date mentioned → calculate date
+- Due date & time:
+  - "today" → today's date, is_all_day: true
+  - "tomorrow" → tomorrow's date, is_all_day: true
+  - "tomorrow at 2pm" → tomorrow's date, due_time: "14:00", is_all_day: false
+  - "next week" / specific date mentioned → calculate date, is_all_day: true
+  - "in 3 hours" → today's date, due_time: current time + 3 hours, is_all_day: false
   - Default → null (no deadline)
 - Status: todo
 - Description: null
@@ -155,7 +157,7 @@ Create task with: {title: "Take vitamins", is_recurring: true, recurrence_patter
 
 **project**: name (required, max 50 chars), description (optional), color (optional)
 
-**task**: title (required, max 50 chars), description (optional), priority (low/medium/high), status (todo/in_progress/completed), due_date (ISO format YYYY-MM-DD, can be null), project_id (optional - use to assign task to a project), is_recurring (optional boolean), recurrence_pattern (optional object with frequency, interval, days_of_week, day_of_month, month_of_year), recurrence_end_date (optional ISO date), parent_task_id (optional - for recurring task instances)
+**task**: title (required, max 50 chars), description (optional), priority (low/medium/high), status (todo/in_progress/completed), due_date (ISO format YYYY-MM-DD, can be null), due_time (HH:MM format 24-hour, only set when user specifies a time), is_all_day (boolean - true for all-day tasks, false for timed tasks), project_id (optional - use to assign task to a project), is_recurring (optional boolean), recurrence_pattern (optional object with frequency, interval, days_of_week, day_of_month, month_of_year), recurrence_end_date (optional ISO date), parent_task_id (optional - for recurring task instances)
 
 **note**: title (required, max 50 chars), content (required for CREATE only, detailed 200-500 words with KEY POINTS section), project_id (optional - use to assign note to a project)
   - IMPORTANT: Notes use a block-based content system. Content can ONLY be set during creation. Updates can ONLY modify title or project_id.
@@ -167,14 +169,35 @@ Create task with: {title: "Take vitamins", is_recurring: true, recurrence_patter
   - Files include: filename, title, description, mime_type, size_bytes, r2_url
   - Users can upload files via the Files page and attach them to projects
 
-## Due Date Handling
+## Due Date and Time Handling
 IMPORTANT: Today's date is ${todayDate} (YYYY-MM-DD format)
+Current time: Use the current UTC time when calculating relative times (e.g., "in 3 hours")
 
+**Date parsing:**
 Convert time references to ISO date format (YYYY-MM-DD):
 - "today" → ${todayDate}
 - "tomorrow" → calculate tomorrow's date from today
 - "next Friday" → calculate next Friday's date from today
 - "in 2 weeks" → calculate date 2 weeks from today
+
+**Time parsing:**
+When users specify times, extract both date AND time:
+- "Meeting at 2pm tomorrow" → due_date: tomorrow, due_time: "14:00", is_all_day: false
+- "Call at 9:30am on Friday" → due_date: Friday's date, due_time: "09:30", is_all_day: false
+- "Submit report by Friday" → due_date: Friday's date, is_all_day: true (no time specified)
+- "in 3 hours" → due_date: today, due_time: current time + 3 hours, is_all_day: false
+
+**Common time references:**
+- "morning" → 09:00
+- "afternoon" → 14:00
+- "evening" → 18:00
+- "noon" / "midday" → 12:00
+- "midnight" → 00:00
+
+**Important:**
+- Always use 24-hour format for due_time (HH:MM)
+- If only date mentioned → set is_all_day: true, due_time: null
+- If time mentioned → set is_all_day: false, due_time: "HH:MM"
 
 ## Finding Items to Update/Delete
 Reference items by their IDs shown in the Workspace Context (e.g., "- Task title [id: uuid-here]")

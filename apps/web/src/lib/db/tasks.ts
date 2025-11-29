@@ -35,9 +35,17 @@ export async function createTask(task: Omit<TaskInsert, 'user_id'>) {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
 
+	// Ensure is_all_day defaults to true if not specified
+	const taskData = {
+		...task,
+		user_id: user.id,
+		is_all_day: task.is_all_day ?? true,
+		due_time: task.is_all_day ? null : task.due_time
+	};
+
 	const { data, error } = await supabase
 		.from('tasks')
-		.insert({ ...task, user_id: user.id })
+		.insert(taskData)
 		.select()
 		.single();
 
@@ -46,9 +54,19 @@ export async function createTask(task: Omit<TaskInsert, 'user_id'>) {
 }
 
 export async function updateTask(id: string, updates: TaskUpdate) {
+	// If changing to all-day, clear due_time
+	const updateData = {
+		...updates,
+		updated_at: new Date().toISOString()
+	};
+
+	if (updates.is_all_day === true) {
+		updateData.due_time = null;
+	}
+
 	const { data, error } = await supabase
 		.from('tasks')
-		.update({ ...updates, updated_at: new Date().toISOString() })
+		.update(updateData)
 		.eq('id', id)
 		.select()
 		.single();

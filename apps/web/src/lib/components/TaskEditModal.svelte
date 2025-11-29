@@ -13,6 +13,8 @@
 	let editTaskDescription = '';
 	let editTaskPriority = 'medium';
 	let editTaskDueDate = '';
+	let editTaskDueTime = '09:00';
+	let isAllDay = true;
 	let editTaskProjectId: string | null = null;
 	let isRecurring = false;
 	let recurrencePattern: RecurrencePattern = {
@@ -26,6 +28,8 @@
 		editTaskDescription = task.description || '';
 		editTaskPriority = task.priority;
 		editTaskDueDate = task.due_date || '';
+		editTaskDueTime = task.due_time || '09:00';
+		isAllDay = task.is_all_day ?? true;
 		editTaskProjectId = task.project_id;
 		isRecurring = task.is_recurring || false;
 		recurrencePattern = task.recurrence_pattern || {
@@ -41,6 +45,8 @@
 			description: editTaskDescription || null,
 			priority: editTaskPriority,
 			due_date: editTaskDueDate || null,
+			due_time: isAllDay ? null : editTaskDueTime,
+			is_all_day: isAllDay,
 			project_id: editTaskProjectId,
 			is_recurring: isRecurring,
 			recurrence_pattern: isRecurring ? recurrencePattern : null,
@@ -92,6 +98,29 @@
 						/>
 					</div>
 				</div>
+
+				{#if editTaskDueDate}
+					<div class="form-group">
+						<label class="checkbox-label">
+							<input
+								type="checkbox"
+								bind:checked={isAllDay}
+							/>
+							<span>All-day task</span>
+						</label>
+					</div>
+
+					{#if !isAllDay}
+						<div class="form-group">
+							<label for="edit-task-due-time">Due Time</label>
+							<input
+								type="time"
+								id="edit-task-due-time"
+								bind:value={editTaskDueTime}
+							/>
+						</div>
+					{/if}
+				{/if}
 				<div class="form-group">
 					<label for="edit-task-project">Project (optional)</label>
 					<select id="edit-task-project" bind:value={editTaskProjectId}>
@@ -208,11 +237,23 @@
 		padding: 10px 12px;
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
-		background: var(--bg-tertiary);
+		background: var(--bg-secondary);
 		color: var(--text-primary);
 		font-size: 0.9375rem;
 		font-family: 'Inter', sans-serif;
 		transition: all 0.2s ease;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+	}
+
+	.form-group select {
+		cursor: pointer;
+		padding-right: 36px;
+		background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
+		background-color: var(--bg-secondary);
 	}
 
 	.form-group input:focus,
@@ -311,14 +352,26 @@
 	}
 
 	.checkbox-label input[type='checkbox'] {
-		width: 18px;
-		height: 18px;
+		width: 20px;
+		height: 20px;
 		cursor: pointer;
 		accent-color: var(--accent-primary);
 		margin: 0;
 		padding: 0;
 		flex-shrink: 0;
 		vertical-align: middle;
+		border: 2px solid var(--border-color);
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+
+	.checkbox-label input[type='checkbox']:checked {
+		background-color: var(--accent-primary);
+		border-color: var(--accent-primary);
+	}
+
+	.checkbox-label input[type='checkbox']:hover {
+		border-color: var(--accent-primary);
 	}
 
 	.checkbox-label span {

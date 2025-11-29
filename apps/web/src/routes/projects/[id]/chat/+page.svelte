@@ -11,17 +11,21 @@
 	import { getProject, getProjects } from '$lib/db/projects';
 	import { getTasks, updateTask, deleteTask, createTask } from '$lib/db/tasks';
 	import { getNotes, createNote } from '$lib/db/notes';
-	import type { Project, Task, Note } from '@chatkin/types';
+	import { getFiles, createFile } from '$lib/db/files';
+	import type { Project, Task, Note, File } from '@chatkin/types';
+	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { useProjectTasks } from '$lib/logic/useProjectTasks';
 	import { useProjectNotes } from '$lib/logic/useProjectNotes';
 	import { useProjectActions } from '$lib/logic/useProjectActions';
 	import { handleError } from '$lib/utils/error-handler';
+	import { getThumbnailUrl } from '$lib/utils/image-cdn';
 
 	$: projectId = $page.params.id;
 
 	let project: Project | null = null;
 	let tasks: Task[] = [];
 	let notes: Note[] = [];
+	let files: File[] = [];
 	let loading = true;
 	let showMenu = false;
 	let showDeleteConfirm = false;
@@ -36,6 +40,12 @@
 	let showNewItemMenu = false;
 	let showNewTaskModal = false;
 	let showNewNoteModal = false;
+	let showFileUploadModal = false;
+	let fileInput: HTMLInputElement;
+	let isDragging = false;
+	let dragCounter = 0;
+	let isUploading = false;
+	let uploadProgress = 0;
 	let newTaskTitle = '';
 	let newTaskDescription = '';
 	let newTaskPriority: 'low' | 'medium' | 'high' = 'medium';
@@ -99,10 +109,11 @@
 	async function loadData() {
 		loading = true;
 		try {
-			[project, tasks, notes, projects] = await Promise.all([
+			[project, tasks, notes, files, projects] = await Promise.all([
 				getProject(projectId),
 				getTasks().then(allTasks => allTasks.filter(t => t.project_id === projectId)),
 				getNotes().then(allNotes => allNotes.filter(n => n.project_id === projectId)),
+				getFiles().then(allFiles => allFiles.filter(f => f.project_id === projectId)),
 				getProjects()
 			]);
 		} catch (error) {
@@ -249,6 +260,83 @@
 		}
 	}
 
+	async function handleFileUpload(event: Event) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (!file) return;
+
+		await uploadFile(file);
+		target.value = '';
+	}
+
+	async function uploadFile(file: globalThis.File) {
+		isUploading = true;
+		uploadProgress = 0;
+
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+
+			const response = await fetch(`${PUBLIC_WORKER_URL}/api/files/upload`, {
+				method: 'POST',
+				body: formData,
+				credentials: 'include'
+			});
+
+			if (!response.ok) throw new Error('Upload failed');
+
+			const data = await response.json();
+
+			// Create file record in database
+			await createFile({
+				filename: data.filename,
+				original_name: data.originalName,
+				mime_type: data.mimeType,
+				size_bytes: data.size,
+				r2_url: data.url,
+				project_id: projectId
+			});
+
+			showFileUploadModal = false;
+			await loadData();
+		} catch (error) {
+			handleError(error, { operation: 'Upload file', component: 'ProjectChatPage' });
+			alert('Failed to upload file');
+		} finally {
+			isUploading = false;
+			uploadProgress = 0;
+		}
+	}
+
+	function handleDragEnter(e: DragEvent) {
+		e.preventDefault();
+		dragCounter++;
+		isDragging = true;
+	}
+
+	function handleDragLeave(e: DragEvent) {
+		e.preventDefault();
+		dragCounter--;
+		if (dragCounter === 0) {
+			isDragging = false;
+		}
+	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+	}
+
+	async function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		isDragging = false;
+		dragCounter = 0;
+
+		const file = e.dataTransfer?.files[0];
+		if (!file) return;
+
+		await uploadFile(file);
+	}
+
 	$: categorized = categorizeTasks(tasks);
 	$: todayTasks = categorized.todayTasks;
 	$: thisWeekTasks = categorized.thisWeekTasks;
@@ -298,6 +386,13 @@
 										<path d="M15 3l2 2-9 9-4 1 1-4 9-9z"/>
 									</svg>
 									<span>New Note</span>
+								</button>
+								<button class="dropdown-item" onclick={() => { showFileUploadModal = true; showNewItemMenu = false; }}>
+									<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z"/>
+										<path d="M13 2v5h3"/>
+									</svg>
+									<span>New File</span>
 								</button>
 							</div>
 						{/if}
@@ -490,6 +585,31 @@
 									</div>
 								</a>
 							{/each}
+						</div>
+					{/if}
+
+					<!-- Files -->
+					{#if files.length > 0}
+						<div class="content-group">
+							<h2 class="group-title">Files</h2>
+							<div class="files-grid">
+								{#each files as file (file.id)}
+									<a href="/files?file={file.id}" class="file-card-compact">
+										{#if file.mime_type.startsWith('image/')}
+											<img src={file.r2_url} alt={file.title || file.filename} class="file-thumbnail" />
+										{:else}
+											<div class="file-icon-compact">
+												<svg width="32" height="32" viewBox="0 0 48 48" fill="currentColor">
+													<path d="M14 2H34L42 10V46H6V2H14ZM32 4V12H40M10 20H38M10 28H38M10 36H28" />
+												</svg>
+											</div>
+										{/if}
+										<div class="file-info-compact">
+											<p class="file-name">{file.title || file.filename}</p>
+										</div>
+									</a>
+								{/each}
+							</div>
 						</div>
 					{/if}
 				</div>
@@ -721,6 +841,38 @@
 						{/each}
 					</div>
 				{/if}
+
+				<!-- Files -->
+				{#if files.length > 0}
+					<div class="content-group">
+						<h2 class="group-title">Files</h2>
+						<div class="files-grid">
+							{#each files as file (file.id)}
+								<a href="/files?file={file.id}" class="file-card-compact">
+									<div class="file-thumbnail">
+										{#if file.mime_type.startsWith('image/')}
+											<img
+												src={getThumbnailUrl(file.r2_url)}
+												alt={file.title || file.filename}
+												loading="lazy"
+												decoding="async"
+											/>
+										{:else}
+											<div class="file-icon-compact">
+												<svg width="48" height="48" viewBox="0 0 48 48" fill="currentColor">
+													<path d="M14 2H34L42 10V46H6V2H14ZM32 4V12H40M10 20H38M10 28H38M10 36H28" />
+												</svg>
+											</div>
+										{/if}
+									</div>
+									<div class="file-info-compact">
+										<p class="file-name">{file.title || file.filename}</p>
+									</div>
+								</a>
+							{/each}
+						</div>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -863,6 +1015,61 @@
 		</div>
 	{/if}
 
+	<!-- Hidden file input for mobile -->
+	<input
+		bind:this={fileInput}
+		type="file"
+		onchange={handleFileUpload}
+		disabled={isUploading}
+		style="display: none;"
+	/>
+
+	<!-- File Upload Modal -->
+	{#if showFileUploadModal}
+		<div class="modal-overlay" onclick={() => showFileUploadModal = false}>
+			<div class="modal upload-modal" onclick={(e) => e.stopPropagation()}>
+				<h2>Upload File</h2>
+
+				<div
+					class="upload-area"
+					class:dragging={isDragging}
+					class:uploading={isUploading}
+					ondragenter={handleDragEnter}
+					ondragleave={handleDragLeave}
+					ondragover={handleDragOver}
+					ondrop={handleDrop}
+					onclick={() => fileInput?.click()}
+					role="button"
+					tabindex="0"
+				>
+					<svg width="48" height="48" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
+						<path d="M7 7l3-3 3 3"/>
+						<path d="M10 4v10"/>
+					</svg>
+
+					{#if isUploading}
+						<p class="upload-text">Uploading...</p>
+						<div class="progress-bar">
+							<div class="progress-fill" style="width: {uploadProgress}%"></div>
+						</div>
+					{:else if isDragging}
+						<p class="upload-text">Drop file here</p>
+					{:else}
+						<p class="upload-text">Drag & drop or click to upload</p>
+						<p class="upload-hint">Maximum file size: 10MB</p>
+					{/if}
+				</div>
+
+				<div class="modal-actions">
+					<button type="button" class="secondary-btn" onclick={() => showFileUploadModal = false} disabled={isUploading}>
+						Cancel
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Floating Action Button with Menu (Mobile Only) -->
 	<div class="fab-container">
 		{#if showFabMenu}
@@ -879,6 +1086,13 @@
 						<path d="M15 3l2 2-9 9-4 1 1-4 9-9z"/>
 					</svg>
 					<span>Add Note</span>
+				</button>
+				<button class="fab-menu-item" onclick={() => { fileInput?.click(); showFabMenu = false; }}>
+					<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z"/>
+						<path d="M13 2v5h3"/>
+					</svg>
+					<span>Add File</span>
 				</button>
 				<a class="fab-menu-item" href={`/projects/${projectId}/chat/mobile`}>
 					<svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
@@ -1331,6 +1545,67 @@
 		color: var(--text-muted);
 		padding-top: 8px;
 		border-top: 1px solid var(--border-color);
+	}
+
+	/* Files Grid */
+	.files-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		gap: 16px;
+	}
+
+	.file-card-compact {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-lg);
+		overflow: hidden;
+		transition: all 0.2s ease;
+		cursor: pointer;
+		text-decoration: none;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.file-card-compact:hover {
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		transform: translateY(-2px);
+	}
+
+	.file-thumbnail {
+		width: 100%;
+		aspect-ratio: 1 / 1;
+		background: var(--bg-tertiary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+	}
+
+	.file-thumbnail img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.file-icon-compact {
+		color: var(--text-muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.file-info-compact {
+		padding: 12px;
+	}
+
+	.file-name {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		margin: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	/* Chat Section */
@@ -1891,6 +2166,12 @@
 			background: var(--bg-secondary);
 		}
 
+		/* Mobile files grid - 2 columns */
+		.files-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 12px;
+		}
+
 		.fab-container {
 			display: block;
 			position: fixed;
@@ -1989,5 +2270,65 @@
 		.fab-container {
 			display: none;
 		}
+	}
+
+	/* Upload Modal */
+	.upload-area {
+		border: 2px dashed var(--border-color);
+		border-radius: var(--radius-lg);
+		padding: 48px 24px;
+		text-align: center;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		background: var(--bg-tertiary);
+		margin-bottom: 20px;
+	}
+
+	.upload-area:hover {
+		border-color: var(--accent-primary);
+		background: var(--bg-secondary);
+	}
+
+	.upload-area.dragging {
+		border-color: var(--accent-primary);
+		background: rgba(199, 124, 92, 0.1);
+	}
+
+	.upload-area.uploading {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+
+	.upload-area svg {
+		color: var(--text-muted);
+		margin-bottom: 16px;
+	}
+
+	.upload-text {
+		font-size: 0.9375rem;
+		font-weight: 500;
+		color: var(--text-primary);
+		margin: 0 0 8px 0;
+	}
+
+	.upload-hint {
+		font-size: 0.8125rem;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.progress-bar {
+		width: 100%;
+		height: 4px;
+		background: var(--bg-secondary);
+		border-radius: 2px;
+		overflow: hidden;
+		margin-top: 16px;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--accent-primary);
+		transition: width 0.3s ease;
 	}
 </style>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Task, Project } from '@chatkin/types';
-	import { truncateText, formatDueDate, getProjectName, isToday, isThisWeek } from '$lib/utils/formatters';
+	import { truncateText, formatDueDate, formatDueDateTime, getProjectName, isToday, isThisWeek } from '$lib/utils/formatters';
 
 	export let tasks: Task[] = [];
 	export let projects: Project[] = [];
@@ -104,7 +104,7 @@
 										</div>
 										<div class="task-meta">
 											<span class="priority {task.priority}">{task.priority}</span>
-											<span class="task-time">{formatDueDate(task.due_date)}</span>
+											<span class="task-time">{formatDueDateTime(task.due_date, task.due_time, task.is_all_day)}</span>
 										</div>
 									</div>
 								</div>
@@ -139,7 +139,7 @@
 										</div>
 										<div class="task-meta">
 											<span class="priority {task.priority}">{task.priority}</span>
-											<span class="task-time">{formatDueDate(task.due_date)}</span>
+											<span class="task-time">{formatDueDateTime(task.due_date, task.due_time, task.is_all_day)}</span>
 										</div>
 									</div>
 								</div>
@@ -174,7 +174,7 @@
 										</div>
 										<div class="task-meta">
 											<span class="priority {task.priority}">{task.priority}</span>
-											<span class="task-time">{formatDueDate(task.due_date)}</span>
+											<span class="task-time">{formatDueDateTime(task.due_date, task.due_time, task.is_all_day)}</span>
 										</div>
 									</div>
 								</div>

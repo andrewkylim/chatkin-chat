@@ -271,7 +271,7 @@
 		justify-content: center;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
-		border-radius: 50%;
+		border-radius: var(--radius-md);
 		cursor: pointer;
 		transition: all 0.2s ease;
 	}

@@ -14,6 +14,8 @@ import { handleImageTransform } from './routes/image';
 import { handleTempFileRequest } from './routes/temp-files';
 import { handleSaveToLibrary } from './routes/save-to-library';
 import { handleDeleteFile } from './routes/delete-file';
+import { handleSendNotification } from './routes/send-notification';
+import { checkTaskReminders } from './cron/task-reminders';
 
 export { Env };
 
@@ -51,6 +53,10 @@ const handler = {
       return handleDeleteFile(request, env, corsHeaders);
     }
 
+    if (url.pathname === '/api/send-notification') {
+      return handleSendNotification(request, env, corsHeaders);
+    }
+
     if (url.pathname.startsWith('/api/temp-files/')) {
       return handleTempFileRequest(request, env, corsHeaders);
     }
@@ -75,6 +81,11 @@ const handler = {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  },
+
+  async scheduled(_controller: globalThis.ScheduledController, env: Env, ctx: globalThis.ExecutionContext): Promise<void> {
+    // Run task reminder checks
+    ctx.waitUntil(checkTaskReminders(env));
   },
 };
 

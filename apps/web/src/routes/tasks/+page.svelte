@@ -30,6 +30,8 @@
 		interval: 1
 	};
 	let newTaskRecurrenceEndDate = '';
+	let newTaskDueTime = '09:00';
+	let newTaskIsAllDay = true;
 	let showCompletedTasks = false;
 
 	// Task detail modal state
@@ -92,6 +94,8 @@
 				description: newTaskDescription || null,
 				priority: newTaskPriority as 'low' | 'medium' | 'high',
 				due_date: newTaskDueDate || null,
+				is_all_day: newTaskIsAllDay,
+				due_time: newTaskIsAllDay ? null : newTaskDueTime,
 				project_id: newTaskProjectId,
 				status: 'todo',
 				is_recurring: newTaskIsRecurring,
@@ -105,6 +109,8 @@
 			newTaskDescription = '';
 			newTaskPriority = 'medium';
 			newTaskDueDate = '';
+			newTaskDueTime = '09:00';
+			newTaskIsAllDay = true;
 			newTaskProjectId = null;
 			newTaskIsRecurring = false;
 			newTaskRecurrencePattern = {
@@ -586,6 +592,30 @@
 							/>
 						</div>
 					</div>
+
+					{#if newTaskDueDate}
+						<div class="form-group">
+							<label class="checkbox-label">
+								<input
+									type="checkbox"
+									bind:checked={newTaskIsAllDay}
+								/>
+								<span>All-day task</span>
+							</label>
+						</div>
+
+						{#if !newTaskIsAllDay}
+							<div class="form-group">
+								<label for="task-due-time">Due Time</label>
+								<input
+									type="time"
+									id="task-due-time"
+									bind:value={newTaskDueTime}
+								/>
+							</div>
+						{/if}
+					{/if}
+
 					<div class="form-group">
 						<label for="task-project">Project (optional)</label>
 						<select id="task-project" bind:value={newTaskProjectId}>
@@ -1265,12 +1295,24 @@
 	.form-group select {
 		width: 100%;
 		padding: 12px 16px;
-		background: var(--bg-tertiary);
+		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
 		color: var(--text-primary);
 		font-size: 0.9375rem;
 		font-family: 'Inter', sans-serif;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+	}
+
+	.form-group select {
+		cursor: pointer;
+		padding-right: 36px;
+		background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
+		background-color: var(--bg-secondary);
 	}
 
 	.form-group input:focus,
@@ -1370,8 +1412,8 @@
 	}
 
 	.checkbox-label input[type='checkbox'] {
-		width: 18px;
-		height: 18px;
+		width: 20px;
+		height: 20px;
 		cursor: pointer;
 		accent-color: var(--accent-primary);
 		margin: 0;
@@ -1379,6 +1421,18 @@
 		padding: 0;
 		flex-shrink: 0;
 		vertical-align: middle;
+		border: 2px solid var(--border-color);
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+
+	.checkbox-label input[type='checkbox']:checked {
+		background-color: var(--accent-primary);
+		border-color: var(--accent-primary);
+	}
+
+	.checkbox-label input[type='checkbox']:hover {
+		border-color: var(--accent-primary);
 	}
 
 	.checkbox-label span {

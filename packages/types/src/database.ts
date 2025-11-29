@@ -30,7 +30,9 @@ export interface Task {
   description: string | null;
   status: 'todo' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
-  due_date: string | null; // ISO date string
+  due_date: string | null; // ISO date string (YYYY-MM-DD)
+  due_time: string | null; // Time string (HH:MM:SS) - null for all-day tasks
+  is_all_day: boolean; // Whether task is all-day (no specific time)
   completed_at: string | null;
   is_recurring: boolean; // Whether this task repeats
   recurrence_pattern: RecurrencePattern | null; // Recurrence configuration
@@ -103,5 +105,36 @@ export interface File {
 export interface User {
   id: string;
   email: string | null;
+  created_at: string;
+}
+
+export interface UserNotificationPreferences {
+  id: string;
+  user_id: string;
+  email_task_due_soon: boolean;
+  email_ai_proposals: boolean;
+  email_ai_insights: boolean;
+  browser_task_due_soon: boolean;
+  browser_ai_proposals: boolean;
+  browser_ai_insights: boolean;
+  notification_email: string | null;
+  task_reminder_times: number[]; // Array of hours before due time (e.g., [1, 24, 168])
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationQueue {
+  id: string;
+  user_id: string;
+  notification_type: 'task_due_soon' | 'ai_proposal' | 'ai_insight';
+  channel: 'email' | 'browser';
+  task_id: string | null;
+  message_id: string | null;
+  title: string;
+  body: string;
+  action_url: string | null;
+  status: 'pending' | 'sent' | 'failed';
+  sent_at: string | null;
+  error_message: string | null;
   created_at: string;
 }
