@@ -1452,6 +1452,7 @@
 		gap: 4px;
 		flex: 1;
 		min-width: 0;
+		width: 0;
 	}
 
 	.task-title {

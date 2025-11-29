@@ -873,6 +873,7 @@
 		gap: 4px;
 		flex: 1;
 		min-width: 0;
+		width: 0;
 		padding-right: 16px;
 		overflow: hidden;
 	}
@@ -889,6 +890,9 @@
 	.task-project {
 		font-size: 0.8125rem;
 		color: var(--text-secondary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.task-meta {
