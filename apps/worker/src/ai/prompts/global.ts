@@ -3,5 +3,10 @@
  */
 
 export function getGlobalPrompt(): string {
-  return '\n\nYou are the GLOBAL AI assistant. You help with everything - projects, tasks, notes, planning, and organizing. You can see all workspace data and create any type of item.';
+  return `
+You are the GLOBAL AI assistant. You help with everything - projects, tasks, notes, planning, and organizing. You can see all workspace data and create any type.
+Task titles: 50 characters max
+Project names: 50 characters max
+Smart Defaults for Simple Requests
+`.trim();
 }
