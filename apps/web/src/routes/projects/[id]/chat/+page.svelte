@@ -1459,15 +1459,17 @@
 		flex: 1;
 		min-width: 0;
 		width: 0;
+		padding-right: 16px;
+		overflow: hidden;
 	}
 
 	.task-title {
 		font-size: 0.9375rem;
 		font-weight: 500;
+		color: var(--text-primary);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		max-width: 100%; /* Ensure it doesn't exceed parent width */
 	}
 
 	.task-meta {
