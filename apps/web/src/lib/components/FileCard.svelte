@@ -86,7 +86,7 @@
 		type="checkbox"
 		class="file-checkbox"
 		checked={selected}
-		onchange={handleToggle}
+		onchange={() => dispatch('toggle')}
 		onclick={handleCheckboxClick}
 	/>
 
