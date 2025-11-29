@@ -240,11 +240,9 @@
 	}
 
 	async function handleCreateNote() {
-		if (!newNoteTitle.trim()) return;
-
 		try {
 			await createNote({
-				title: newNoteTitle,
+				title: newNoteTitle.trim() || 'Untitled',
 				content: newNoteContent,
 				project_id: projectId
 			});
@@ -350,18 +348,11 @@
 		<!-- Project Content Section (Tasks & Notes) -->
 		<div class="content-section">
 			<header class="section-header">
-				{#if loading}
-					<h1>Loading...</h1>
-				{:else if project}
-					<div class="title-group">
-						<a href="/projects" class="back-btn">
-							<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M14 2l-8 8 8 8"/>
-							</svg>
-						</a>
-						<h1>{project.name}</h1>
-					</div>
-				{/if}
+				<a href="/projects" class="back-btn">
+					<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2l-8 8 8 8"/>
+					</svg>
+				</a>
 				<div class="header-actions">
 					<!-- New Item Button with Dropdown -->
 					<div class="new-item-container">
@@ -439,6 +430,11 @@
 				</div>
 			{:else}
 				<div class="content-list">
+					<!-- Project Title -->
+					{#if project}
+						<h1 class="project-title">{project.name}</h1>
+					{/if}
+
 					<!-- Tasks Section -->
 					{#if tasks.length > 0}
 						{#if !showCompletedTasks}
@@ -462,7 +458,7 @@
 											/>
 											<div class="task-content" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
-													<span class="task-title">{truncateTitle(task.title)}</span>
+													<span class="task-title" title={task.title}>{task.title}</span>
 												</div>
 												<div class="task-meta">
 													<span class="priority {task.priority}">{task.priority}</span>
@@ -494,7 +490,7 @@
 											/>
 											<div class="task-content" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
-													<span class="task-title">{truncateTitle(task.title)}</span>
+													<span class="task-title" title={task.title}>{task.title}</span>
 												</div>
 												<div class="task-meta">
 													<span class="priority {task.priority}">{task.priority}</span>
@@ -526,7 +522,7 @@
 											/>
 											<div class="task-content" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
-													<span class="task-title">{truncateTitle(task.title)}</span>
+													<span class="task-title" title={task.title}>{task.title}</span>
 												</div>
 												<div class="task-meta">
 													<span class="priority {task.priority}">{task.priority}</span>
@@ -556,7 +552,7 @@
 											/>
 											<div class="task-content completed" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
-													<span class="task-title">{truncateTitle(task.title)}</span>
+													<span class="task-title" title={task.title}>{task.title}</span>
 												</div>
 												<div class="task-meta">
 													<span class="task-time">Completed</span>
@@ -984,17 +980,16 @@
 				<h2>Create New Note</h2>
 				<form onsubmit={(e) => { e.preventDefault(); handleCreateNote(); }}>
 					<div class="form-group">
-						<label for="note-title">Title</label>
+						<label for="note-title">Title (optional)</label>
 						<input
 							id="note-title"
 							type="text"
 							bind:value={newNoteTitle}
-							placeholder="Note title"
-							required
+							placeholder="Untitled"
 						/>
 					</div>
 					<div class="form-group">
-						<label for="note-content">Content</label>
+						<label for="note-content">Content (optional)</label>
 						<textarea
 							id="note-content"
 							bind:value={newNoteContent}
@@ -1124,6 +1119,7 @@
 		display: flex;
 		height: 100vh;
 		overflow: hidden;
+		max-width: 100vw;
 	}
 
 	/* Mobile Layout (hidden on desktop) */
@@ -1152,23 +1148,6 @@
 		align-items: center;
 	}
 
-	.title-group {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		min-width: 0;
-	}
-
-	.section-header h1 {
-		font-size: 1.5rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		max-width: 250px;
-	}
-
 	.back-btn {
 		width: 36px;
 		height: 36px;
@@ -1195,6 +1174,7 @@
 	.header-actions {
 		display: flex;
 		gap: 8px;
+		flex-shrink: 0;
 	}
 
 	.icon-btn {
@@ -1285,6 +1265,7 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.new-item-btn:hover {
@@ -1368,6 +1349,14 @@
 		flex-direction: column;
 	}
 
+	.project-title {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0 0 24px 0;
+		letter-spacing: -0.02em;
+	}
+
 	.task-group {
 		margin-bottom: 32px;
 		min-width: 0;
@@ -1444,7 +1433,7 @@
 		gap: 16px;
 		text-decoration: none;
 		color: var(--text-primary);
-		min-width: 0; /* Allow flex shrinking */
+		min-width: 0;
 	}
 
 	.task-content.completed .task-title {
@@ -1470,6 +1459,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		min-width: 0;
 	}
 
 	.task-meta {
@@ -1521,6 +1511,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+		min-width: 0;
 	}
 
 	.note-card:hover {
@@ -1546,6 +1537,7 @@
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+		word-break: break-word;
 	}
 
 	.note-footer {

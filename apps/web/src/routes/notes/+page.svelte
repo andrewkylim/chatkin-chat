@@ -69,11 +69,9 @@
 	}
 
 	async function handleCreateNote() {
-		if (!newNoteTitle.trim()) return;
-
 		try {
 			await createNote({
-				title: newNoteTitle,
+				title: newNoteTitle.trim() || 'Untitled',
 				content: newNoteContent || undefined,
 				project_id: newNoteProjectId
 			});
@@ -308,13 +306,12 @@
 							type="text"
 							id="note-title"
 							bind:value={newNoteTitle}
-							placeholder="e.g., Meeting Notes"
+							placeholder="Untitled"
 							maxlength="50"
-							required
 						/>
 					</div>
 					<div class="form-group">
-						<label for="note-content">Content (optional)</label>
+						<label for="note-content">Content</label>
 						<textarea
 							id="note-content"
 							bind:value={newNoteContent}
