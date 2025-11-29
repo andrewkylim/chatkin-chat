@@ -527,13 +527,20 @@
 				</button>
 				<span class="bulk-count">{selectedCount} selected</span>
 
-				<select class="bulk-project-select" on:change={handleBulkAddToProject} value="">
-					<option value="" disabled>Add to project...</option>
-					<option value="__none__">Remove from project</option>
-					{#each projects as project}
-						<option value={project.id}>{project.name}</option>
-					{/each}
-				</select>
+				<div class="bulk-project-wrapper">
+					<svg class="bulk-icon mobile-only" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+						<line x1="12" y1="11" x2="12" y2="17"/>
+						<line x1="9" y1="14" x2="15" y2="14"/>
+					</svg>
+					<select class="bulk-project-select" on:change={handleBulkAddToProject} value="">
+						<option value="" disabled>Add to project...</option>
+						<option value="__none__">Remove from project</option>
+						{#each projects as project}
+							<option value={project.id}>{project.name}</option>
+						{/each}
+					</select>
+				</div>
 
 				<button class="bulk-delete-btn" on:click={handleBulkDelete}>
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -545,7 +552,7 @@
 							d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"
 						/>
 					</svg>
-					Delete
+					<span class="btn-text">Delete</span>
 				</button>
 			</div>
 		{/if}
@@ -894,6 +901,12 @@
 		background: rgba(255, 255, 255, 0.3);
 	}
 
+	.bulk-project-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
 	.bulk-project-select {
 		padding: 8px 12px;
 		background: rgba(255, 255, 255, 0.2);
@@ -916,6 +929,10 @@
 	.bulk-project-select option {
 		background: var(--bg-secondary);
 		color: var(--text-primary);
+	}
+
+	.mobile-only {
+		display: none;
 	}
 
 	/* File Display */
@@ -1087,8 +1104,39 @@
 
 		.bulk-select-btn,
 		.bulk-delete-btn {
-			padding: 6px 12px;
+			padding: 8px;
 			font-size: 0.8125rem;
+			justify-content: center;
+		}
+
+		.btn-text {
+			display: none;
+		}
+
+		.mobile-only {
+			display: block;
+		}
+
+		.bulk-project-wrapper {
+			width: 34px;
+			height: 34px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(255, 255, 255, 0.2);
+			border: 1px solid rgba(255, 255, 255, 0.3);
+			border-radius: var(--radius-md);
+		}
+
+		.bulk-project-select {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			opacity: 0;
+			padding: 0;
+			border: none;
 		}
 
 		.bulk-count {
