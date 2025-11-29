@@ -798,11 +798,15 @@
 		-webkit-overflow-scrolling: touch;
 		padding: 20px;
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.task-group {
 		margin-bottom: 32px;
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.group-header {
@@ -870,6 +874,7 @@
 		flex: 1;
 		min-width: 0;
 		padding-right: 16px;
+		overflow: hidden;
 	}
 
 	.task-title {
