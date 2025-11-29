@@ -77,6 +77,7 @@
 	let isPlayingAudio = false;
 	let audioUnlocked = false;
 	let currentAudio: HTMLAudioElement | null = null;
+	let ttsAudioElement: HTMLAudioElement | null = null; // Pre-created for iOS compatibility
 	let lastActivityTime = Date.now();
 	let inactivityTimer: number | undefined;
 	let autoListenTimeout: number | undefined;
@@ -850,6 +851,14 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			await silentAudio.play();
 			audioUnlocked = true;
 			logger.debug('Audio playback unlocked');
+			
+			// CRITICAL for iOS: Pre-create audio element during user interaction
+			// This element will be reused for all TTS playback
+			if (!ttsAudioElement) {
+				ttsAudioElement = new Audio();
+				ttsAudioElement.preload = 'auto';
+				logger.debug('Pre-created TTS audio element for iOS');
+			}
 		} catch (error) {
 			logger.error('Failed to unlock audio', error);
 		}
@@ -878,6 +887,13 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				currentAudio.pause();
 				currentAudio = null;
 				isPlayingAudio = false;
+			}
+			
+			// Clean up TTS audio element
+			if (ttsAudioElement) {
+				ttsAudioElement.pause();
+				ttsAudioElement.src = '';
+				ttsAudioElement = null;
 			}
 
 			// Stop recording if active
@@ -921,9 +937,16 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		try {
 			isPlayingAudio = true;
 
-			// CRITICAL for iOS: Create Audio element BEFORE async operations
-			// iOS requires audio elements to be created synchronously in user interaction context
-			const audio = new Audio();
+			// Use pre-created audio element for iOS, or create new one as fallback
+			let audio: HTMLAudioElement;
+			if (ttsAudioElement) {
+				audio = ttsAudioElement;
+				logger.debug('Using pre-created audio element for TTS');
+			} else {
+				// Fallback: create new audio element (for desktop or if unlockAudio wasn't called)
+				audio = new Audio();
+				logger.debug('Creating new audio element for TTS');
+			}
 			currentAudio = audio;
 
 			// Call Amazon Polly API endpoint
@@ -947,7 +970,23 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 			audio.load();
 
 			// Play the audio
-			await audio.play();
+			logger.debug('Attempting to play TTS audio', { 
+				hasAudio: !!audio, 
+				hasSrc: !!audio.src,
+				readyState: audio.readyState 
+			});
+			
+			try {
+				await audio.play();
+				logger.debug('TTS audio playback started successfully');
+			} catch (playError) {
+				logger.error('Audio play() failed', { 
+					error: playError, 
+					errorName: (playError as Error).name,
+					errorMessage: (playError as Error).message 
+				});
+				throw playError;
+			}
 
 			// Wait for audio to finish
 			await new Promise<void>((resolve) => {
