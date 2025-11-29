@@ -15,7 +15,11 @@ export async function handleImageTransform(
   corsHeaders: CorsHeaders
 ): Promise<Response> {
   try {
-    logger.debug('Transforming image', { fileName, options: optionsString });
+    logger.info('Image transform request received', {
+      fileName,
+      options: optionsString,
+      fullPath: `${optionsString}/${fileName}`
+    });
 
     // Parse transformation options from URL
     const options = parseImageOptions(optionsString);
@@ -36,21 +40,17 @@ export async function handleImageTransform(
     // Build Cloudflare Image Resizing request
     const transformOptions = buildTransformOptions(options);
 
-    // Create a request to the original file URL
-    // We need to fetch from the actual R2 URL to apply transformations
-    const fileUrl = `${env.PUBLIC_WORKER_URL}/api/files/${fileName}`;
-
-    // Fetch with image transformation applied
-    const response = await fetch(fileUrl, transformOptions);
-
-    // Return transformed image with caching headers
-    return new Response(response.body, {
+    // Return the R2 object directly with CF image transformation options
+    // Cloudflare will apply the transformations at the edge
+    return new Response(object.body, {
       headers: {
         ...corsHeaders,
-        'Content-Type': response.headers.get('Content-Type') || contentType,
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Vary': 'Accept',
       },
+      // @ts-ignore - CF-specific property
+      cf: transformOptions.cf
     });
   } catch (error) {
     return handleError(error, 'Image transformation failed', corsHeaders);
