@@ -97,7 +97,7 @@
 									/>
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateText(task.title, 30)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id, projects)}
 												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 											{/if}
@@ -132,7 +132,7 @@
 									/>
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateText(task.title, 30)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id, projects)}
 												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 											{/if}
@@ -167,7 +167,7 @@
 									/>
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateText(task.title, 30)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id, projects)}
 												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 											{/if}
@@ -201,7 +201,7 @@
 								/>
 								<div class="task-content completed" on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 									<div class="task-main">
-										<span class="task-title">{truncateText(task.title, 30)}</span>
+										<span class="task-title">{task.title}</span>
 										{#if getProjectName(task.project_id, projects)}
 											<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 										{/if}

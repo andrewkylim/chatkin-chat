@@ -196,7 +196,7 @@
 									{getProjectEmoji(project)}
 								</div>
 								<div class="project-info">
-									<h3>{truncateProjectName(project.name)}</h3>
+									<h3>{project.name}</h3>
 									<p class="project-meta">{stats.totalTasks} tasks · {stats.totalNotes} notes · {stats.totalFiles} files</p>
 								</div>
 							</div>

@@ -246,7 +246,7 @@
 									/>
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateTitle(task.title)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -281,7 +281,7 @@
 									/>
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateTitle(task.title)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -316,7 +316,7 @@
 									/>
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateTitle(task.title)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -350,7 +350,7 @@
 									/>
 									<div class="task-content completed" on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
-											<span class="task-title">{truncateTitle(task.title)}</span>
+											<span class="task-title">{task.title}</span>
 											{#if getProjectName(task.project_id)}
 												<span class="task-project">{getProjectName(task.project_id)}</span>
 											{/if}
@@ -427,7 +427,7 @@
 								/>
 								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
-										<span class="task-title">{truncateTitle(task.title)}</span>
+										<span class="task-title">{task.title}</span>
 										{#if getProjectName(task.project_id)}
 											<span class="task-project">{getProjectName(task.project_id)}</span>
 										{/if}
@@ -462,7 +462,7 @@
 								/>
 								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
-										<span class="task-title">{truncateTitle(task.title)}</span>
+										<span class="task-title">{task.title}</span>
 										{#if getProjectName(task.project_id)}
 											<span class="task-project">{getProjectName(task.project_id)}</span>
 										{/if}
@@ -497,7 +497,7 @@
 								/>
 								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
-										<span class="task-title">{truncateTitle(task.title)}</span>
+										<span class="task-title">{task.title}</span>
 										{#if getProjectName(task.project_id)}
 											<span class="task-project">{getProjectName(task.project_id)}</span>
 										{/if}
@@ -531,7 +531,7 @@
 								/>
 								<div class="task-content completed" on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
-										<span class="task-title">{truncateTitle(task.title)}</span>
+										<span class="task-title">{task.title}</span>
 										{#if getProjectName(task.project_id)}
 											<span class="task-project">{getProjectName(task.project_id)}</span>
 										{/if}
