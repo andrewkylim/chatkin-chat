@@ -1030,7 +1030,7 @@
 	}
 
 	/* Mobile Styles */
-	@media (max-width: 768px) {
+	@media (max-width: 1024px) {
 		.page-header {
 			display: none;
 		}
