@@ -739,6 +739,7 @@
 		flex-direction: column;
 		border-right: 1px solid var(--border-color);
 		background: var(--bg-secondary);
+		min-width: 0;
 	}
 
 	.section-header {
