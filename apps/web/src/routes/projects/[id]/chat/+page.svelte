@@ -1138,6 +1138,7 @@
 		flex-direction: column;
 		border-right: 1px solid var(--border-color);
 		background: var(--bg-secondary);
+		min-width: 0;
 	}
 
 	.section-header {
@@ -1362,6 +1363,7 @@
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		padding: 20px;
+		min-width: 0;
 	}
 
 	.task-group {
