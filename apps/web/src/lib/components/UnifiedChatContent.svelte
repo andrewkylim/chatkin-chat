@@ -921,6 +921,11 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		try {
 			isPlayingAudio = true;
 
+			// CRITICAL for iOS: Create Audio element BEFORE async operations
+			// iOS requires audio elements to be created synchronously in user interaction context
+			const audio = new Audio();
+			currentAudio = audio;
+
 			// Call Amazon Polly API endpoint
 			const response = await fetch('/api/tts', {
 				method: 'POST',
@@ -934,8 +939,12 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 
 			const audioBlob = await response.blob();
 			const audioUrl = URL.createObjectURL(audioBlob);
-			const audio = new Audio(audioUrl);
-		currentAudio = audio;
+			
+			// Set the source AFTER fetching (but audio object was created earlier)
+			audio.src = audioUrl;
+			
+			// Load the audio
+			audio.load();
 
 			// Play the audio
 			await audio.play();
