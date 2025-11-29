@@ -3,10 +3,20 @@ main = "src/index.ts"
 compatibility_date = "2024-11-22"
 compatibility_flags = ["nodejs_compat"]
 
-[observability.logs]
+[observability]
 enabled = false
 head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
 invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
 
 # Production routes - applies to default deployment
 routes = [
@@ -18,7 +28,7 @@ routes = [
   { pattern = "chatkin.ai/api/send-notification", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/api/temp-files/*", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/api/files/*", zone_name = "chatkin.ai" },
-  { pattern = "chatkin.ai/cdn-cgi/image/*", zone_name = "chatkin.ai" }
+  { pattern = "chatkin.ai/img/*", zone_name = "chatkin.ai" }
 ]
 
 [triggers]

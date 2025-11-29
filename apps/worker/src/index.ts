@@ -61,9 +61,9 @@ const handler = {
       return handleTempFileRequest(request, env, corsHeaders);
     }
 
-    // Handle CDN image transformations: /cdn-cgi/image/<options>/<filename>
-    if (url.pathname.startsWith('/cdn-cgi/image/')) {
-      const pathParts = url.pathname.replace('/cdn-cgi/image/', '').split('/');
+    // Handle CDN image transformations: /img/<options>/<filename>
+    if (url.pathname.startsWith('/img/')) {
+      const pathParts = url.pathname.replace('/img/', '').split('/');
       if (pathParts.length >= 2) {
         const optionsString = pathParts[0];
         const fileName = pathParts.slice(1).join('/');

@@ -37,7 +37,7 @@ export function getCdnImageUrl(fileUrl: string, options: ImageOptions = {}): str
 	if (optParts.length === 0) return fileUrl;
 
 	const optsString = optParts.join(',');
-	return `${PUBLIC_WORKER_URL}/cdn-cgi/image/${optsString}/${filename}`;
+	return `${PUBLIC_WORKER_URL}/img/${optsString}/${filename}`;
 }
 
 /**
