@@ -797,10 +797,12 @@
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		padding: 20px;
+		min-width: 0;
 	}
 
 	.task-group {
 		margin-bottom: 32px;
+		min-width: 0;
 	}
 
 	.group-header {
