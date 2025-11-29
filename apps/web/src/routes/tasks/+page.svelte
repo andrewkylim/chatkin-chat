@@ -830,6 +830,7 @@
 		border-radius: var(--radius-md);
 		margin-bottom: 8px;
 		transition: all 0.2s ease;
+		min-width: 0;
 	}
 
 	.task-item:hover {
@@ -852,6 +853,7 @@
 		align-items: flex-start;
 		cursor: pointer;
 		gap: 16px;
+		min-width: 0;
 	}
 
 	.task-content.completed .task-title {
