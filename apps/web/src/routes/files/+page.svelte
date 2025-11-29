@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
+	import { supabase } from '$lib/supabase';
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import FileCard from '$lib/components/FileCard.svelte';
@@ -238,8 +239,17 @@
 			formData.append('file', file);
 			formData.append('permanent', 'true');
 
+			const { data: { session } } = await supabase.auth.getSession();
+			if (!session) {
+				alert('Please log in to upload files');
+				return;
+			}
+
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/upload`, {
 				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${session.access_token}`
+				},
 				body: formData,
 			});
 
@@ -347,8 +357,17 @@
 			formData.append('file', file);
 			formData.append('permanent', 'true');
 
+			const { data: { session } } = await supabase.auth.getSession();
+			if (!session) {
+				alert('Please log in to upload files');
+				return;
+			}
+
 			const response = await fetch(`${PUBLIC_WORKER_URL}/api/upload`, {
 				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${session.access_token}`
+				},
 				body: formData,
 			});
 
