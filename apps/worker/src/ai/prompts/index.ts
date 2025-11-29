@@ -3,7 +3,7 @@
  */
 
 import type { ChatRequest } from '@chatkin/types/api';
-import { getBasePrompt } from './base';
+import { getChatModePrompt, getActionModePrompt } from './base';
 import { getGlobalPrompt } from './global';
 import { getTasksPrompt } from './tasks';
 import { getNotesPrompt } from './notes';
@@ -11,9 +11,13 @@ import { getProjectPrompt } from './project';
 
 export function buildSystemPrompt(
   context: ChatRequest['context'],
-  workspaceContext?: string
+  workspaceContext?: string,
+  mode: 'chat' | 'action' = 'chat'
 ): string {
-  let systemPrompt = getBasePrompt(workspaceContext);
+  // Use mode-specific base prompt
+  let systemPrompt = mode === 'chat'
+    ? getChatModePrompt(workspaceContext)
+    : getActionModePrompt(workspaceContext);
 
   // Add project-specific context
   if (context?.projectId) {

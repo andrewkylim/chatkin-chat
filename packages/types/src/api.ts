@@ -22,6 +22,7 @@ export interface ChatRequest {
     scope?: 'global' | 'tasks' | 'notes' | 'project';
   };
   authToken?: string; // User's auth token for database queries (RLS)
+  mode?: 'chat' | 'action'; // Chat mode (Marvin persona, read-only) or Action mode (task-oriented, full CRUD)
 }
 
 export interface ChatResponse {

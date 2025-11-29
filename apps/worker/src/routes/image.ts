@@ -10,10 +10,9 @@
 import type { Env, CorsHeaders } from '../types';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
-import { parseImageOptions, buildTransformOptions } from '../utils/image-transform';
 
 export async function handleImageTransform(
-  request: Request,
+  _request: Request,
   optionsString: string,
   fileName: string,
   env: Env,

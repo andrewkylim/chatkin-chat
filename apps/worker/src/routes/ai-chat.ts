@@ -7,7 +7,7 @@ import type { ChatRequest } from '@chatkin/types/api';
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';
 import { buildSystemPrompt } from '../ai/prompts';
-import { getTools } from '../ai/tools';
+import { getToolsForMode } from '../ai/tools';
 import { parseAIResponse } from '../ai/response-handler';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
@@ -77,7 +77,7 @@ export async function handleAIChat(
     logger.debug('Authenticated AI chat request', { userId: user.userId });
 
     const body = await request.json() as ChatRequest;
-    const { message, files, conversationHistory, conversationSummary, workspaceContext, context, authToken } = body;
+    const { message, files, conversationHistory, conversationSummary, workspaceContext, context, authToken, mode = 'chat' } = body;
 
     if (!message) {
       throw new WorkerError('Message is required', 400);
@@ -88,6 +88,7 @@ export async function handleAIChat(
 
     logger.debug('Processing AI chat request', {
       scope: context?.scope,
+      mode: mode,
       messageLength: message.length,
       hasHistory: !!conversationHistory?.length,
       hasFiles: !!files,
@@ -95,11 +96,16 @@ export async function handleAIChat(
       files: files?.map(f => ({ name: f.name, type: f.type, url: f.url }))
     });
 
-    // Build system prompt based on scope
-    const systemPrompt = buildSystemPrompt(context, workspaceContext);
+    // Build system prompt based on scope and mode
+    const systemPrompt = buildSystemPrompt(context, workspaceContext, mode);
 
-    // Get tool definitions
-    const tools = getTools();
+    // Get tool definitions based on mode
+    const tools = getToolsForMode(mode);
+
+    // Set model parameters based on mode
+    const modelParams = mode === 'chat'
+      ? { temperature: 0.7, max_tokens: 2048 }  // Chat mode: more creative, shorter responses
+      : { temperature: 0.3, max_tokens: 4096 }; // Action mode: more precise, longer responses
 
     // Create Anthropic client
     const anthropic = createAnthropicClient(env.ANTHROPIC_API_KEY);
@@ -205,7 +211,8 @@ export async function handleAIChat(
       // Create non-streaming response with tools
       const response = await anthropic.messages.create({
         model: 'claude-3-5-haiku-20241022',
-        max_tokens: 4096,
+        max_tokens: modelParams.max_tokens,
+        temperature: modelParams.temperature,
         system: systemPrompt,
         messages: currentMessages,
         tools: tools,

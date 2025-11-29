@@ -195,3 +195,29 @@ export function getTools() {
     }
   ];
 }
+
+/**
+ * Get tools for Chat Mode (read-only, query tools only)
+ */
+export function getChatModeTools() {
+  const allTools = getTools();
+  // Only include query tools for chat mode
+  return allTools.filter(tool =>
+    tool.name.startsWith('query_')
+  );
+}
+
+/**
+ * Get tools for Action Mode (full CRUD operations)
+ */
+export function getActionModeTools() {
+  // Return all tools for action mode
+  return getTools();
+}
+
+/**
+ * Get tools based on mode
+ */
+export function getToolsForMode(mode: 'chat' | 'action') {
+  return mode === 'chat' ? getChatModeTools() : getActionModeTools();
+}

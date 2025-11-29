@@ -7,7 +7,7 @@
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
 	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
-	import { getOrCreateConversation, getRecentMessages, addMessage, updateMessageMetadata } from '$lib/db/conversations';
+	import { getOrCreateConversation, getRecentMessages, addMessage, updateMessageMetadata, updateConversationMode } from '$lib/db/conversations';
 	import { createFile } from '$lib/db/files';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
@@ -89,6 +89,7 @@
 	let messagesReady = false;
 	let uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; addedToLibrary?: boolean; saving?: boolean }> = [];
 	let uploadStatus: string = '';
+	let aiMode: 'chat' | 'action' = 'chat'; // Default to chat mode (Marvin)
 
 	async function scrollToBottom() {
 		// Wait for DOM to update, then scroll immediately (for new messages during session)
@@ -170,7 +171,8 @@
 					scope,
 					projectId
 				},
-				authToken: session?.access_token
+				authToken: session?.access_token,
+				mode: aiMode
 			};
 
 			// Use local worker URL in development
@@ -703,6 +705,23 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		);
 	}
 
+	async function setMode(mode: 'chat' | 'action') {
+		aiMode = mode;
+		// Save to conversation metadata
+		if (conversation) {
+			try {
+				await updateConversationMode(conversation.id, mode);
+			} catch (error) {
+				logger.error('Error updating conversation mode', error);
+			}
+		}
+	}
+
+	function toggleMode() {
+		const newMode = aiMode === 'chat' ? 'action' : 'chat';
+		setMode(newMode);
+	}
+
 	async function saveFileToLibrary(file: { name: string; url: string; type: string; size: number; temporary?: boolean }, index: number) {
 		// Check if this is being called for uploadedFiles (input area) or message files
 		// If index is out of bounds for uploadedFiles, it's a message file
@@ -1060,6 +1079,11 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		try {
 			// Get or create conversation for global scope
 			conversation = await getOrCreateConversation(scope, projectId);
+
+			// Load mode from conversation
+			if (conversation.mode) {
+				aiMode = conversation.mode;
+			}
 
 			// Load recent messages from database
 			const dbMessages = await getRecentMessages(conversation.id, 50);
@@ -1585,7 +1609,25 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				}];
 				}}
 			/>
+
 			<div class="input-wrapper">
+				<button
+					type="button"
+					class="mode-toggle-btn {aiMode}"
+					onclick={toggleMode}
+					aria-label={aiMode === 'chat' ? 'Switch to Action Mode' : 'Switch to Chat Mode'}
+					title={aiMode === 'chat' ? 'Chat Mode (Read-only) - Click to switch to Action Mode' : 'Action Mode (Full Access) - Click to switch to Chat Mode'}
+				>
+					{#if aiMode === 'chat'}
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+						</svg>
+					{:else}
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+						</svg>
+					{/if}
+				</button>
 				<input
 					type="text"
 					bind:value={inputMessage}
@@ -2153,7 +2195,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		width: 100%;
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
-		padding: 12px 48px 12px 16px;
+		padding: 12px 48px 12px 48px;
 		background: var(--bg-tertiary);
 		color: var(--text-primary);
 		font-size: 0.9375rem;
@@ -2199,6 +2241,44 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		border-radius: var(--radius-md);
 		border: 1px solid var(--border-color);
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	}
+
+	/* Mode Toggle */
+	.mode-toggle-btn {
+		position: absolute;
+		left: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
+		padding: 0;
+		z-index: 5;
+	}
+
+	.mode-toggle-btn:hover {
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+	}
+
+	.mode-toggle-btn.action {
+		color: var(--accent-primary);
+	}
+	
+	.mode-toggle-btn.action:hover {
+		background: rgba(199, 124, 92, 0.1);
+	}
+
+	.mode-toggle-btn svg {
+		flex-shrink: 0;
 	}
 
 	.char-counter.warning {

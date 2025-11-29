@@ -66,6 +66,7 @@ export interface Conversation {
   project_id: string | null; // NULL = not project-scoped
   scope: 'global' | 'project' | 'tasks' | 'notes';
   title: string | null;
+  mode: 'chat' | 'action'; // Chat mode (Marvin persona, read-only) or Action mode (task-oriented, full CRUD)
   conversation_summary: string | null; // AI-generated summary of older messages
   message_count: number;
   last_summarized_at: string | null;

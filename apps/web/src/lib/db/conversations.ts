@@ -41,6 +41,7 @@ export async function getOrCreateConversation(
 		scope,
 		project_id: projectId || null,
 		title: scope === 'global' ? 'General Chat' : scope === 'project' ? 'Project Chat' : `${scope.charAt(0).toUpperCase() + scope.slice(1)} Chat`,
+		mode: 'chat', // Default to chat mode
 		conversation_summary: null,
 		message_count: 0,
 		last_summarized_at: null
@@ -208,6 +209,23 @@ export async function pruneOldMessages(conversationId: string, keepLast: number 
 		.delete()
 		.eq('conversation_id', conversationId)
 		.lt('created_at', cutoffTimestamp);
+
+	if (error) throw error;
+}
+
+/**
+ * Update the mode for a conversation
+ * @param conversationId - Conversation ID
+ * @param mode - 'chat' or 'action'
+ */
+export async function updateConversationMode(
+	conversationId: string,
+	mode: 'chat' | 'action'
+) {
+	const { error } = await supabase
+		.from('conversations')
+		.update({ mode })
+		.eq('id', conversationId);
 
 	if (error) throw error;
 }
