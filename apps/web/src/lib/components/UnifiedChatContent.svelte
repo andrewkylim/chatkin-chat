@@ -84,6 +84,7 @@
 	let voiceInputRef: any;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
+	let session: any = null;
 	let messagesReady = false;
 	let uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; addedToLibrary?: boolean; saving?: boolean }> = [];
 	let uploadStatus: string = '';
@@ -992,6 +993,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	}
 
 	onMount(async () => {
+		// Get session for file uploads
+		const { data: { session: userSession } } = await supabase.auth.getSession();
+		session = userSession;
+
 		// Lock viewport to prevent elastic scroll on mobile
 		if (typeof document !== 'undefined') {
 			document.documentElement.style.overflow = 'hidden';
@@ -1520,6 +1525,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 				maxSizeMB={10}
 				permanent={false}
 				conversationId={conversation?.id || null}
+				{session}
 				bind:uploadStatus
 				onUploadComplete={(file) => {
 				uploadedFiles = [...uploadedFiles, {

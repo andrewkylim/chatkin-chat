@@ -47,21 +47,6 @@ export function getCdnImageUrl(fileUrl: string, options: ImageOptions = {}): str
 	*/
 }
 
-
-const optParts: string[] = [];
-
-if (options.width) optParts.push(`w=${options.width}`);
-if (options.height) optParts.push(`h=${options.height}`);
-if (options.fit) optParts.push(`fit=${options.fit}`);
-if (options.format) optParts.push(`f=${options.format}`);
-if (options.quality) optParts.push(`q=${options.quality}`);
-
-if (optParts.length === 0) return fileUrl;
-
-const optsString = optParts.join(',');
-return `${PUBLIC_WORKER_URL}/img/${optsString}/${filename}`;
-}
-
 /**
  * Get thumbnail URL (400px, cover fit, auto format, 85% quality)
  */

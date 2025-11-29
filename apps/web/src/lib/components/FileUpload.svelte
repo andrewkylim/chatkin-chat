@@ -2,6 +2,7 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createFile } from '$lib/db/files';
 	import { handleError } from '$lib/utils/error-handler';
+	import type { Session } from '@supabase/supabase-js';
 
 	interface UploadedFile {
 		name: string;
@@ -20,6 +21,7 @@
 	export let maxSizeMB: number = 10;
 	export let permanent: boolean = false; // NEW: If true, save to permanent bucket with DB entry
 	export let showDragDrop: boolean = false; // NEW: If true, show drag and drop area
+	export let session: Session | null = null; // NEW: Session for auth
 
 	// Export upload state so parent can display status
 	export let uploading = false;
@@ -69,6 +71,9 @@
 			const response = await fetch(`${workerUrl}/api/upload`, {
 				method: 'POST',
 				body: formData,
+				headers: {
+					...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+				}
 			});
 
 			uploadProgress = 75; // Upload complete, processing

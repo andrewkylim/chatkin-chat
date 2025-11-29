@@ -5,6 +5,7 @@
 	import MobileUserMenu from './MobileUserMenu.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import VoiceInput from './VoiceInput.svelte';
+	import { supabase } from '$lib/supabase';
 
 	interface AIQuestion {
 		question: string;
@@ -75,6 +76,7 @@
 
 	let messagesContainer: HTMLDivElement;
 	let voiceInputRef: any;
+	let session: any = null;
 	const currentPath = $derived($page.url.pathname);
 
 	export function scrollToBottom() {
@@ -91,7 +93,11 @@
 	});
 
 	// Scroll to bottom on mount
-	onMount(() => {
+	onMount(async () => {
+		// Get session for file uploads
+		const { data: { session: userSession } } = await supabase.auth.getSession();
+		session = userSession;
+
 		if (messagesReady) {
 			scrollToBottom();
 		}
@@ -472,6 +478,7 @@
 			accept="image/*,application/pdf,.doc,.docx,.txt"
 			maxSizeMB={10}
 			permanent={false}
+			{session}
 			onUploadComplete={(file) => {
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
