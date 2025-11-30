@@ -458,7 +458,6 @@
 				{:else}
 					<div class="content-list">
 
-					<!-- Tasks Section -->
 					{#if tasks.length > 0}
 						{#if !showCompletedTasks}
 							<!-- Today Section -->
@@ -556,6 +555,16 @@
 									{/each}
 								</div>
 							{/if}
+
+					<!-- Fallback when all tasks are completed -->
+					{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
+						<div class="empty-state">
+							<div class="project-icon-large">✅</div>
+							<h2>All tasks completed!</h2>
+							<p>Great work! You've completed all your tasks.</p>
+							<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed Tasks</button>
+						</div>
+					{/if}
 						{:else}
 							<!-- Completed Tasks -->
 							{#if completedTasks.length > 0}
@@ -583,6 +592,14 @@
 											</div>
 										</div>
 									{/each}
+								</div>
+							{:else}
+								<!-- Fallback for when in completed mode but no completed tasks -->
+								<div class="empty-state">
+									<div class="project-icon-large">📝</div>
+									<h2>No completed tasks</h2>
+									<p>You haven't completed any tasks yet.</p>
+									<button class="toggle-link" onclick={toggleShowCompleted}>Show Active Tasks</button>
 								</div>
 							{/if}
 						{/if}
@@ -817,36 +834,54 @@
 								{/each}
 							</div>
 						{/if}
-					{:else}
-						<!-- Completed Tasks -->
-						{#if completedTasks.length > 0}
-							<div class="task-group">
-								<div class="group-header">
-									<h2 class="group-title">Completed</h2>
-									<button class="toggle-link" onclick={toggleShowCompleted}>Show All Tasks</button>
-								</div>
-								{#each completedTasks as task (task.id)}
-									<div class="task-item">
-										<input
-											type="checkbox"
-											class="task-checkbox"
-											id={task.id}
-											checked={true}
-											onchange={() => handleToggleTask(task.id, task.status)}
-										/>
-										<div class="task-content completed" onclick={() => openTaskDetail(task)}>
-											<div class="task-main">
-												<span class="task-title">{truncateTitle(task.title)}</span>
-											</div>
-											<div class="task-meta">
-												<span class="task-time">Completed</span>
+
+				<!-- Fallback when all tasks are completed -->
+				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
+					<div class="empty-state">
+						<div class="project-icon-large">✅</div>
+						<h2>All tasks completed!</h2>
+						<p>Great work! You've completed all your tasks.</p>
+						<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed Tasks</button>
+					</div>
+				{/if}
+						{:else}
+							<!-- Completed Tasks -->
+							{#if completedTasks.length > 0}
+								<div class="task-group">
+									<div class="group-header">
+										<h2 class="group-title">Completed</h2>
+										<button class="toggle-link" onclick={toggleShowCompleted}>Show All Tasks</button>
+									</div>
+									{#each completedTasks as task (task.id)}
+										<div class="task-item">
+											<input
+												type="checkbox"
+												class="task-checkbox"
+												id={task.id}
+												checked={true}
+												onchange={() => handleToggleTask(task.id, task.status)}
+											/>
+											<div class="task-content completed" onclick={() => openTaskDetail(task)}>
+												<div class="task-main">
+													<span class="task-title">{truncateTitle(task.title)}</span>
+												</div>
+												<div class="task-meta">
+													<span class="task-time">Completed</span>
+												</div>
 											</div>
 										</div>
-									</div>
-								{/each}
-							</div>
+									{/each}
+								</div>
+							{:else}
+								<!-- Fallback for when in completed mode but no completed tasks -->
+								<div class="empty-state">
+									<div class="project-icon-large">📝</div>
+									<h2>No completed tasks</h2>
+									<p>You haven't completed any tasks yet.</p>
+									<button class="toggle-link" onclick={toggleShowCompleted}>Show Active Tasks</button>
+								</div>
+							{/if}
 						{/if}
-					{/if}
 				{/if}
 
 				<!-- Notes -->
