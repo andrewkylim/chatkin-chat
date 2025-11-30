@@ -19,6 +19,7 @@
 	import { useProjectActions } from '$lib/logic/useProjectActions';
 	import { handleError } from '$lib/utils/error-handler';
 	import { getThumbnailUrl } from '$lib/utils/image-cdn';
+	import { supabase } from '$lib/supabase';
 
 	$: projectId = $page.params.id;
 
@@ -275,25 +276,43 @@
 			const formData = new FormData();
 			formData.append('file', file);
 
-			const response = await fetch(`${PUBLIC_WORKER_URL}/api/files/upload`, {
+			const { data: { session } } = await supabase.auth.getSession();
+			if (!session) {
+				alert('Please log in to upload files');
+				return;
+			}
+
+			const workerUrl = PUBLIC_WORKER_URL.replace(/\/$/, '');
+			const response = await fetch(`${workerUrl}/api/upload`, {
 				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${session.access_token}`
+				},
 				body: formData,
-				credentials: 'include'
 			});
 
 			if (!response.ok) throw new Error('Upload failed');
 
-			const data = await response.json();
+			const result = await response.json();
 
-			// Create file record in database
+		// Create file record in database
+		if (result.success && result.file) {
 			await createFile({
-				filename: data.filename,
-				original_name: data.originalName,
-				mime_type: data.mimeType,
-				size_bytes: data.size,
-				r2_url: data.url,
-				project_id: projectId
+				filename: result.file.originalName,
+				r2_key: result.file.name,
+				r2_url: result.file.url,
+				mime_type: result.file.type,
+				size_bytes: result.file.size,
+				note_id: null,
+				conversation_id: null,
+				message_id: null,
+				project_id: projectId,
+				is_hidden_from_library: false,
+				title: result.file.title || null,
+				description: result.file.description || null,
+				ai_generated_metadata: !!(result.file.title || result.file.description),
 			});
+		}
 
 			showFileUploadModal = false;
 			await loadData();
@@ -422,18 +441,22 @@
 					<div class="spinner"></div>
 					<p>Loading project...</p>
 				</div>
-			{:else if tasks.length === 0 && notes.length === 0}
-				<div class="empty-state">
-					<div class="project-icon-large">{project?.color || '📁'}</div>
-					<h2>No tasks or notes yet</h2>
-					<p>Create tasks and notes to get started</p>
-				</div>
 			{:else}
-				<div class="content-list">
-					<!-- Project Title -->
-					{#if project}
+				{#if project}
+					<div class="project-title-wrapper">
+						<span class="project-icon-title">{project.color || '📁'}</span>
 						<h1 class="project-title">{project.name}</h1>
-					{/if}
+					</div>
+				{/if}
+
+				{#if tasks.length === 0 && notes.length === 0}
+					<div class="empty-state">
+						<div class="project-icon-large">{project?.color || '📁'}</div>
+						<h2>No tasks or notes yet</h2>
+						<p>Create tasks and notes to get started</p>
+					</div>
+				{:else}
+					<div class="content-list">
 
 					<!-- Tasks Section -->
 					{#if tasks.length > 0}
@@ -610,6 +633,7 @@
 					{/if}
 				</div>
 			{/if}
+			{/if}
 		</div>
 
 		<!-- Chat Section -->
@@ -641,8 +665,6 @@
 				</a>
 				{#if project}
 					<div class="project-info-mobile">
-						<div class="project-icon-small">{project.color || '📁'}</div>
-						<h1>{truncateTitle(project.name, 30)}</h1>
 					</div>
 				{/if}
 			</div>
@@ -682,13 +704,21 @@
 					<div class="spinner"></div>
 					<p>Loading project...</p>
 				</div>
-			{:else if tasks.length === 0 && notes.length === 0}
-				<div class="empty-state">
-					<div class="project-icon-large">{project?.color || '📁'}</div>
-					<h2>No tasks or notes yet</h2>
-					<p>Create tasks and notes to get started</p>
-				</div>
 			{:else}
+				{#if project}
+					<div class="project-title-wrapper mobile">
+						<span class="project-icon-title">{project.color || '📁'}</span>
+						<h1 class="project-title mobile">{project.name}</h1>
+					</div>
+				{/if}
+
+				{#if tasks.length === 0 && notes.length === 0}
+					<div class="empty-state">
+						<div class="project-icon-large">{project?.color || '📁'}</div>
+						<h2>No tasks or notes yet</h2>
+						<p>Create tasks and notes to get started</p>
+					</div>
+				{:else}
 				<!-- Tasks Section -->
 				{#if tasks.length > 0}
 					{#if !showCompletedTasks}
@@ -869,6 +899,7 @@
 						</div>
 					</div>
 				{/if}
+			{/if}
 			{/if}
 		</div>
 	</div>
@@ -1349,11 +1380,31 @@
 		flex-direction: column;
 	}
 
+	.project-title-wrapper {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin: 20px 0 24px 0;
+		padding: 0 20px;
+	}
+
+	.project-title-wrapper.mobile {
+		margin: 0 0 20px 0;
+		padding: 0;
+	}
+
+	.project-icon-title {
+		font-size: 1.5rem;
+		line-height: 1;
+		flex-shrink: 0;
+	}
+
 	.project-title {
 		font-size: 1.25rem;
 		font-weight: 700;
 		color: var(--text-primary);
-		margin: 0 0 24px 0;
+		margin: 0;
+		padding: 0;
 		letter-spacing: -0.02em;
 	}
 
