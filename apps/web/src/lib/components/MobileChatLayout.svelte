@@ -1043,8 +1043,6 @@
 	.send-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-		background: var(--bg-tertiary);
-		color: var(--text-muted);
 	}
 
 	/* Mode Toggle */
