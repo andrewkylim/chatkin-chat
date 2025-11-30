@@ -1670,6 +1670,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 		bind:uploadedFiles
 		{isStreaming}
 		{messagesReady}
+		{session}
 		onSubmit={() => sendMessage()}
 		onQuestionSubmit={handleInlineQuestionSubmit}
 		onQuestionCancel={handleInlineQuestionCancel}

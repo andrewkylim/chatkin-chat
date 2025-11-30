@@ -40,6 +40,7 @@
 		uploadedFiles = $bindable([]),
 		isStreaming = false,
 		messagesReady = false,
+		session = null,
 		onSubmit,
 		onQuestionSubmit,
 		onQuestionCancel,
@@ -61,6 +62,7 @@
 		uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; addedToLibrary?: boolean; saving?: boolean }>;
 		isStreaming: boolean;
 		messagesReady: boolean;
+		session: any;
 		onSubmit: () => void;
 		onQuestionSubmit?: (messageIndex: number, answers: Record<string, string>) => void;
 		onQuestionCancel?: (messageIndex: number) => void;
@@ -80,7 +82,6 @@
 
 	let messagesContainer: HTMLDivElement;
 	let voiceInputRef: any;
-	let session: any = null;
 	const currentPath = $derived($page.url.pathname);
 
 	export function scrollToBottom() {
@@ -98,10 +99,6 @@
 
 	// Scroll to bottom on mount
 	onMount(async () => {
-		// Get session for file uploads
-		const { data: { session: userSession } } = await supabase.auth.getSession();
-		session = userSession;
-
 		if (messagesReady) {
 			scrollToBottom();
 		}
