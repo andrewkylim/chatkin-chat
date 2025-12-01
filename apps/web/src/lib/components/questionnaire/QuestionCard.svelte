@@ -61,14 +61,8 @@
 		return colorMap[domain] || 'var(--accent-primary)';
 	}
 
-	// Emoji options for emoji_scale
-	const emojiOptions = [
-		{ value: 1, emoji: '😞', label: question.scale_min_label || 'Very low' },
-		{ value: 2, emoji: '😟', label: 'Low' },
-		{ value: 3, emoji: '😐', label: 'Neutral' },
-		{ value: 4, emoji: '🙂', label: 'High' },
-		{ value: 5, emoji: '😊', label: question.scale_max_label || 'Very high' }
-	];
+	// Circle fill percentages for emoji_scale (progressive satisfaction)
+	const fillPercentages = [0, 25, 50, 75, 100];
 
 	// Parse multiple choice options
 	let multipleChoiceOptions: Array<{ value: string; label: string; score: number }> = [];
@@ -112,20 +106,50 @@
 				{/if}
 			</div>
 		{:else if question.question_type === 'emoji_scale'}
-			<!-- Emoji scale (5 emojis) -->
+			<!-- Emoji scale with circle icons -->
 			<div class="emoji-container">
-				{#each emojiOptions as option}
+				{#each Array.from({ length: (question.scale_max || 5) - (question.scale_min || 1) + 1 }, (_, i) => i + (question.scale_min || 1)) as num, index}
+					{@const fillPercent = fillPercentages[index]}
 					<button
 						type="button"
 						class="emoji-button"
-						class:selected={value === option.value.toString()}
-						onclick={() => handleEmojiSelect(option.value)}
-						title={option.label}
+						class:selected={value === num.toString()}
+						onclick={() => handleEmojiSelect(num)}
 					>
-						<span class="emoji">{option.emoji}</span>
-						<span class="emoji-label">{option.label}</span>
+						<svg class="circle-icon" viewBox="0 0 24 24" fill="none">
+							<!-- Outer circle -->
+							<circle
+								cx="12"
+								cy="12"
+								r="9"
+								stroke="currentColor"
+								stroke-width="2"
+								fill="none"
+								class="circle-stroke"
+							/>
+							<!-- Inner filled circle based on satisfaction level -->
+							{#if fillPercent > 0}
+								<circle
+									cx="12"
+									cy="12"
+									r={9 * (fillPercent / 100)}
+									fill="currentColor"
+									opacity="0.6"
+									class="circle-fill"
+								/>
+							{/if}
+						</svg>
 					</button>
 				{/each}
+			</div>
+			<!-- Labels -->
+			<div class="scale-labels">
+				{#if question.scale_min_label}
+					<span class="scale-label">{question.scale_min_label}</span>
+				{/if}
+				{#if question.scale_max_label}
+					<span class="scale-label">{question.scale_max_label}</span>
+				{/if}
 			</div>
 		{:else if question.question_type === 'multiple_choice'}
 			<!-- Multiple choice options -->
@@ -246,53 +270,57 @@
 		max-width: 400px;
 	}
 
-	/* Emoji Scale Styles */
+	/* Emoji Scale Styles (with circle icons) */
 	.emoji-container {
 		display: flex;
-		gap: 12px;
+		gap: 8px;
 		justify-content: center;
 		flex-wrap: wrap;
+		margin-bottom: 16px;
 	}
 
 	.emoji-button {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 8px;
-		padding: 16px 20px;
+		flex: 1;
+		padding: 24px 16px;
 		border: 2px solid var(--border-color);
 		border-radius: var(--radius-lg);
 		background: var(--bg-primary);
 		cursor: pointer;
 		transition: all 0.2s ease;
-		min-width: 100px;
+		min-width: 60px;
 	}
 
 	.emoji-button:hover {
 		border-color: var(--accent-primary);
 		background: var(--bg-tertiary);
-		transform: translateY(-2px);
+		transform: scale(1.05);
 	}
 
 	.emoji-button.selected {
 		border-color: var(--accent-primary);
 		background: var(--accent-primary);
+		transform: scale(1.1);
 	}
 
-	.emoji-button.selected .emoji-label {
+	.circle-icon {
+		width: 40px;
+		height: 40px;
+		margin: 0 auto;
+		color: var(--text-secondary);
+	}
+
+	.emoji-button.selected .circle-icon {
 		color: white;
 	}
 
-	.emoji {
-		font-size: 2.5rem;
-		line-height: 1;
+	.emoji-button.selected .circle-stroke {
+		stroke: white;
 	}
 
-	.emoji-label {
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-		font-weight: 500;
-		text-align: center;
+	.scale-labels {
+		display: flex;
+		justify-content: space-between;
+		padding: 0 8px;
 	}
 
 	/* Multiple Choice Styles */
