@@ -560,6 +560,12 @@
 					} else if (op.type === 'project') {
 						await updateProject(op.id, op.changes);
 						results.push(`✓ Updated project`);
+					} else if (op.type === 'file') {
+						const { updateFileProject } = await import('$lib/db/files');
+						if (op.changes.project_id !== undefined) {
+							await updateFileProject(op.id, op.changes.project_id);
+						}
+						results.push(`✓ Updated file`);
 					}
 					successCount++;
 				} else if (op.operation === 'delete') {
@@ -574,6 +580,11 @@
 					} else if (op.type === 'project') {
 						await deleteProject(op.id);
 						results.push(`✓ Deleted project`);
+					} else if (op.type === 'file') {
+						const { deleteFile } = await import('$lib/db/files');
+						const { data: { session } } = await supabase.auth.getSession();
+						await deleteFile(op.id, session?.access_token);
+						results.push(`✓ Deleted file`);
 					}
 					successCount++;
 				}
