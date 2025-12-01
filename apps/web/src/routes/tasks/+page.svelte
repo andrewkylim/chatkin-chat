@@ -61,9 +61,6 @@
 		notificationCounts.setCurrentSection('tasks');
 		notificationCounts.clearCount('tasks');
 
-		// Load show completed preference from localStorage
-		showCompletedTasks = loadCompletedPreference();
-
 		// Delete completed tasks older than 30 days
 		try {
 			await deleteOldCompletedTasks();
@@ -72,6 +69,16 @@
 		}
 
 		await loadData();
+
+		// Load show completed preference from localStorage
+		// Only restore "show completed" if there are no active tasks
+		const savedPreference = loadCompletedPreference();
+		const hasActiveTasks = tasks.some(t => t.status !== 'completed');
+		if (savedPreference && !hasActiveTasks) {
+			showCompletedTasks = true;
+		} else {
+			showCompletedTasks = false;
+		}
 	});
 
 	async function loadData() {
@@ -217,7 +224,7 @@
 					<div class="spinner"></div>
 					<p>Loading tasks...</p>
 				</div>
-			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
+			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length === 0}
 				<div class="empty-state">
 					<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
@@ -225,9 +232,9 @@
 				</div>
 			{:else}
 				<div class="tasks-list">
-					{#if !showCompletedTasks}
+					{#if !showCompletedTasks || completedTasks.length === 0}
 					<!-- Today Section -->
-					{#if todayTasks.length > 0}
+					{#if todayTasks.length > 0 || (todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0)}
 						<div class="task-group">
 							<div class="group-header">
 								<h2 class="group-title">Today</h2>
@@ -330,6 +337,16 @@
 							{/each}
 						</div>
 					{/if}
+
+					<!-- Fallback when all tasks are completed -->
+					{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
+						<div class="empty-state">
+							<div class="project-icon-large">✅</div>
+							<h2>All tasks completed!</h2>
+							<p>Great work! You've completed all your tasks.</p>
+							<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
+						</div>
+					{/if}
 					{/if}
 
 					<!-- Completed -->
@@ -399,16 +416,16 @@
 					<div class="spinner"></div>
 					<p>Loading tasks...</p>
 				</div>
-			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
+			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length === 0}
 				<div class="empty-state">
 					<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
 				</div>
 			{:else}
-				{#if !showCompletedTasks}
+				{#if !showCompletedTasks || completedTasks.length === 0}
 				<!-- Today Section -->
-				{#if todayTasks.length > 0}
+				{#if todayTasks.length > 0 || (todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0)}
 					<div class="task-group">
 						<div class="group-header">
 							<h2 class="group-title">Today</h2>
@@ -511,6 +528,26 @@
 						{/each}
 					</div>
 				{/if}
+				{/if}
+
+				<!-- Fallback when all tasks are completed -->
+				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
+					<div class="empty-state">
+						<div class="project-icon-large">✅</div>
+						<h2>All tasks completed!</h2>
+						<p>Great work! You've completed all your tasks.</p>
+						<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
+					</div>
+				{/if}
+
+				<!-- Fallback when all tasks are completed -->
+				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
+					<div class="empty-state">
+						<div class="project-icon-large">✅</div>
+						<h2>All tasks completed!</h2>
+						<p>Great work! You've completed all your tasks.</p>
+						<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
+					</div>
 				{/if}
 
 				<!-- Completed -->
@@ -1667,5 +1704,10 @@
 		.form-row {
 			grid-template-columns: 1fr;
 		}
+	}
+
+	.project-icon-large {
+		font-size: 4rem;
+		margin-bottom: 16px;
 	}
 </style>

@@ -68,7 +68,7 @@
 				<div class="spinner"></div>
 				<p>Loading tasks...</p>
 			</div>
-		{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0}
+		{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length === 0}
 			<div class="empty-state">
 				<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
 				<h2>No tasks yet</h2>
@@ -76,9 +76,9 @@
 			</div>
 		{:else}
 			<div class="tasks-list">
-				{#if !showCompletedTasks}
+				{#if !showCompletedTasks || completedTasks.length === 0}
 					<!-- Today Section -->
-					{#if todayTasks.length > 0}
+					{#if todayTasks.length > 0 || (todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0)}
 						<div class="task-group">
 							<div class="group-header">
 								<h2 class="group-title">Today</h2>
@@ -458,5 +458,20 @@
 
 	.toggle-link:hover {
 		background: var(--bg-tertiary);
+	}
+
+	.empty-active-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 40px 0;
+		gap: 16px;
+		color: var(--text-secondary);
+	}
+
+	.empty-active-state p {
+		margin: 0;
+		font-size: 0.9375rem;
 	}
 </style>

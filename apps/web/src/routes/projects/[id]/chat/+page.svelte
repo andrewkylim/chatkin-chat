@@ -88,8 +88,13 @@
 		// Load completed tasks preference from localStorage
 		if (typeof window !== 'undefined') {
 			const saved = localStorage.getItem('showCompletedTasks');
-			if (saved !== null) {
-				showCompletedTasks = saved === 'true';
+			// Only restore "show completed" if there are no active tasks
+			// Otherwise, default to showing active tasks
+			const hasActiveTasks = tasks.some(t => t.status !== 'completed');
+			if (saved === 'true' && !hasActiveTasks) {
+				showCompletedTasks = true;
+			} else {
+				showCompletedTasks = false;
 			}
 		}
 
@@ -459,9 +464,9 @@
 					<div class="content-list">
 
 					{#if tasks.length > 0}
-						{#if !showCompletedTasks}
+						{#if !showCompletedTasks || completedTasks.length === 0}
 							<!-- Today Section -->
-							{#if todayTasks.length > 0}
+							{#if todayTasks.length > 0 || (todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0)}
 								<div class="task-group">
 									<div class="group-header">
 										<h2 class="group-title">Today</h2>
@@ -738,9 +743,9 @@
 				{:else}
 				<!-- Tasks Section -->
 				{#if tasks.length > 0}
-					{#if !showCompletedTasks}
+					{#if !showCompletedTasks || completedTasks.length === 0}
 						<!-- Today Section -->
-						{#if todayTasks.length > 0}
+						{#if todayTasks.length > 0 || (todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0)}
 							<div class="task-group">
 								<div class="group-header">
 									<h2 class="group-title">Today</h2>
@@ -2419,5 +2424,19 @@
 		height: 100%;
 		background: var(--accent-primary);
 		transition: width 0.3s ease;
+	}
+	.empty-active-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 40px 0;
+		gap: 16px;
+		color: var(--text-secondary);
+	}
+
+	.empty-active-state p {
+		margin: 0;
+		font-size: 0.9375rem;
 	}
 </style>

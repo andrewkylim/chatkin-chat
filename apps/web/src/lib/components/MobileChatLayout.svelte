@@ -82,6 +82,9 @@
 
 	let messagesContainer: HTMLDivElement;
 	let voiceInputRef: any;
+	let uploading = $state(false);
+	let uploadProgress = $state(0);
+	let uploadStatus = $state('');
 	const currentPath = $derived($page.url.pathname);
 
 	export function scrollToBottom() {
@@ -480,6 +483,9 @@
 			maxSizeMB={10}
 			permanent={false}
 			{session}
+			bind:uploading
+			bind:uploadProgress
+			bind:uploadStatus
 			onUploadComplete={(file) => {
 				uploadedFiles = [...uploadedFiles, {
 					name: file.originalName,
@@ -513,9 +519,9 @@
 				type="text"
 				bind:value={inputMessage}
 				maxlength="10000"
-				placeholder="Ask me anything..."
+				placeholder={uploading ? uploadStatus : "Ask me anything..."}
 				class="message-input"
-				disabled={isStreaming}
+				disabled={isStreaming || uploading}
 			/>
 			<VoiceInput
 				bind:this={voiceInputRef}
@@ -533,7 +539,7 @@
 				}}
 			/>
 		</div>
-		<button type="submit" class="send-btn" disabled={isStreaming || !inputMessage.trim()} aria-label="Send message">
+		<button type="submit" class="send-btn" disabled={isStreaming || (!inputMessage.trim() && uploadedFiles.length === 0) || uploading} aria-label="Send message">
 			<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M5 15L15 5"/>
 				<path d="M9 5h6v6"/>
