@@ -1150,11 +1150,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					<!-- Standalone mode: just title -->
 					<h1>{pageTitle}</h1>
 				{/if}
-				{#if !isEmbedded}
 				<!-- Talk Mode Toggle -->
 				<div class="header-actions">
 					<button
-						class="talk-mode-btn {talkModeActive ? 'active' : ''}"
+						class="talk-mode-btn {talkModeActive ? 'active' : ''} {isEmbedded ? 'icon-only' : ''}"
 						title={talkModeActive ? 'Turn off Talk Mode' : 'Turn on Talk Mode'}
 						onclick={toggleTalkMode}
 					>
@@ -1165,18 +1164,19 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 						<line x1="16" y1="16" x2="16" y2="8"/>
 						<line x1="20" y1="14" x2="20" y2="10"/>
 						</svg>
-						<span class="talk-mode-label">
-							{#if isPlayingAudio}
-								Speaking...
-							{:else if talkModeActive}
-								Talk
-							{:else}
-								Talk
-							{/if}
-						</span>
+						{#if !isEmbedded}
+							<span class="talk-mode-label">
+								{#if isPlayingAudio}
+									Speaking...
+								{:else if talkModeActive}
+									Talk
+								{:else}
+									Talk
+								{/if}
+							</span>
+						{/if}
 					</button>
 				</div>
-			{/if}
 			</div>
 		</header>
 
@@ -1827,6 +1827,11 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	.talk-mode-btn.active:hover {
 		background: var(--accent-hover);
 		border-color: var(--accent-hover);
+	}
+
+	.talk-mode-btn.icon-only {
+		padding: 8px;
+		min-width: auto;
 	}
 
 	.talk-mode-label {

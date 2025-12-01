@@ -378,9 +378,9 @@
 	<div class="mobile-content">
 		<header class="mobile-header">
 			<div class="mobile-header-left">
-				<button class="mobile-logo-button">
+				<a href="/chat" class="mobile-logo-button">
 					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
-				</button>
+				</a>
 				<h1>Tasks</h1>
 			</div>
 			<MobileUserMenu />

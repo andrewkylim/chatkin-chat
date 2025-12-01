@@ -64,66 +64,68 @@
 		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" on:click|stopPropagation on:keydown|stopPropagation>
 			<h2 id="modal-title">Edit Project</h2>
 			<form on:submit|preventDefault={handleUpdateProject}>
-				<div class="form-group">
-					<label>Project Icon</label>
-					<div class="emoji-selector">
-						<div class="emoji-row">
-							{#each editAvailableEmojis as emoji}
+				<div class="form-content">
+					<div class="form-group">
+						<label>Project Icon</label>
+						<div class="emoji-selector">
+							<div class="emoji-row">
+								{#each editAvailableEmojis as emoji}
+									<button
+										type="button"
+										class="emoji-btn"
+										class:selected={editSelectedEmoji === emoji}
+										on:click={() => editSelectedEmoji = emoji}
+										aria-label="Select {emoji} icon"
+										aria-pressed={editSelectedEmoji === emoji}
+									>
+										{emoji}
+									</button>
+								{/each}
 								<button
 									type="button"
-									class="emoji-btn"
-									class:selected={editSelectedEmoji === emoji}
-									on:click={() => editSelectedEmoji = emoji}
-									aria-label="Select {emoji} icon"
-									aria-pressed={editSelectedEmoji === emoji}
+									class="emoji-more-btn"
+									class:active={editShowAllEmojis}
+									on:click={() => editShowAllEmojis = !editShowAllEmojis}
+									aria-label={editShowAllEmojis ? "Show less emojis" : "Show more emojis"}
+									aria-expanded={editShowAllEmojis}
 								>
-									{emoji}
+									{#if editShowAllEmojis}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+											<path d="M5 15l5-5 5 5"/>
+										</svg>
+									{:else}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+											<circle cx="4" cy="10" r="1.5"/>
+											<circle cx="10" cy="10" r="1.5"/>
+											<circle cx="16" cy="10" r="1.5"/>
+										</svg>
+									{/if}
 								</button>
-							{/each}
-							<button
-								type="button"
-								class="emoji-more-btn"
-								class:active={editShowAllEmojis}
-								on:click={() => editShowAllEmojis = !editShowAllEmojis}
-								aria-label={editShowAllEmojis ? "Show less emojis" : "Show more emojis"}
-								aria-expanded={editShowAllEmojis}
-							>
-								{#if editShowAllEmojis}
-									<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-										<path d="M5 15l5-5 5 5"/>
-									</svg>
-								{:else}
-									<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-										<circle cx="4" cy="10" r="1.5"/>
-										<circle cx="10" cy="10" r="1.5"/>
-										<circle cx="16" cy="10" r="1.5"/>
-									</svg>
-								{/if}
-							</button>
+							</div>
 						</div>
 					</div>
-				</div>
-				<div class="form-group">
-					<label for="edit-project-name">Project Name</label>
-					<input
-						type="text"
-						id="edit-project-name"
-						bind:value={editProjectName}
-						placeholder="e.g., Wedding Planning"
-						maxlength="50"
-						required
-						autofocus
-					/>
-				</div>
-				<div class="form-group">
-					<label for="edit-project-description">Description (optional)</label>
-					<textarea
-						id="edit-project-description"
-						bind:value={editProjectDescription}
-						placeholder="Briefly describe your project..."
-						maxlength="200"
-						rows="3"
-					></textarea>
+					<div class="form-group">
+						<label for="edit-project-name">Project Name</label>
+						<input
+							type="text"
+							id="edit-project-name"
+							bind:value={editProjectName}
+							placeholder="e.g., Wedding Planning"
+							maxlength="50"
+							required
+							autofocus
+						/>
+					</div>
+					<div class="form-group">
+						<label for="edit-project-description">Description (optional)</label>
+						<textarea
+							id="edit-project-description"
+							bind:value={editProjectDescription}
+							placeholder="Briefly describe your project..."
+							maxlength="200"
+							rows="3"
+						></textarea>
+					</div>
 				</div>
 				<div class="modal-actions">
 					<button type="button" class="secondary-btn" on:click={handleClose}>
@@ -160,13 +162,30 @@
 		max-width: 500px;
 		width: 100%;
 		max-height: 90vh;
-		overflow-y: auto;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+		display: flex;
+		flex-direction: column;
 	}
 
 	.modal h2 {
 		font-size: 1.5rem;
 		margin-bottom: 20px;
+		flex-shrink: 0;
+	}
+
+	.modal form {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.form-content {
+		flex: 1;
+		overflow-y: auto;
+		padding-right: 4px;
+		margin-bottom: 16px;
 	}
 
 	.form-group {
@@ -208,6 +227,10 @@
 		display: flex;
 		gap: 12px;
 		justify-content: flex-end;
+		flex-shrink: 0;
+		padding-top: 16px;
+		border-top: 1px solid var(--border-color);
+		margin-top: 0;
 	}
 
 	.secondary-btn {
@@ -255,6 +278,16 @@
 		border: 1px solid var(--border-color);
 		max-height: 300px;
 		overflow-y: auto;
+	}
+
+	@media (max-width: 768px) {
+		.emoji-selector {
+			max-height: 150px;
+		}
+
+		.modal {
+			max-height: 85vh;
+		}
 	}
 
 	.emoji-row {

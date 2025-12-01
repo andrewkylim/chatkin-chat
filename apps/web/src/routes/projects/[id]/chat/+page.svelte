@@ -655,9 +655,9 @@
 	<div class="mobile-content">
 		<header class="mobile-header">
 			<div class="mobile-header-left">
-				<button class="mobile-logo-button">
+				<a href="/chat" class="mobile-logo-button">
 					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
-				</button>
+				</a>
 				<a href="/projects" class="back-btn">
 					<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M14 2l-8 8 8 8"/>

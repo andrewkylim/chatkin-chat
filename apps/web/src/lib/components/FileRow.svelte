@@ -185,6 +185,8 @@
 		border-radius: var(--radius-md);
 		transition: all 0.2s ease;
 		min-height: 52px;
+		max-width: 100%;
+		overflow: hidden;
 	}
 
 	.file-row:hover {
@@ -308,12 +310,26 @@
 
 	/* Mobile Responsive - keep on one line but hide date */
 	@media (max-width: 768px) {
+		.file-row {
+			gap: 8px;
+		}
+
 		.file-date {
 			display: none;
 		}
 
 		.file-meta {
-			min-width: 50px;
+			min-width: 45px;
+			font-size: 0.7rem;
+		}
+
+		.file-info {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.file-title {
+			font-size: 0.8125rem;
 		}
 
 		.file-actions {

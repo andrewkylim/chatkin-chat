@@ -60,102 +60,104 @@
 		<div class="modal" on:click|stopPropagation>
 			<h2>Edit Task</h2>
 			<form on:submit|preventDefault={handleSubmit}>
-				<div class="form-group">
-					<label for="edit-task-title">Task Title</label>
-					<input
-						type="text"
-						id="edit-task-title"
-						bind:value={editTaskTitle}
-						placeholder="e.g., Call the contractor"
-						maxlength="50"
-						required
-					/>
-				</div>
-				<div class="form-group">
-					<label for="edit-task-description">Description (optional)</label>
-					<textarea
-						id="edit-task-description"
-						bind:value={editTaskDescription}
-						placeholder="Add details..."
-						rows="2"
-					></textarea>
-				</div>
-				<div class="form-row">
+				<div class="form-content">
 					<div class="form-group">
-						<label for="edit-task-priority">Priority</label>
-						<select id="edit-task-priority" bind:value={editTaskPriority}>
-							<option value="low">Low</option>
-							<option value="medium">Medium</option>
-							<option value="high">High</option>
-						</select>
-					</div>
-					<div class="form-group">
-						<label for="edit-task-due-date">Due Date (optional)</label>
+						<label for="edit-task-title">Task Title</label>
 						<input
-							type="date"
-							id="edit-task-due-date"
-							bind:value={editTaskDueDate}
+							type="text"
+							id="edit-task-title"
+							bind:value={editTaskTitle}
+							placeholder="e.g., Call the contractor"
+							maxlength="50"
+							required
 						/>
 					</div>
-				</div>
+					<div class="form-group">
+						<label for="edit-task-description">Description (optional)</label>
+						<textarea
+							id="edit-task-description"
+							bind:value={editTaskDescription}
+							placeholder="Add details..."
+							rows="2"
+						></textarea>
+					</div>
+					<div class="form-row">
+						<div class="form-group">
+							<label for="edit-task-priority">Priority</label>
+							<select id="edit-task-priority" bind:value={editTaskPriority}>
+								<option value="low">Low</option>
+								<option value="medium">Medium</option>
+								<option value="high">High</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="edit-task-due-date">Due Date (optional)</label>
+							<input
+								type="date"
+								id="edit-task-due-date"
+								bind:value={editTaskDueDate}
+							/>
+						</div>
+					</div>
 
-				{#if editTaskDueDate}
+					{#if editTaskDueDate}
+						<div class="form-group">
+							<label class="checkbox-label">
+								<input
+									type="checkbox"
+									bind:checked={isAllDay}
+								/>
+								<span>All-day task</span>
+							</label>
+						</div>
+
+						{#if !isAllDay}
+							<div class="form-group">
+								<label for="edit-task-due-time">Due Time</label>
+								<input
+									type="time"
+									id="edit-task-due-time"
+									bind:value={editTaskDueTime}
+								/>
+							</div>
+						{/if}
+					{/if}
+					<div class="form-group">
+						<label for="edit-task-project">Project (optional)</label>
+						<select id="edit-task-project" bind:value={editTaskProjectId}>
+							<option value={null}>No project</option>
+							{#each projects as project}
+								<option value={project.id}>{project.name}</option>
+							{/each}
+						</select>
+					</div>
+
+					<!-- Recurrence Options -->
 					<div class="form-group">
 						<label class="checkbox-label">
 							<input
 								type="checkbox"
-								bind:checked={isAllDay}
+								bind:checked={isRecurring}
 							/>
-							<span>All-day task</span>
+							<span>Repeat this task</span>
 						</label>
 					</div>
 
-					{#if !isAllDay}
-						<div class="form-group">
-							<label for="edit-task-due-time">Due Time</label>
-							<input
-								type="time"
-								id="edit-task-due-time"
-								bind:value={editTaskDueTime}
-							/>
+					{#if isRecurring}
+						<div class="recurrence-section">
+							<RecurrencePatternPicker bind:pattern={recurrencePattern} />
+
+							<div class="form-group">
+								<label for="recurrence-end-date">End date (optional)</label>
+								<input
+									type="date"
+									id="recurrence-end-date"
+									bind:value={recurrenceEndDate}
+								/>
+							</div>
 						</div>
 					{/if}
-				{/if}
-				<div class="form-group">
-					<label for="edit-task-project">Project (optional)</label>
-					<select id="edit-task-project" bind:value={editTaskProjectId}>
-						<option value={null}>No project</option>
-						{#each projects as project}
-							<option value={project.id}>{project.name}</option>
-						{/each}
-					</select>
 				</div>
-
-				<!-- Recurrence Options -->
-				<div class="form-group">
-					<label class="checkbox-label">
-						<input
-							type="checkbox"
-							bind:checked={isRecurring}
-						/>
-						<span>Repeat this task</span>
-					</label>
-				</div>
-
-				{#if isRecurring}
-					<div class="recurrence-section">
-						<RecurrencePatternPicker bind:pattern={recurrencePattern} />
-
-						<div class="form-group">
-							<label for="recurrence-end-date">End date (optional)</label>
-							<input
-								type="date"
-								id="recurrence-end-date"
-								bind:value={recurrenceEndDate}
-							/>
-						</div>
-					</div>
-				{/if}
 
 				<div class="modal-actions">
 					<button type="button" class="delete-btn" on:click={onDelete}>
@@ -200,7 +202,6 @@
 		max-width: 500px;
 		width: 100%;
 		max-height: 85vh;
-		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
 	}
@@ -212,10 +213,18 @@
 	}
 
 	.modal form {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.form-content {
 		flex: 1;
 		overflow-y: auto;
-		min-height: 0;
-		padding-bottom: 8px;
+		padding-right: 4px;
+		margin-bottom: 16px;
 	}
 
 	.form-group {
@@ -279,7 +288,10 @@
 		display: flex;
 		gap: 12px;
 		align-items: center;
-		margin-top: 24px;
+		flex-shrink: 0;
+		padding-top: 16px;
+		border-top: 1px solid var(--border-color);
+		margin-top: 0;
 	}
 
 	.primary-btn {

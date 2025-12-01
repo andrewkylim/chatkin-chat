@@ -165,9 +165,9 @@
 	<!-- Mobile Header -->
 	<header class="mobile-header">
 		<div class="mobile-header-left">
-			<button class="mobile-logo-button">
+			<a href="/chat" class="mobile-logo-button">
 				<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
-			</button>
+			</a>
 			<h1>Projects</h1>
 		</div>
 		<MobileUserMenu />
@@ -250,62 +250,64 @@
 			<div class="modal" on:click|stopPropagation>
 				<h2>Create New Project</h2>
 				<form on:submit|preventDefault={handleCreateProject}>
-					<div class="form-group">
-						<label>Project Icon</label>
-						<div class="emoji-selector">
-							<div class="emoji-row">
-								{#each availableEmojis as emoji}
+					<div class="form-content">
+						<div class="form-group">
+							<label>Project Icon</label>
+							<div class="emoji-selector">
+								<div class="emoji-row">
+									{#each availableEmojis as emoji}
+										<button
+											type="button"
+											class="emoji-btn"
+											class:selected={selectedEmoji === emoji}
+											on:click={() => selectedEmoji = emoji}
+										>
+											{emoji}
+										</button>
+									{/each}
 									<button
 										type="button"
-										class="emoji-btn"
-										class:selected={selectedEmoji === emoji}
-										on:click={() => selectedEmoji = emoji}
+										class="emoji-more-btn"
+										class:active={showAllEmojis}
+										on:click={() => showAllEmojis = !showAllEmojis}
+										title={showAllEmojis ? "Show less" : "More emojis"}
 									>
-										{emoji}
+										{#if showAllEmojis}
+											<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M5 15l5-5 5 5"/>
+											</svg>
+										{:else}
+											<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+												<circle cx="4" cy="10" r="1.5"/>
+												<circle cx="10" cy="10" r="1.5"/>
+												<circle cx="16" cy="10" r="1.5"/>
+											</svg>
+										{/if}
 									</button>
-								{/each}
-								<button
-									type="button"
-									class="emoji-more-btn"
-									class:active={showAllEmojis}
-									on:click={() => showAllEmojis = !showAllEmojis}
-									title={showAllEmojis ? "Show less" : "More emojis"}
-								>
-									{#if showAllEmojis}
-										<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M5 15l5-5 5 5"/>
-										</svg>
-									{:else}
-										<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-											<circle cx="4" cy="10" r="1.5"/>
-											<circle cx="10" cy="10" r="1.5"/>
-											<circle cx="16" cy="10" r="1.5"/>
-										</svg>
-									{/if}
-								</button>
+								</div>
 							</div>
 						</div>
-					</div>
-					<div class="form-group">
-						<label for="project-name">Project Name</label>
-						<input
-							type="text"
-							id="project-name"
-							bind:value={newProjectName}
-							placeholder="e.g., Wedding Planning"
-							maxlength="50"
-							required
-						/>
-					</div>
-					<div class="form-group">
-						<label for="project-description">Description (optional)</label>
-						<textarea
-							id="project-description"
-							bind:value={newProjectDescription}
-							placeholder="Briefly describe your project..."
-							maxlength="200"
-							rows="3"
-						></textarea>
+						<div class="form-group">
+							<label for="project-name">Project Name</label>
+							<input
+								type="text"
+								id="project-name"
+								bind:value={newProjectName}
+								placeholder="e.g., Wedding Planning"
+								maxlength="50"
+								required
+							/>
+						</div>
+						<div class="form-group">
+							<label for="project-description">Description (optional)</label>
+							<textarea
+								id="project-description"
+								bind:value={newProjectDescription}
+								placeholder="Briefly describe your project..."
+								maxlength="200"
+								rows="3"
+							></textarea>
+						</div>
 					</div>
 					<div class="modal-actions">
 						<button type="button" class="secondary-btn" on:click={() => showNewProjectModal = false}>
@@ -675,13 +677,30 @@
 		max-width: 500px;
 		width: 100%;
 		max-height: 90vh;
-		overflow-y: auto;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+		display: flex;
+		flex-direction: column;
 	}
 
 	.modal h2 {
 		font-size: 1.5rem;
 		margin-bottom: 20px;
+		flex-shrink: 0;
+	}
+
+	.modal form {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+		overflow: hidden;
+	}
+
+	.form-content {
+		flex: 1;
+		overflow-y: auto;
+		padding-right: 4px;
+		margin-bottom: 16px;
 	}
 
 	.form-group {
@@ -723,6 +742,10 @@
 		display: flex;
 		gap: 12px;
 		justify-content: flex-end;
+		flex-shrink: 0;
+		padding-top: 16px;
+		border-top: 1px solid var(--border-color);
+		margin-top: 0;
 	}
 
 	.secondary-btn {
@@ -770,6 +793,16 @@
 		border: 1px solid var(--border-color);
 		max-height: 300px;
 		overflow-y: auto;
+	}
+
+	@media (max-width: 768px) {
+		.emoji-selector {
+			max-height: 150px;
+		}
+
+		.modal {
+			max-height: 85vh;
+		}
 	}
 
 	.emoji-row {
