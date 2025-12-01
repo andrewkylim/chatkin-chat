@@ -13,7 +13,6 @@
 	let questions: Question[] = $state([]);
 	let currentQuestionIndex = $state(0);
 	let responses = $state(new Map<string, string>());
-	let currentResponseValue = $state('');
 	let loading = $state(true);
 	let saving = $state(false);
 	let submitting = $state(false);
