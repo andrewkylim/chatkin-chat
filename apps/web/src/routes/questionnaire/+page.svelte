@@ -13,6 +13,7 @@
 	let questions: Question[] = $state([]);
 	let currentQuestionIndex = $state(0);
 	let responses = $state(new Map<string, string>());
+	let currentResponseValue = $state('');
 	let loading = $state(true);
 	let saving = $state(false);
 	let submitting = $state(false);
@@ -216,7 +217,7 @@
 
 			<QuestionCard
 				question={currentQuestion}
-				bind:value={currentResponse}
+				value={currentResponse}
 				onNext={handleNext}
 				onBack={handleBack}
 				canGoBack={currentQuestionIndex > 0}
