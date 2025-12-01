@@ -432,11 +432,11 @@
 					</div>
 				{/if}
 
-				{#if tasks.length === 0 && notes.length === 0}
+				{#if tasks.length === 0 && notes.length === 0 && files.length === 0}
 					<div class="empty-state">
 						<div class="project-icon-large">{project?.color || '📁'}</div>
-						<h2>No tasks or notes yet</h2>
-						<p>Create tasks and notes to get started</p>
+						<h2>No tasks, notes, or files yet</h2>
+						<p>Create tasks, notes, or upload files to get started</p>
 					</div>
 				{:else}
 					<div class="content-list">
@@ -712,11 +712,11 @@
 					</div>
 				{/if}
 
-				{#if tasks.length === 0 && notes.length === 0}
+				{#if tasks.length === 0 && notes.length === 0 && files.length === 0}
 					<div class="empty-state">
 						<div class="project-icon-large">{project?.color || '📁'}</div>
-						<h2>No tasks or notes yet</h2>
-						<p>Create tasks and notes to get started</p>
+						<h2>No tasks, notes, or files yet</h2>
+						<p>Create tasks, notes, or upload files to get started</p>
 					</div>
 				{:else}
 				<!-- Tasks Section -->
