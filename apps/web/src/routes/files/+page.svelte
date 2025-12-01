@@ -235,6 +235,7 @@
 			return;
 		}
 
+		isUploading = true;
 		try {
 			const formData = new FormData();
 			formData.append('file', file);
@@ -243,6 +244,7 @@
 			const { data: { session } } = await supabase.auth.getSession();
 			if (!session) {
 				alert('Please log in to upload files');
+				isUploading = false;
 				return;
 			}
 
@@ -284,6 +286,7 @@
 			console.error('Upload failed:', error);
 			alert('Failed to upload file. Please try again.');
 		} finally {
+			isUploading = false;
 			target.value = '';
 		}
 	}
@@ -463,13 +466,13 @@
 						</div>
 					</div>
 					<!-- Upload Button -->
-					<button class="primary-btn" on:click={() => desktopFileInput?.click()}>
+					<button class="primary-btn" class:uploading={isUploading} on:click={() => desktopFileInput?.click()} disabled={isUploading}>
 						<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 							<path d="M3 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/>
 							<path d="M7 7l3-3 3 3"/>
 							<path d="M10 4v10"/>
 						</svg>
-						Upload
+						{isUploading ? 'Uploading...' : 'Upload'}
 					</button>
 					<input
 						bind:this={desktopFileInput}
@@ -652,10 +655,14 @@
 
 		<!-- Floating Action Button (Mobile Only) -->
 		<div class="fab-container">
-			<button class="fab" on:click={() => fabFileInput?.click()} aria-label="Upload file">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-					<path d="M12 5v14M5 12h14"/>
-				</svg>
+			<button class="fab" class:uploading={isUploading} on:click={() => fabFileInput?.click()} disabled={isUploading} aria-label="Upload file">
+				{#if isUploading}
+					<div class="fab-spinner"></div>
+				{:else}
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+						<path d="M12 5v14M5 12h14"/>
+					</svg>
+				{/if}
 			</button>
 			<input
 				bind:this={fabFileInput}
@@ -1199,6 +1206,20 @@
 
 		.fab:active {
 			transform: scale(0.95);
+		}
+
+		.fab.uploading {
+			opacity: 0.8;
+			cursor: not-allowed;
+		}
+
+		.fab-spinner {
+			width: 24px;
+			height: 24px;
+			border: 3px solid rgba(255, 255, 255, 0.3);
+			border-top-color: white;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
 		}
 	}
 
