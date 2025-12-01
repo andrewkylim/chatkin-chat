@@ -38,6 +38,14 @@ html, body {
   --gap-tight: 8px;
   --gap-standard: 12px;
   --gap-loose: 20px;
+
+  /* Domain Colors (for questionnaire/profile) */
+  --domain-body: #10B981;
+  --domain-mind: #3B82F6;
+  --domain-purpose: #8B5CF6;
+  --domain-connection: #F59E0B;
+  --domain-growth: #EAB308;
+  --domain-security: #EF4444;
 }
 
 [data-theme='dark'] {

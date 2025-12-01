@@ -91,6 +91,11 @@
 				<img src="/files.webp" alt="" class="nav-icon" />
 				<span>Files</span>
 			</a>
+
+			<a href="/profile" class="nav-item" class:active={currentPath === '/profile'}>
+				<img src="/profile.webp" alt="" class="nav-icon" />
+				<span>Profile</span>
+			</a>
 		</div>
 	</nav>
 

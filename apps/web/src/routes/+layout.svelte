@@ -3,17 +3,56 @@
 	import '../app.css';
 	import { auth } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { supabase } from '$lib/supabase';
+	import { page } from '$app/stores';
 
 	let { children } = $props();
-	// Trigger production rebuild with correct PUBLIC_WORKER_URL
 
-	onMount(() => {
-		auth.initialize();
+	onMount(async () => {
+		await auth.initialize();
 
 		// Apply saved theme on load
 		const savedTheme = localStorage.getItem('theme');
 		if (savedTheme === 'dark') {
 			document.documentElement.setAttribute('data-theme', 'dark');
+		}
+
+		// Check if user needs to complete questionnaire
+		if ($auth.user && $page.url.pathname !== '/questionnaire' && !$page.url.pathname.startsWith('/auth')) {
+			try {
+				// Check if user has profile
+				const { data: profile, error: profileError } = await supabase
+					.from('user_profiles')
+					.select('has_completed_questionnaire')
+					.eq('user_id', $auth.user.id)
+					.maybeSingle();
+
+				if (profileError && profileError.code !== 'PGRST116') {
+					console.error('Error checking profile:', profileError);
+					return;
+				}
+
+				// If no profile exists, create one
+				if (!profile) {
+					await supabase.from('user_profiles').insert({
+						user_id: $auth.user.id,
+						has_completed_questionnaire: false
+					});
+
+					// Redirect to questionnaire
+					goto('/questionnaire');
+					return;
+				}
+
+				// If questionnaire not completed, redirect
+				if (!profile.has_completed_questionnaire) {
+					goto('/questionnaire');
+					return;
+				}
+			} catch (err) {
+				console.error('Error in profile check:', err);
+			}
 		}
 	});
 </script>

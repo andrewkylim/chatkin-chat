@@ -15,6 +15,8 @@ import { handleTempFileRequest } from './routes/temp-files';
 import { handleSaveToLibrary } from './routes/save-to-library';
 import { handleDeleteFile } from './routes/delete-file';
 import { handleSendNotification } from './routes/send-notification';
+import { handleGenerateAssessmentReport } from './routes/generate-assessment-report';
+import { handleGenerateOnboarding } from './routes/generate-onboarding';
 import { checkTaskReminders } from './cron/task-reminders';
 
 export { Env };
@@ -55,6 +57,14 @@ const handler = {
 
     if (url.pathname === '/api/send-notification') {
       return handleSendNotification(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/generate-assessment-report') {
+      return handleGenerateAssessmentReport(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/generate-onboarding') {
+      return handleGenerateOnboarding(request, env, corsHeaders);
     }
 
     if (url.pathname.startsWith('/api/temp-files/')) {

@@ -8,6 +8,14 @@ export interface WorkspaceContext {
 	projects: ProjectSummary[];
 	tasks: TaskSummary[];
 	notes: NoteSummary[];
+	userProfile?: UserProfileSummary;
+}
+
+export interface UserProfileSummary {
+	summary: string;
+	communicationTone: string;
+	focusAreas: string[];
+	hasCompletedQuestionnaire: boolean;
 }
 
 // Database response types
@@ -77,7 +85,31 @@ export async function loadWorkspaceContext(): Promise<WorkspaceContext> {
 	// Load all notes with project names
 	const notes = await loadNotesSummary();
 
-	return { projects, tasks, notes };
+	// Load user profile
+	const userProfile = await loadUserProfile();
+
+	return { projects, tasks, notes, userProfile };
+}
+
+/**
+ * Load user profile for AI context
+ */
+async function loadUserProfile(): Promise<UserProfileSummary | undefined> {
+	const { data, error } = await supabase
+		.from('user_profiles')
+		.select('profile_summary, communication_tone, focus_areas, has_completed_questionnaire')
+		.maybeSingle();
+
+	if (error || !data || !data.has_completed_questionnaire) {
+		return undefined;
+	}
+
+	return {
+		summary: data.profile_summary || '',
+		communicationTone: data.communication_tone || 'encouraging',
+		focusAreas: data.focus_areas || [],
+		hasCompletedQuestionnaire: data.has_completed_questionnaire
+	};
 }
 
 /**
@@ -194,6 +226,16 @@ async function loadNotesSummary(): Promise<NoteSummary[]> {
  */
 export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	let formatted = '## Workspace Context\n\n';
+
+	// User Profile section (if available)
+	if (context.userProfile && context.userProfile.summary) {
+		formatted += '### User Profile & Psychological Analysis\n\n';
+		formatted += context.userProfile.summary;
+		formatted += '\n\n';
+		formatted += `**Communication Preference**: ${context.userProfile.communicationTone}\n`;
+		formatted += `**Priority Focus Areas**: ${context.userProfile.focusAreas.join(', ')}\n\n`;
+		formatted += '**Using This Profile**: This analysis informs all your interactions. Reference specific insights when relevant, tailor suggestions to this user\'s unique situation, and maintain awareness of their challenges and goals.\n\n';
+	}
 
 	// Projects section
 	if (context.projects.length > 0) {
