@@ -507,19 +507,12 @@
 				{/if}
 
 				<!-- Fallback when all tasks are completed -->
-				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
+				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0 && !showCompletedTasks}
 					<div class="empty-state">
-						<div class="project-icon-large">✅</div>
-						<h2>All tasks completed!</h2>
-						<p>Great work! You've completed all your tasks.</p>
-						<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
-					</div>
-				{/if}
-
-				<!-- Fallback when all tasks are completed -->
-				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
-					<div class="empty-state">
-						<div class="project-icon-large">✅</div>
+						<svg class="completion-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M9 11l3 3L22 4"></path>
+							<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+						</svg>
 						<h2>All tasks completed!</h2>
 						<p>Great work! You've completed all your tasks.</p>
 						<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
@@ -1673,8 +1666,8 @@
 		}
 	}
 
-	.project-icon-large {
-		font-size: 4rem;
+	.completion-icon {
+		color: #6B9B6E;
 		margin-bottom: 16px;
 	}
 </style>
