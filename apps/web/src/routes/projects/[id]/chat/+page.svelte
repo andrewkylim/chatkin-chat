@@ -2,7 +2,6 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
-	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import { page } from '$app/stores';
@@ -32,8 +31,6 @@
 	let showDeleteConfirm = false;
 	let showEditModal = false;
 	let projects: Project[] = [];
-	let showTaskDetailModal = false;
-	let selectedTask: Task | null = null;
 	let showEditTaskModal = false;
 	let editingTask: Task | null = null;
 	let showCompletedTasks = false;
@@ -170,13 +167,7 @@
 	}
 
 	function openTaskDetail(task: Task) {
-		selectedTask = task;
-		showTaskDetailModal = true;
-	}
-
-	function openEditFromDetail() {
-		editingTask = selectedTask;
-		showTaskDetailModal = false;
+		editingTask = task;
 		showEditTaskModal = true;
 	}
 
@@ -190,19 +181,6 @@
 		} catch (error) {
 			handleError(error, { operation: 'Update task', component: 'ProjectChatPage' });
 			alert('Failed to update task');
-		}
-	}
-
-	async function handleDeleteFromDetail() {
-		if (!selectedTask || !confirm('Are you sure you want to delete this task?')) return;
-
-		try {
-			await deleteTask(selectedTask.id);
-			showTaskDetailModal = false;
-			await loadData();
-		} catch (error) {
-			handleError(error, { operation: 'Delete task', component: 'ProjectChatPage' });
-			alert('Failed to delete task');
 		}
 	}
 
@@ -969,15 +947,6 @@
 			</div>
 		</div>
 	{/if}
-
-	<TaskDetailModal
-		show={showTaskDetailModal}
-		task={selectedTask}
-		projects={projects}
-		onClose={() => showTaskDetailModal = false}
-		onEdit={openEditFromDetail}
-		onDelete={handleDeleteFromDetail}
-	/>
 
 	<TaskEditModal
 		show={showEditTaskModal}

@@ -100,8 +100,7 @@ export async function updateNoteBlock(blockId: string, content: string) {
 	const { data, error } = await supabase
 		.from('note_blocks')
 		.update({
-			content: { text: content },
-			updated_at: new Date().toISOString()
+			content: { text: content }
 		})
 		.eq('id', blockId)
 		.select()

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
-	import TaskDetailModal from '$lib/components/TaskDetailModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import RecurrencePatternPicker from '$lib/components/RecurrencePatternPicker.svelte';
@@ -33,10 +32,6 @@
 	let newTaskDueTime = '09:00';
 	let newTaskIsAllDay = true;
 	let showCompletedTasks = false;
-
-	// Task detail modal state
-	let showTaskDetailModal = false;
-	let selectedTask: Task | null = null;
 
 	// Edit modal state
 	let showEditTaskModal = false;
@@ -144,27 +139,8 @@
 	}
 
 	function openTaskDetail(task: Task) {
-		selectedTask = task;
-		showTaskDetailModal = true;
-	}
-
-	function openEditFromDetail() {
-		editingTask = selectedTask;
-		showTaskDetailModal = false;
+		editingTask = task;
 		showEditTaskModal = true;
-	}
-
-	async function handleDeleteFromDetail() {
-		if (!selectedTask) return;
-
-		try {
-			await deleteTask(selectedTask.id);
-			showTaskDetailModal = false;
-			selectedTask = null;
-			await loadData();
-		} catch {
-			// Error already handled by deleteTask action
-		}
 	}
 
 	async function handleUpdateTask(updatedTask: Partial<Task>) {
@@ -703,15 +679,6 @@
 	{/if}
 
 	<!-- Task Modals -->
-	<TaskDetailModal
-		show={showTaskDetailModal}
-		task={selectedTask}
-		projects={projects}
-		onClose={() => showTaskDetailModal = false}
-		onEdit={openEditFromDetail}
-		onDelete={handleDeleteFromDetail}
-	/>
-
 	<TaskEditModal
 		show={showEditTaskModal}
 		task={editingTask}

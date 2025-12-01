@@ -358,11 +358,13 @@
 														<strong>Delete {operation.type}</strong>
 													{/if}
 												</div>
-												{#if operation.data.title}
-													<div class="operation-title">{operation.data.title}</div>
-												{/if}
-												{#if operation.data.description}
-													<div class="operation-desc">{operation.data.description}</div>
+												{#if operation.data}
+													{#if operation.data.title}
+														<div class="operation-title">{operation.data.title}</div>
+													{/if}
+													{#if operation.data.description}
+														<div class="operation-desc">{operation.data.description}</div>
+													{/if}
 												{/if}
 												{#if operation.reason}
 													<div class="operation-reason">{operation.reason}</div>

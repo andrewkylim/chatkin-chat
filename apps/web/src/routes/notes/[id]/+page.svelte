@@ -1,12 +1,13 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { getNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
+	import { getProjects } from '$lib/db/projects';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { handleError } from '$lib/utils/error-handler';
 	import { marked } from 'marked';
-	import type { Note, NoteBlock } from '@chatkin/types';
+	import type { Note, NoteBlock, Project } from '@chatkin/types';
 
 	$: noteId = $page.params.id;
 
@@ -15,19 +16,27 @@
 	}
 
 	let note: NoteWithBlocks | null = null;
+	let projects: Project[] = [];
 	let loading = true;
 	let showDeleteConfirm = false;
 	let isEditing = false;
 	let editTitle = '';
 	let editContent = '';
 	let editBlockId = '';
+	let editProjectId: string | null = null;
+
+	// Inline editing state
+	let isEditingInline = false;
+	let autosaveTimeout: number | null = null;
+	let titleElement: HTMLElement;
+	let contentElement: HTMLElement;
 
 	// Determine back navigation based on referrer or default to /notes
 	let backUrl = '/notes';
 	let backText = 'Back to Notes';
 
 	onMount(async () => {
-		await loadNote();
+		await Promise.all([loadNote(), loadProjects()]);
 
 		// Check if user came from a project page
 		const referrer = document.referrer;
@@ -53,6 +62,14 @@
 		}
 	}
 
+	async function loadProjects() {
+		try {
+			projects = await getProjects();
+		} catch (error) {
+			handleError(error, { operation: 'Load projects', component: 'NoteDetailPage' });
+		}
+	}
+
 	function renderMarkdown(text: string): string {
 		return marked(text, { breaks: true }) as string;
 	}
@@ -69,6 +86,7 @@
 
 	function startEdit() {
 		editTitle = note.title;
+		editProjectId = note.project_id || null;
 		// Get the first text block's content
 		const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
 		editContent = firstTextBlock?.content?.text || '';
@@ -80,8 +98,11 @@
 		if (!editTitle.trim()) return;
 
 		try {
-			// Update note title
-			await updateNote(noteId, { title: editTitle });
+			// Update note title and project
+			await updateNote(noteId, {
+				title: editTitle,
+				project_id: editProjectId
+			});
 
 			// Update note block content if it exists
 			if (editBlockId && editContent !== undefined) {
@@ -95,6 +116,60 @@
 			alert('Failed to update note');
 		}
 	}
+
+	// Inline editing functions
+	function handleTitleInput() {
+		scheduleAutosave();
+	}
+
+	function handleContentInput() {
+		scheduleAutosave();
+	}
+
+	function scheduleAutosave() {
+		if (autosaveTimeout) {
+			clearTimeout(autosaveTimeout);
+		}
+		autosaveTimeout = window.setTimeout(async () => {
+			await saveInlineChanges();
+		}, 500);
+	}
+
+	async function saveInlineChanges() {
+		if (!note || !titleElement || !contentElement) return;
+
+		try {
+			const newTitle = titleElement.innerText.trim();
+			const newContent = contentElement.innerText.trim();
+
+			// Update title if changed
+			if (newTitle && newTitle !== note.title) {
+				await updateNote(noteId, { title: newTitle });
+				note.title = newTitle;
+			}
+
+			// Update content if changed
+			const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
+			const currentContent = firstTextBlock?.content?.text || '';
+
+			if (firstTextBlock && newContent !== currentContent) {
+				await updateNoteBlock(firstTextBlock.id, newContent);
+				if (firstTextBlock.content) {
+					firstTextBlock.content.text = newContent;
+				}
+			}
+		} catch (error) {
+			handleError(error, { operation: 'Autosave note', component: 'NoteDetailPage' });
+		}
+	}
+
+	function handleTitleClick() {
+		isEditingInline = true;
+	}
+
+	function handleContentClick() {
+		isEditingInline = true;
+	}
 </script>
 
 <AppLayout>
@@ -105,37 +180,50 @@
 			<p>Loading note...</p>
 		</div>
 	{:else if note}
-		<header class="note-header">
+		<div class="page-header">
 			<a href={backUrl} class="back-btn">
 				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
 					<path d="M12 4l-8 8 8 8"/>
 				</svg>
 				{backText}
 			</a>
-			<div class="header-title-row">
-				<h1>{note.title || 'Untitled'}</h1>
-				<div class="header-actions">
-					<button class="icon-btn" on:click={startEdit} title="Edit note">
-						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M12.5 2.5l3 3L6 15H3v-3L12.5 2.5z"/>
-						</svg>
-					</button>
-					<button class="icon-btn delete-btn" on:click={() => showDeleteConfirm = true} title="Delete note">
-						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M3 4h12M7 4V3a1 1 0 011-1h2a1 1 0 011 1v1M14 4v11a1 1 0 01-1 1H5a1 1 0 01-1-1V4"/>
-						</svg>
-					</button>
-				</div>
+			<div class="header-actions">
+				<button class="icon-btn" on:click={startEdit} title="Edit note">
+					<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12.5 2.5l3 3L6 15H3v-3L12.5 2.5z"/>
+					</svg>
+				</button>
+				<button class="icon-btn delete-btn" on:click={() => showDeleteConfirm = true} title="Delete note">
+					<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M3 4h12M7 4V3a1 1 0 011-1h2a1 1 0 011 1v1M14 4v11a1 1 0 01-1 1H5a1 1 0 01-1-1V4"/>
+					</svg>
+				</button>
 			</div>
-		</header>
+		</div>
 
 		<div class="note-content">
+			<h1
+				bind:this={titleElement}
+				contenteditable="true"
+				on:input={handleTitleInput}
+				on:click={handleTitleClick}
+				class:editing={isEditingInline}
+			>
+				{note.title || 'Untitled'}
+			</h1>
+
 			{#if note.note_blocks && note.note_blocks.length > 0}
 				{#each note.note_blocks.sort((a: NoteBlock, b: NoteBlock) => a.position - b.position) as block (block.id)}
 					{#if block.type === 'text'}
-						<div class="text-block markdown-content">
-							<!-- svelte-ignore svelte/no-at-html-tags -->
-							{@html renderMarkdown(block.content.text || '')}
+						<div
+							bind:this={contentElement}
+							contenteditable="true"
+							on:input={handleContentInput}
+							on:click={handleContentClick}
+							class="text-block editable-content"
+							class:editing={isEditingInline}
+						>
+							{block.content.text || ''}
 						</div>
 					{:else if block.type === 'code'}
 						<div class="code-block">
@@ -173,6 +261,7 @@
 							id="edit-title"
 							bind:value={editTitle}
 							placeholder="Note title"
+							maxlength="50"
 							required
 							autofocus
 						/>
@@ -185,6 +274,15 @@
 							placeholder="Note content (supports Markdown)"
 							rows="10"
 						></textarea>
+					</div>
+					<div class="form-group">
+						<label for="edit-project">Project (optional)</label>
+						<select id="edit-project" bind:value={editProjectId}>
+							<option value={null}>Standalone note</option>
+							{#each projects as project}
+								<option value={project.id}>{project.name}</option>
+							{/each}
+						</select>
 					</div>
 					<div class="modal-actions">
 						<button type="button" class="secondary-btn" on:click={() => isEditing = false}>
@@ -245,19 +343,17 @@
 		to { transform: rotate(360deg); }
 	}
 
-	.note-header {
-		margin-bottom: 2rem;
-	}
-
-	.header-title-row {
+	.page-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		margin-bottom: 1rem;
 	}
 
 	.header-actions {
 		display: flex;
 		gap: 8px;
+		flex-shrink: 0;
 	}
 
 	.icon-btn {
@@ -302,16 +398,13 @@
 		transition: all 0.2s ease;
 	}
 
+	.back-btn svg {
+		margin-top: -1px;
+	}
+
 	.back-btn:hover {
 		color: var(--text-primary);
 		background: var(--bg-tertiary);
-	}
-
-	.note-header h1 {
-		font-size: 2rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		margin: 0;
 	}
 
 	.note-content {
@@ -319,6 +412,27 @@
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-lg);
 		padding: 2rem;
+	}
+
+	.note-content h1 {
+		font-size: 2rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		margin: 0 0 2rem 0;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid var(--border-color);
+		outline: none;
+		cursor: text;
+	}
+
+	.note-content h1:focus {
+		outline: none;
+	}
+
+	.note-content h1:empty:before {
+		content: 'Untitled';
+		color: var(--text-secondary);
+		opacity: 0.5;
 	}
 
 	.text-block {
@@ -329,6 +443,25 @@
 		line-height: 1.6;
 		margin: 0;
 		white-space: pre-wrap;
+	}
+
+	.editable-content {
+		outline: none;
+		cursor: text;
+		white-space: pre-wrap;
+		word-wrap: break-word;
+		min-height: 100px;
+		line-height: 1.6;
+	}
+
+	.editable-content:focus {
+		outline: none;
+	}
+
+	.editable-content:empty:before {
+		content: 'Start typing...';
+		color: var(--text-secondary);
+		opacity: 0.5;
 	}
 
 	/* Markdown content styling */
@@ -484,19 +617,34 @@
 	}
 
 	.form-group input,
-	.form-group textarea {
+	.form-group textarea,
+	.form-group select {
 		width: 100%;
-		padding: 12px 16px;
-		background: var(--bg-tertiary);
+		padding: 10px 12px;
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
+		background: var(--bg-secondary);
 		color: var(--text-primary);
 		font-size: 0.9375rem;
 		font-family: 'Inter', sans-serif;
+		transition: all 0.2s ease;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+	}
+
+	.form-group select {
+		cursor: pointer;
+		padding-right: 36px;
+		background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
+		background-color: var(--bg-secondary);
 	}
 
 	.form-group input:focus,
-	.form-group textarea:focus {
+	.form-group textarea:focus,
+	.form-group select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
 		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
@@ -575,5 +723,20 @@
 
 	.primary-btn:active {
 		transform: translateY(0);
+	}
+
+	/* Mobile adjustments */
+	@media (max-width: 768px) {
+		.note-detail-page {
+			padding: 1rem;
+		}
+
+		.note-content {
+			padding: 1.5rem;
+		}
+
+		.note-content h1 {
+			font-size: 1.5rem;
+		}
 	}
 </style>
