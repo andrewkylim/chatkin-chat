@@ -19,6 +19,7 @@
 	let error = $state<string | null>(null);
 	let showDomainTransition = $state(false);
 	let previousDomain = $state<string | null>(null);
+	let pendingSaves: Promise<any>[] = [];
 
 	const currentQuestion = $derived(questions[currentQuestionIndex]);
 	const currentDomain = $derived(currentQuestion?.domain);
@@ -112,29 +113,46 @@
 		}
 	}
 
-	function handleNext() {
-		// Save current response
-		if (currentQuestion && currentResponse) {
-			saveResponse(currentQuestion.id, currentResponse);
+	async function handleNext(autoValue?: string) {
+		// Use autoValue if provided (from auto-advance), otherwise use currentResponse
+		const responseValue = autoValue || currentResponse;
+
+		// Update local responses map immediately for instant UI feedback
+		if (currentQuestion && responseValue) {
+			responses.set(currentQuestion.id, responseValue);
 		}
 
 		if (currentQuestionIndex < questions.length - 1) {
-			const nextQuestion = questions[currentQuestionIndex + 1];
+			// Not the last question - save in background and track the promise
+			if (currentQuestion && responseValue) {
+				const question = questions.find((q) => q.id === currentQuestion.id);
+				const isOpenEnded = question?.question_type === 'open_ended';
 
-			// Check if we're entering a new domain
-			if (nextQuestion.domain !== currentDomain) {
-				previousDomain = currentDomain;
-				showDomainTransition = true;
-				setTimeout(() => {
-					showDomainTransition = false;
-					currentQuestionIndex++;
-				}, 2000); // Show domain transition for 2 seconds
-			} else {
-				currentQuestionIndex++;
+				const savePromise = supabase.from('assessment_responses').upsert({
+					user_id: $auth.user!.id,
+					question_id: currentQuestion.id,
+					response_value: isOpenEnded ? null : responseValue,
+					response_text: isOpenEnded ? responseValue : null,
+					updated_at: new Date().toISOString()
+				}, { onConflict: 'user_id,question_id' });
+
+				pendingSaves.push(savePromise);
 			}
+
+			// Advance to next question immediately
+			currentQuestionIndex++;
 		} else {
-			// Last question - submit questionnaire
-			submitQuestionnaire();
+			// Last question - save and wait for ALL saves to complete
+			if (currentQuestion && responseValue) {
+				await saveResponse(currentQuestion.id, responseValue);
+			}
+
+			// Wait for all background saves to complete
+			if (pendingSaves.length > 0) {
+				await Promise.all(pendingSaves);
+			}
+
+			await submitQuestionnaire();
 		}
 	}
 
@@ -197,10 +215,14 @@
 			<button onclick={() => window.location.reload()} class="retry-button"> Retry </button>
 		</div>
 	{:else if submitting}
-		<div class="loading-container">
-			<div class="spinner"></div>
-			<p>Analyzing your responses...</p>
-			<p class="sub-text">This may take a moment</p>
+		<div class="analysis-container">
+			<div class="spinner-large"></div>
+			<h2 class="analysis-title">Creating Your Profile</h2>
+			<p class="analysis-description">
+				Analyzing your responses and generating a comprehensive report with personalized
+				recommendations.
+			</p>
+			<p class="analysis-note">This may take up to 30 seconds</p>
 		</div>
 	{:else if showDomainTransition && previousDomain !== currentDomain}
 		<div class="transition-container">
@@ -214,14 +236,16 @@
 				domain={currentDomain}
 			/>
 
-			<QuestionCard
-				question={currentQuestion}
-				value={currentResponse}
-				onNext={handleNext}
-				onBack={handleBack}
-				canGoBack={currentQuestionIndex > 0}
-				isLast={currentQuestionIndex === questions.length - 1}
-			/>
+			{#key currentQuestion.id}
+				<QuestionCard
+					question={currentQuestion}
+					value={currentResponse}
+					onNext={handleNext}
+					onBack={handleBack}
+					canGoBack={currentQuestionIndex > 0}
+					isLast={currentQuestionIndex === questions.length - 1}
+				/>
+			{/key}
 
 			{#if saving}
 				<p class="saving-indicator">Saving...</p>
@@ -239,13 +263,15 @@
 
 	.loading-container,
 	.error-container,
-	.transition-container {
+	.transition-container,
+	.analysis-container {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		min-height: 60vh;
-		gap: 20px;
+		min-height: 100vh;
+		gap: 24px;
+		padding: 20px;
 	}
 
 	.spinner {
@@ -255,6 +281,16 @@
 		border-top-color: var(--accent-primary);
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
+	}
+
+	.spinner-large {
+		width: 64px;
+		height: 64px;
+		border: 5px solid var(--border-color);
+		border-top-color: var(--accent-primary);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin-bottom: 16px;
 	}
 
 	@keyframes spin {
@@ -267,6 +303,31 @@
 		font-size: 1.125rem;
 		color: var(--text-primary);
 		font-weight: 500;
+	}
+
+	.analysis-title {
+		font-size: 2rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0;
+		text-align: center;
+	}
+
+	.analysis-description {
+		font-size: 1.125rem;
+		color: var(--text-secondary);
+		text-align: center;
+		max-width: 500px;
+		line-height: 1.6;
+		margin: 0;
+	}
+
+	.analysis-note {
+		font-size: 0.9375rem;
+		color: var(--text-muted);
+		text-align: center;
+		font-style: italic;
+		margin: 8px 0 0 0;
 	}
 
 	.sub-text {
@@ -307,13 +368,13 @@
 	}
 
 	.question-container {
-		animation: fadeIn 0.3s ease-in;
+		animation: fadeIn 0.15s ease-in;
 	}
 
 	@keyframes fadeIn {
 		from {
 			opacity: 0;
-			transform: translateY(10px);
+			transform: translateY(5px);
 		}
 		to {
 			opacity: 1;

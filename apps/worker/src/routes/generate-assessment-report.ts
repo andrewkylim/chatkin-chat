@@ -20,7 +20,7 @@ interface QuestionResponse {
 		question_type: string;
 		weight: number;
 		options: any;
-	};
+	} | null;
 }
 
 interface DomainScores {
@@ -74,17 +74,17 @@ export async function handleGenerateAssessmentReport(
 		}
 
 		// Calculate domain scores
-		const domainScores = calculateDomainScores(responses as QuestionResponse[]);
+		const domainScores = calculateDomainScores(responses as unknown as QuestionResponse[]);
 		logger.debug('Calculated domain scores', { domainScores });
 
 		// Generate AI report
-		const client = createAnthropicClient(env);
-		const aiReport = await generateAIReport(client, responses as QuestionResponse[], domainScores);
+		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
+		const aiReport = await generateAIReport(client, responses as unknown as QuestionResponse[], domainScores);
 
 		// Generate profile summary for AI context
 		const profileSummary = await generateProfileSummary(
 			client,
-			responses as QuestionResponse[],
+			responses as unknown as QuestionResponse[],
 			domainScores
 		);
 
@@ -170,7 +170,7 @@ export async function handleGenerateAssessmentReport(
 			}
 		);
 	} catch (error) {
-		return handleError(error, corsHeaders);
+		return handleError(error, 'generate-assessment-report', corsHeaders);
 	}
 }
 
@@ -179,6 +179,7 @@ function calculateDomainScores(responses: QuestionResponse[]): DomainScores {
 
 	// Group responses by domain
 	responses.forEach((response) => {
+		if (!response.assessment_questions) return;
 		const domain = response.assessment_questions.domain;
 		if (!domainGroups[domain]) {
 			domainGroups[domain] = [];
@@ -195,6 +196,7 @@ function calculateDomainScores(responses: QuestionResponse[]): DomainScores {
 
 		domainResponses.forEach((response) => {
 			const question = response.assessment_questions;
+			if (!question) return;
 			let score = 0;
 
 			// Get score based on question type
@@ -230,9 +232,10 @@ async function generateAIReport(
 	domainScores: DomainScores
 ): Promise<string> {
 	const responsesText = responses
+		.filter((r) => r.assessment_questions)
 		.map((r) => {
 			const answer = r.response_value || r.response_text || 'No response';
-			return `Q: ${r.assessment_questions.question_text}\nA: ${answer}`;
+			return `Q: ${r.assessment_questions!.question_text}\nA: ${answer}`;
 		})
 		.join('\n\n');
 
@@ -272,9 +275,10 @@ async function generateProfileSummary(
 	domainScores: DomainScores
 ): Promise<string> {
 	const responsesText = responses
+		.filter((r) => r.assessment_questions)
 		.map((r) => {
 			const answer = r.response_value || r.response_text || 'No response';
-			return `Q: ${r.assessment_questions.question_text}\nA: ${answer}`;
+			return `Q: ${r.assessment_questions!.question_text}\nA: ${answer}`;
 		})
 		.join('\n\n');
 

@@ -92,7 +92,7 @@ export async function handleGenerateOnboarding(
 		}
 
 		// Generate onboarding content
-		const client = createAnthropicClient(env);
+		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
 		const onboardingContent = await generateOnboardingContent(
 			client,
 			profile.profile_summary,
@@ -194,7 +194,7 @@ export async function handleGenerateOnboarding(
 			}
 		);
 	} catch (error) {
-		return handleError(error, corsHeaders);
+		return handleError(error, 'generate-onboarding', corsHeaders);
 	}
 }
 

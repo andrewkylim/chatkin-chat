@@ -178,6 +178,8 @@ export async function createRecurringTaskInstance(
 		status: 'todo',
 		priority: parentTask.priority,
 		due_date: dueDate,
+		due_time: parentTask.due_time,
+		is_all_day: parentTask.is_all_day,
 		is_recurring: false, // Instances are not recurring themselves
 		recurrence_pattern: null,
 		parent_task_id: parentTask.id, // Link back to parent

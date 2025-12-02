@@ -156,6 +156,8 @@ export async function createTaskAction(taskData: {
 	try {
 		await dbCreateTask({
 			...taskData,
+			due_time: null,
+			is_all_day: true,
 			is_recurring: false,
 			recurrence_pattern: null,
 			parent_task_id: null,
