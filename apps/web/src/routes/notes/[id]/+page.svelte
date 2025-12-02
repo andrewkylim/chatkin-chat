@@ -87,11 +87,11 @@
 
 	function startEdit() {
 		if (!note) return;
-		editTitle = note.title;
+		editTitle = note.title || '';
 		editProjectId = note.project_id || null;
 		// Get the first text block's content
 		const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
-		editContent = firstTextBlock?.content?.text || '';
+		editContent = (firstTextBlock?.content?.text as string) || '';
 		editBlockId = firstTextBlock?.id || '';
 		isEditing = true;
 	}

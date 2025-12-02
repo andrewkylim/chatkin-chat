@@ -153,16 +153,22 @@ export async function createTaskAction(taskData: {
 	due_date: string | null;
 	project_id: string | null;
 	status: 'todo' | 'in_progress' | 'completed';
+	due_time?: string | null;
+	is_all_day?: boolean;
+	is_recurring?: boolean;
+	recurrence_pattern?: RecurrencePattern | null;
+	parent_task_id?: string | null;
+	recurrence_end_date?: string | null;
 }): Promise<void> {
 	try {
 		await dbCreateTask({
 			...taskData,
-			due_time: null,
-			is_all_day: true,
-			is_recurring: false,
-			recurrence_pattern: null,
-			parent_task_id: null,
-			recurrence_end_date: null
+			due_time: taskData.due_time ?? null,
+			is_all_day: taskData.is_all_day ?? true,
+			is_recurring: taskData.is_recurring ?? false,
+			recurrence_pattern: taskData.recurrence_pattern ?? null,
+			parent_task_id: taskData.parent_task_id ?? null,
+			recurrence_end_date: taskData.recurrence_end_date ?? null
 		});
 	} catch (error) {
 		handleError(error, { operation: 'Create task', component: 'TasksPage' });
