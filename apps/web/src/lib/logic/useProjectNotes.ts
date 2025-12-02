@@ -52,13 +52,14 @@ export function formatDate(dateString: string): string {
 
 /**
  * Gets a preview of the note's content from its first text block
- * @param note - Note with blocks
+ * @param note - Note (may or may not have blocks)
  * @returns Preview text (max 200 chars) or placeholder message
  */
-export function getContentPreview(note: NoteWithBlocks): string {
-	if (!note.note_blocks || note.note_blocks.length === 0) return 'No content yet...';
+export function getContentPreview(note: Note | NoteWithBlocks): string {
+	const noteWithBlocks = note as NoteWithBlocks;
+	if (!noteWithBlocks.note_blocks || noteWithBlocks.note_blocks.length === 0) return 'No content yet...';
 
-	const firstTextBlock = note.note_blocks.find((block: NoteBlock) => block.type === 'text');
+	const firstTextBlock = noteWithBlocks.note_blocks.find((block: NoteBlock) => block.type === 'text');
 	if (!firstTextBlock || !firstTextBlock.content?.text) return 'No content yet...';
 
 	const text = firstTextBlock.content.text as string;
@@ -67,14 +68,15 @@ export function getContentPreview(note: NoteWithBlocks): string {
 
 /**
  * Counts total words across all text blocks in a note
- * @param note - Note with blocks
+ * @param note - Note (may or may not have blocks)
  * @returns Total word count
  */
-export function getWordCount(note: NoteWithBlocks): number {
-	if (!note.note_blocks || note.note_blocks.length === 0) return 0;
+export function getWordCount(note: Note | NoteWithBlocks): number {
+	const noteWithBlocks = note as NoteWithBlocks;
+	if (!noteWithBlocks.note_blocks || noteWithBlocks.note_blocks.length === 0) return 0;
 
 	let allText = '';
-	for (const block of note.note_blocks) {
+	for (const block of noteWithBlocks.note_blocks) {
 		if (block.type === 'text' && block.content?.text) {
 			allText += (block.content.text as string) + ' ';
 		}
