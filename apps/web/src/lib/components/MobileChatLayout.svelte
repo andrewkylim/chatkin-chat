@@ -311,7 +311,7 @@
 									<button class="confirm-btn" type="button" onclick={() => {
 										if (!onQuestionSubmit) return;
 										const answers = {};
-										message.questions.forEach((q, qIdx) => {
+										message.questions?.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
 											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
 											if (selected) {

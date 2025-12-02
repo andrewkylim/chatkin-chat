@@ -14,6 +14,7 @@
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { logger } from '$lib/utils/logger';
 	import { supabase } from '$lib/supabase';
+	import type { TaskData, NoteData, ProjectData } from '$lib/types/chat';
 
 	// Props for customization
 	export let scope: 'global' | 'tasks' | 'notes' | 'project' = 'global';
@@ -545,6 +546,7 @@
 					successCount++;
 				} else if (op.operation === 'update') {
 					if (!op.id) throw new Error('Missing ID for update operation');
+					if (!op.changes) throw new Error('Missing changes for update operation');
 
 					if (op.type === 'task') {
 						await updateTask(op.id, op.changes);
@@ -1456,7 +1458,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={() => {
 										const answers = {};
-										message.questions.forEach((q, qIdx) => {
+										message.questions?.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
 											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
 											if (selected) {

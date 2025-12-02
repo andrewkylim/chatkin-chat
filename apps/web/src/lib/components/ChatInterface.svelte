@@ -221,6 +221,7 @@
 						const taskData = op.data as TaskData;
 						await createTask({
 							...taskData,
+							description: taskData.description ?? null,
 							project_id: taskData.project_id || projectId || null,
 							is_recurring: false,
 							recurrence_pattern: null,
@@ -236,7 +237,11 @@
 						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
 						const projectData = op.data as ProjectData;
-						await createProject({ ...projectData, description: projectData.description || null });
+						await createProject({
+							name: projectData.name,
+							description: projectData.description ?? null,
+							color: projectData.color
+						});
 						notificationCounts.incrementCount('projects');
 						results.push(`✓ Created project: ${projectData.name}`);
 					}

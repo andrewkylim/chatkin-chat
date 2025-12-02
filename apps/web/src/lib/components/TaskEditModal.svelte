@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Task, Project, RecurrencePattern } from '@chatkin/types';
+	import type { Priority } from '$lib/types/chat';
 	import RecurrencePatternPicker from './RecurrencePatternPicker.svelte';
 
 	export let show = false;
@@ -11,7 +12,7 @@
 
 	let editTaskTitle = '';
 	let editTaskDescription = '';
-	let editTaskPriority = 'medium';
+	let editTaskPriority: Priority = 'medium';
 	let editTaskDueDate = '';
 	let editTaskDueTime = '09:00';
 	let isAllDay = true;
