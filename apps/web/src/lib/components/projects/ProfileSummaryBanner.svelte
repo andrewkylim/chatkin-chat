@@ -74,14 +74,20 @@
 			</div>
 		</div>
 		<div class="banner-text">
-			<div class="summary-content">
+			{#if results.ai_report}
 				{@const overviewText = extractOverviewSection(results.ai_report)}
-				{#if overviewText}
-					{@html formatOverviewContent(overviewText)}
-				{:else}
+				<div class="summary-content">
+					{#if overviewText}
+						{@html formatOverviewContent(overviewText)}
+					{:else}
+						<p>Your wellness assessment is complete with scores across 6 domains. Last updated {formatDate(results.completed_at)}.</p>
+					{/if}
+				</div>
+			{:else}
+				<div class="summary-content">
 					<p>Your wellness assessment is complete with scores across 6 domains. Last updated {formatDate(results.completed_at)}.</p>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 		<div class="banner-footer">
 			<a href="/profile" class="view-report-btn">
