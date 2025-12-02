@@ -6,7 +6,7 @@
  * The component remains responsible only for UI state and rendering.
  */
 
-import type { Task, Project } from '@chatkin/types';
+import type { Task, Project, RecurrencePattern } from '@chatkin/types';
 import {
 	createTask as dbCreateTask,
 	toggleTaskComplete,
