@@ -784,7 +784,14 @@
 {#if showRetakeModal}
 	<div class="modal-overlay" on:click={() => showRetakeModal = false}>
 		<div class="modal" on:click|stopPropagation>
-			<h2>⚠️ Retake Assessment?</h2>
+			<div class="modal-header-with-icon">
+				<svg class="warning-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M12 2L2 20h20L12 2z" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+					<path d="M12 9v4" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/>
+					<circle cx="12" cy="17" r="0.5" fill="#F59E0B" stroke="#F59E0B" stroke-width="1"/>
+				</svg>
+				<h2>Retake Assessment?</h2>
+			</div>
 			<p class="warning-text">
 				Retaking this assessment will delete all your existing content:
 			</p>
@@ -1038,6 +1045,21 @@
 		font-weight: 600;
 		color: var(--text-primary);
 		margin: 0 0 20px 0;
+	}
+
+	.modal-header-with-icon {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 20px;
+	}
+
+	.modal-header-with-icon h2 {
+		margin: 0;
+	}
+
+	.warning-icon {
+		flex-shrink: 0;
 	}
 
 	.warning-text {

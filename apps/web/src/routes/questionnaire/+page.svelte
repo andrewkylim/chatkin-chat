@@ -431,10 +431,10 @@
 	<div class="modal-overlay">
 		<div class="modal-content">
 			<div class="modal-header">
-				<svg class="warning-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-					<line x1="12" y1="9" x2="12" y2="13"/>
-					<line x1="12" y1="17" x2="12.01" y2="17"/>
+				<svg class="warning-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M12 2L2 20h20L12 2z" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+					<path d="M12 9v4" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/>
+					<circle cx="12" cy="17" r="0.5" fill="#F59E0B" stroke="#F59E0B" stroke-width="1"/>
 				</svg>
 				<h2>Retake Assessment?</h2>
 			</div>
