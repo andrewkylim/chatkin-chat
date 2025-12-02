@@ -57,7 +57,7 @@
 
 	interface Operation {
 		operation: 'create' | 'update' | 'delete';
-		type: 'task' | 'note' | 'project';
+		type: 'task' | 'note' | 'project' | 'file';
 		id?: string;
 		data?: Record<string, unknown>;
 		changes?: Record<string, unknown>;
