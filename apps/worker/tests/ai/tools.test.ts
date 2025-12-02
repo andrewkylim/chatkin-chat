@@ -36,6 +36,6 @@ describe('AI Tools', () => {
 
     expect(operationSchema).toBeDefined();
     expect(operationSchema!.items.properties.operation.enum).toEqual(['create', 'update', 'delete']);
-    expect(operationSchema!.items.properties.type.enum).toEqual(['task', 'note', 'project']);
+    expect(operationSchema!.items.properties.type.enum).toEqual(['task', 'note']);
   });
 });
