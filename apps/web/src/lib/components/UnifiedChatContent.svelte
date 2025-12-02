@@ -1113,9 +1113,9 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 					id: msg.id, // Preserve message ID for updating metadata
 					role: msg.role === 'assistant' ? 'ai' : 'user',
 					content: msg.content,
-					proposedActions: msg.metadata?.proposedActions,
-					files: msg.metadata?.files
-				}));
+					proposedActions: msg.metadata?.proposedActions as AIAction[] | undefined,
+					files: msg.metadata?.files as Message['files']
+				})) as Message[];
 			} else {
 				// No history, start empty
 				messages = [];
@@ -1682,9 +1682,10 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 	</div>
 
 	<!-- Mobile: Header + full-screen chat -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<MobileChatLayout
 		bind:this={mobileChatLayout}
-		bind:messages
+		bind:messages={messages as any}
 		bind:inputMessage
 		bind:uploadedFiles
 		{isStreaming}
