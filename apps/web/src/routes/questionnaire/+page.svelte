@@ -166,7 +166,7 @@
 					response_value: isOpenEnded ? null : responseValue,
 					response_text: isOpenEnded ? responseValue : null,
 					updated_at: new Date().toISOString()
-				}, { onConflict: 'user_id,question_id' });
+				}, { onConflict: 'user_id,question_id' }) as unknown as Promise<any>;
 
 				pendingSaves.push(savePromise);
 			}
