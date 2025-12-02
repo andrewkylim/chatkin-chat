@@ -2,7 +2,6 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
-	import ProfileSummaryBanner from '$lib/components/projects/ProfileSummaryBanner.svelte';
 	import DomainProjectCard from '$lib/components/projects/DomainProjectCard.svelte';
 	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
 	import { getAssessmentResults } from '$lib/db/assessment';
@@ -244,6 +243,57 @@
 		return domain ? colorMap[domain] : 'rgba(199, 124, 92, 0.2)';
 	}
 
+	function getDomainConfig(domain: WellnessDomain): { color: string; iconPath: string; desc: string } {
+		const icons: Record<string, string> = {
+			'dumbbell': 'M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2',
+			'brain': 'M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4',
+			'target': 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
+			'users': 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
+			'trending-up': 'M22 7 13.5 15.5 8.5 10.5 2 17 M16 7h6v6',
+			'dollar-sign': 'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'
+		};
+
+		const domainConfig: Record<WellnessDomain, { icon: string; color: string; desc: string }> = {
+			Body: {
+				icon: 'dumbbell',
+				color: 'var(--domain-body)',
+				desc: 'Physical health & energy'
+			},
+			Mind: {
+				icon: 'brain',
+				color: 'var(--domain-mind)',
+				desc: 'Mental & emotional wellbeing'
+			},
+			Purpose: {
+				icon: 'target',
+				color: 'var(--domain-purpose)',
+				desc: 'Work, meaning & fulfillment'
+			},
+			Connection: {
+				icon: 'users',
+				color: 'var(--domain-connection)',
+				desc: 'Relationships & community'
+			},
+			Growth: {
+				icon: 'trending-up',
+				color: 'var(--domain-growth)',
+				desc: 'Learning & development'
+			},
+			Finance: {
+				icon: 'dollar-sign',
+				color: 'var(--domain-finance)',
+				desc: 'Financial & resource stability'
+			}
+		};
+
+		const config = domainConfig[domain];
+		return {
+			color: config.color,
+			iconPath: icons[config.icon],
+			desc: config.desc
+		};
+	}
+
 	function truncateDescription(description: string, maxLength: number = 50) {
 		if (description.length <= maxLength) return description;
 		return description.substring(0, maxLength) + '...';
@@ -334,9 +384,6 @@
 					<p>Create your first project to get started</p>
 				</div>
 			{:else}
-				<!-- Profile Summary Banner -->
-				<ProfileSummaryBanner results={assessmentResults} />
-
 				{#if expandedDomain === null}
 					<!-- Domain Cards Grid View -->
 					<div class="domains-grid">
@@ -373,11 +420,64 @@
 							</button>
 
 							<div class="domain-header">
-								<h2>{group.domain || 'Unassigned'}</h2>
+								<div class="domain-header-top">
+									<div class="domain-header-left">
+										{#if group.domain}
+											{@const config = getDomainConfig(group.domain)}
+											<div class="domain-icon-large" style="background-color: {config.color}">
+												<svg
+													width="28"
+													height="28"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="white"
+													stroke-width="2.5"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<path d={config.iconPath} />
+												</svg>
+											</div>
+											<div class="domain-info">
+												<h2>{group.domain}</h2>
+												<p class="domain-desc">{config.desc}</p>
+											</div>
+										{:else}
+											<div class="domain-icon-large unassigned">
+												<svg
+													width="28"
+													height="28"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="white"
+													stroke-width="2.5"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z" />
+												</svg>
+											</div>
+											<div class="domain-info">
+												<h2>Unassigned</h2>
+												<p class="domain-desc">{group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'} without a domain</p>
+											</div>
+										{/if}
+									</div>
+									{#if group.domain}
+										<div class="domain-score-badge">
+											<span class="score-value">{group.domainScore.toFixed(1)}</span>
+											<span class="score-max">/10</span>
+										</div>
+									{/if}
+								</div>
 								{#if group.domain}
-									<div class="domain-score-badge">
-										<span class="score-value">{group.domainScore.toFixed(1)}</span>
-										<span class="score-max">/10</span>
+									{@const percentage = Math.round((group.domainScore / 10) * 100)}
+									{@const config = getDomainConfig(group.domain)}
+									<div class="domain-progress-section">
+										<div class="progress-bar">
+											<div class="progress-fill" style="width: {percentage}%; background: {config.color}"></div>
+										</div>
+										<span class="progress-percent">{percentage}%</span>
 									</div>
 								{/if}
 							</div>
@@ -651,57 +751,138 @@
 	}
 
 	.back-button {
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		padding: 8px 16px;
-		background: none;
-		border: none;
-		color: var(--text-secondary);
+		padding: 10px 16px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
 		font-size: 0.9375rem;
 		font-weight: 500;
 		cursor: pointer;
-		transition: color 0.2s ease;
-		margin-bottom: 24px;
+		transition: all 0.2s ease;
+		margin-bottom: 28px;
 	}
 
 	.back-button:hover {
-		color: var(--text-primary);
+		background: var(--bg-tertiary);
+		border-color: var(--accent-primary);
+	}
+
+	.back-button svg {
+		flex-shrink: 0;
 	}
 
 	.domain-header {
+		padding: 24px 28px;
+		margin-bottom: 32px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-lg);
+	}
+
+	.domain-header-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 20px;
+		margin-bottom: 20px;
+	}
+
+	.domain-header-left {
 		display: flex;
 		align-items: center;
 		gap: 16px;
-		margin-bottom: 32px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.domain-icon-large {
+		width: 56px;
+		height: 56px;
+		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		color: white;
+	}
+
+	.domain-icon-large.unassigned {
+		background-color: #94a3b8;
+	}
+
+	.domain-info {
+		flex: 1;
+		min-width: 0;
 	}
 
 	.domain-header h2 {
-		font-size: 2rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		color: var(--text-primary);
+		margin: 0 0 4px 0;
+		line-height: 1.2;
+	}
+
+	.domain-desc {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		margin: 0;
+		line-height: 1.4;
 	}
 
 	.domain-score-badge {
 		display: flex;
 		align-items: baseline;
-		gap: 4px;
-		padding: 8px 16px;
-		background: var(--bg-secondary);
-		border: 2px solid var(--border-color);
+		gap: 3px;
+		padding: 10px 18px;
+		background: var(--bg-tertiary);
 		border-radius: var(--radius-md);
+		flex-shrink: 0;
 	}
 
 	.domain-score-badge .score-value {
-		font-size: 1.5rem;
+		font-size: 1.75rem;
 		font-weight: 700;
-		color: var(--accent-primary);
+		color: var(--text-primary);
+		line-height: 1;
+		letter-spacing: -0.02em;
 	}
 
 	.domain-score-badge .score-max {
-		font-size: 1rem;
+		font-size: 0.9375rem;
 		color: var(--text-secondary);
-		font-weight: 500;
+		font-weight: 600;
+	}
+
+	.domain-progress-section {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.domain-progress-section .progress-bar {
+		flex: 1;
+		height: 8px;
+		background: var(--bg-tertiary);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+
+	.domain-progress-section .progress-fill {
+		height: 100%;
+		border-radius: 4px;
+		transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.domain-progress-section .progress-percent {
+		font-size: 0.875rem;
+		font-weight: 600;
+		flex-shrink: 0;
+		color: var(--text-secondary);
 	}
 
 	/* Projects Grid */
