@@ -1,6 +1,6 @@
 /**
- * Generate onboarding content endpoint
- * Creates comprehensive life plan with projects, tasks, and notes based on assessment
+ * Generate onboarding content endpoint - Multi-call optimized version
+ * Creates comprehensive life plan with projects, tasks, and notes via multiple fast AI calls
  */
 
 import type { Env, CorsHeaders } from '../types';
@@ -71,7 +71,7 @@ export async function handleGenerateOnboarding(
 			throw new WorkerError('Assessment results not found', 404);
 		}
 
-		// Fetch all responses for detailed context
+		// Fetch responses for context
 		const { data: responses, error: responsesError } = await supabaseAdmin
 			.from('assessment_responses')
 			.select(
@@ -91,9 +91,9 @@ export async function handleGenerateOnboarding(
 			throw new WorkerError('Failed to fetch questionnaire responses', 500);
 		}
 
-		// Generate onboarding content
+		// Generate onboarding content via multiple fast calls
 		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
-		const onboardingContent = await generateOnboardingContent(
+		const onboardingContent = await generateOnboardingContentMultiCall(
 			client,
 			profile.profile_summary,
 			results.domain_scores,
@@ -101,7 +101,7 @@ export async function handleGenerateOnboarding(
 		);
 
 		// Create projects first
-		const projectMap = new Map<string, string>(); // project_name -> project_id
+		const projectMap = new Map<string, string>();
 
 		for (const project of onboardingContent.projects) {
 			const { data: createdProject, error: projectError } = await supabaseAdmin
@@ -198,7 +198,7 @@ export async function handleGenerateOnboarding(
 	}
 }
 
-async function generateOnboardingContent(
+async function generateOnboardingContentMultiCall(
 	client: any,
 	profileSummary: string,
 	domainScores: any,
@@ -209,124 +209,121 @@ async function generateOnboardingContent(
 		.join('\n');
 
 	const responsesText = responses
-		.slice(0, 20) // Include first 20 responses for context
+		.slice(0, 10) // Reduced for speed
 		.map((r: any) => {
 			const answer = r.response_value || r.response_text || 'No response';
 			return `Q: ${r.assessment_questions?.question_text}\nA: ${answer}`;
 		})
 		.join('\n\n');
 
-	const prompt = `You are a professional life strategist creating a comprehensive life organization system based on a detailed psychological assessment.
+	// Call 1: Generate projects (5-7s)
+	logger.info('Generating projects...');
+	const projects = await generateProjects(client, profileSummary, domainScoresText);
 
-## USER PROFILE (Full Analysis):
-${profileSummary}
+	// Call 2: Generate all tasks in one optimized call (8-12s)
+	logger.info('Generating tasks...');
+	const tasks = await generateAllTasks(client, profileSummary, domainScoresText, responsesText, projects);
 
-## DOMAIN SCORES:
-${domainScoresText}
+	// Notes will be generated separately via /api/generate-notes endpoint
+	// This keeps the main onboarding flow fast (<30s)
+	const notes: OnboardingContent['notes'] = [];
 
-## SAMPLE USER RESPONSES:
-${responsesText}
-
----
-
-Create a COMPREHENSIVE LIFE PLAN that addresses ALL 6 domains with genuinely useful, actionable content.
-
-Generate a multi-project system with detailed tasks and strategic notes:
-
-### PROJECTS (Create 6-8 projects covering all domains):
-
-1. **Life Foundation Project** - "Organizing My Life with Chatkin"
-   - Meta-project for overall system setup
-   - Onboarding tasks, system customization
-
-2. **Body Domain Project** - Based on their physical health needs
-   - Title reflects their specific situation (e.g., "Building Sustainable Fitness Habits", "Energy & Vitality Recovery")
-
-3. **Mind Domain Project** - Mental/emotional wellbeing
-   - Title reflects their needs (e.g., "Stress Management System", "Emotional Resilience Building")
-
-4. **Purpose Domain Project** - Career/work/meaning
-   - Title reflects their situation (e.g., "Career Direction & Alignment", "Work-Life Integration Strategy")
-
-5. **Connection Domain Project** - Relationships/community
-   - Title reflects their needs (e.g., "Strengthening Core Relationships", "Building Community Connections")
-
-6. **Growth Domain Project** - Learning/development
-   - Title reflects their goals (e.g., "Skill Development Roadmap", "Personal Growth Journey")
-
-7. **Finance Domain Project** - Financial/stability
-   - Title reflects their situation (e.g., "Financial Stability Plan", "Resource Management Framework")
-
-### TASKS (40-60 total across all projects):
-
-Each project should have 5-10 tasks that are:
-- **Specific and actionable**: Not "improve health" but "Schedule annual physical exam this week"
-- **Personalized**: Based on their actual responses and situation
-- **Varied in scope**: Quick wins (15min) to major initiatives (ongoing)
-- **Prioritized thoughtfully**: High for urgent/impactful, medium for important, low for nice-to-have
-- **Sequential where needed**: Some tasks unlock others
-- **Genuinely useful**: Each task should move the needle on their life
-
-Priority distribution:
-- ~20% High priority (critical/urgent)
-- ~50% Medium priority (important, strategic)
-- ~30% Low priority (beneficial, aspirational)
-
-### NOTES (15-25 strategic notes across projects):
-
-Create comprehensive reference notes:
-- **Frameworks**: Mental models, decision-making frameworks
-- **Resources**: Curated tools, apps, books, services
-- **Strategies**: Detailed approaches for common challenges
-- **Templates**: Planning templates, reflection prompts
-- **Insights**: Key insights from their assessment
-- **Action Plans**: Step-by-step guides for complex goals
-
-Each note should be 200-500 words of genuinely useful content in markdown format.
-
----
-
-Return as JSON:
-{
-  "projects": [
-    {
-      "name": "...",
-      "description": "...",
-      "color": "blue/green/purple/orange/red/yellow"
-    }
-  ],
-  "tasks": [
-    {
-      "project_name": "...",
-      "title": "...",
-      "description": "...",
-      "priority": "high/medium/low",
-      "status": "todo"
-    }
-  ],
-  "notes": [
-    {
-      "project_name": "...",
-      "title": "...",
-      "content": "..."
-    }
-  ]
+	return { projects, tasks, notes };
 }
 
-CRITICAL: This is their first impression of Chatkin's AI capabilities. Every task and note should demonstrate deep understanding of their situation and provide genuine value. Avoid generic advice - everything should feel tailored to THEIR specific assessment responses.`;
+async function generateProjects(
+	client: any,
+	profileSummary: string,
+	domainScoresText: string
+): Promise<OnboardingContent['projects']> {
+	const prompt = `Create 7 personalized project titles for a life organization system.
+
+PROFILE: ${profileSummary.substring(0, 500)}
+SCORES: ${domainScoresText}
+
+Return ONLY JSON array with 7 projects:
+[
+  {"name": "Getting Started with Chatkin", "description": "Learn the system and set up your workspace", "color": "blue"},
+  {"name": "Personalized Body Project Title", "description": "Description based on physical health needs", "color": "green"},
+  {"name": "Personalized Mind Project Title", "description": "Description for mental/emotional wellbeing", "color": "purple"},
+  {"name": "Personalized Purpose Project Title", "description": "Description for career/work goals", "color": "orange"},
+  {"name": "Personalized Connection Project Title", "description": "Description for relationships", "color": "red"},
+  {"name": "Personalized Growth Project Title", "description": "Description for learning goals", "color": "yellow"},
+  {"name": "Personalized Finance Project Title", "description": "Description for financial stability", "color": "blue"}
+]
+
+Keep names under 40 chars, descriptions under 100 chars.`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',
-		max_tokens: 8000,
+		max_tokens: 1000,
 		messages: [{ role: 'user', content: prompt }]
 	});
 
-	// Extract JSON from response
-	const responseText = message.content[0].text;
-	const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+	const responseText = message.content[0].text.trim();
+	let jsonText = responseText;
 
+	// Remove markdown code blocks if present
+	if (responseText.startsWith('```')) {
+		jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+	}
+
+	const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
 	if (!jsonMatch) {
-		throw new WorkerError('Failed to parse onboarding content from AI response', 500);
+		logger.error('Failed to parse projects response', { responseText: responseText.substring(0, 300) });
+		throw new WorkerError('Failed to parse projects', 500);
+	}
+
+	return JSON.parse(jsonMatch[0]);
+}
+
+async function generateAllTasks(
+	client: any,
+	profileSummary: string,
+	domainScoresText: string,
+	responsesText: string,
+	projects: OnboardingContent['projects']
+): Promise<OnboardingContent['tasks']> {
+	const projectNames = projects.map((p) => p.name).join('\n- ');
+
+	const prompt = `Generate 40-50 specific, actionable tasks across these projects:
+- ${projectNames}
+
+PROFILE: ${profileSummary.substring(0, 600)}
+SCORES: ${domainScoresText}
+KEY RESPONSES: ${responsesText.substring(0, 800)}
+
+Create tasks that are:
+- Specific and actionable (e.g., "Schedule annual physical exam" not "improve health")
+- Personalized to their situation
+- Distributed across all projects (5-7 tasks per project)
+- Varied priority (20% high, 50% medium, 30% low)
+
+Return ONLY JSON array:
+[
+  {"project_name": "exact project name", "title": "Task title (max 50 chars)", "description": "What and why (max 150 chars)", "priority": "high|medium|low", "status": "todo"}
+]
+
+CRITICAL: Use EXACT project names from the list. Generate 40-50 tasks total.`;
+
+	const message = await client.messages.create({
+		model: 'claude-sonnet-4-20250514',
+		max_tokens: 4000,
+		messages: [{ role: 'user', content: prompt }]
+	});
+
+	const responseText = message.content[0].text.trim();
+	let jsonText = responseText;
+
+	// Remove markdown code blocks if present
+	if (responseText.startsWith('```')) {
+		jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+	}
+
+	const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
+	if (!jsonMatch) {
+		logger.error('Failed to parse tasks response', { responseText: responseText.substring(0, 500) });
+		throw new WorkerError('Failed to parse tasks', 500);
 	}
 
 	return JSON.parse(jsonMatch[0]);

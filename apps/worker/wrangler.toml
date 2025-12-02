@@ -28,6 +28,7 @@ routes = [
   { pattern = "chatkin.ai/api/send-notification", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/api/generate-assessment-report", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/api/generate-onboarding", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/generate-notes", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/api/temp-files/*", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/api/files/*", zone_name = "chatkin.ai" },
   { pattern = "chatkin.ai/img/*", zone_name = "chatkin.ai" }
@@ -42,6 +43,20 @@ INTERNAL_WORKER_URL = "https://chatkin-os-worker.andrewkylim.workers.dev"
 
 [env.production]
 name = "chatkin-os-worker"
+routes = [
+  { pattern = "chatkin.ai/api/health", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/ai/*", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/upload", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/save-to-library", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/delete-file", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/send-notification", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/generate-assessment-report", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/generate-onboarding", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/generate-notes", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/temp-files/*", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/api/files/*", zone_name = "chatkin.ai" },
+  { pattern = "chatkin.ai/img/*", zone_name = "chatkin.ai" }
+]
 
 [env.production.vars]
 PUBLIC_WORKER_URL = "https://chatkin.ai"

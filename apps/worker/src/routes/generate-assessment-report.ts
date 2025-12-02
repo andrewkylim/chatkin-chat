@@ -10,6 +10,7 @@ import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
 import { handleGenerateOnboarding } from './generate-onboarding';
+import { handleGenerateNotes } from './generate-notes';
 
 interface QuestionResponse {
 	question_id: string;
@@ -31,8 +32,7 @@ interface DomainScores {
 export async function handleGenerateAssessmentReport(
 	request: Request,
 	env: Env,
-	corsHeaders: CorsHeaders,
-	ctx?: ExecutionContext
+	corsHeaders: CorsHeaders
 ): Promise<Response> {
 	if (request.method !== 'POST') {
 		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -138,40 +138,65 @@ export async function handleGenerateAssessmentReport(
 
 		logger.info('Assessment report generated successfully', { userId: user.userId });
 
-		// Trigger onboarding content generation asynchronously using ctx.waitUntil
-		// This ensures it runs to completion even after we return the response
-		logger.info('Triggering onboarding content generation', { userId: user.userId });
+		// Generate onboarding content (projects + tasks) - fast
+		logger.info('Starting onboarding content generation', { userId: user.userId });
 
-		const onboardingPromise = handleGenerateOnboarding(request, env, corsHeaders)
-			.then(async (response) => {
-				if (response.ok) {
-					const result = (await response.json()) as {
-						success: boolean;
-						created?: { projects: number; tasks: number; notes: number };
-					};
-					logger.info('Onboarding content generated successfully', {
+		try {
+			const onboardingResponse = await handleGenerateOnboarding(request, env, corsHeaders);
+
+			if (onboardingResponse.ok) {
+				const result = (await onboardingResponse.json()) as {
+					success: boolean;
+					created?: { projects: number; tasks: number; notes: number };
+				};
+				logger.info('Onboarding content generated successfully', {
+					userId: user.userId,
+					created: result.created
+				});
+
+				// Now trigger notes generation in background
+				logger.info('Starting notes generation', { userId: user.userId });
+				try {
+					const notesResponse = await handleGenerateNotes(request, env, corsHeaders);
+
+					if (notesResponse.ok) {
+						const notesResult = (await notesResponse.json()) as {
+							success: boolean;
+							created?: { notes: number };
+						};
+						logger.info('Notes generated successfully', {
+							userId: user.userId,
+							created: notesResult.created
+						});
+					} else {
+						const errorText = await notesResponse.text();
+						logger.error('Notes generation failed', {
+							userId: user.userId,
+							status: notesResponse.status,
+							error: errorText
+						});
+					}
+				} catch (notesErr) {
+					logger.error('Failed to generate notes', {
 						userId: user.userId,
-						created: result.created
-					});
-				} else {
-					const errorText = await response.text();
-					logger.error('Onboarding generation failed', {
-						userId: user.userId,
-						status: response.status,
-						error: errorText
+						error: notesErr
 					});
 				}
-			})
-			.catch((err) => {
-				logger.error('Failed to generate onboarding content', {
+			} else {
+				const errorText = await onboardingResponse.text();
+				logger.error('Onboarding generation failed', {
 					userId: user.userId,
-					error: err
+					status: onboardingResponse.status,
+					error: errorText
 				});
+				// Don't throw - profile was created successfully
+			}
+		} catch (err) {
+			logger.error('Failed to generate onboarding content', {
+				userId: user.userId,
+				error: err
 			});
-
-		// Use waitUntil to ensure the promise completes even after response is sent
-		if (ctx) {
-			ctx.waitUntil(onboardingPromise);
+			// Don't throw - profile was created successfully
 		}
 
 		return new Response(

@@ -17,13 +17,14 @@ import { handleDeleteFile } from './routes/delete-file';
 import { handleSendNotification } from './routes/send-notification';
 import { handleGenerateAssessmentReport } from './routes/generate-assessment-report';
 import { handleGenerateOnboarding } from './routes/generate-onboarding';
+import { handleGenerateNotes } from './routes/generate-notes';
 import { checkTaskReminders } from './cron/task-reminders';
 
 export { Env };
 
 // Main handler
 const handler = {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     // Get CORS headers
@@ -60,11 +61,15 @@ const handler = {
     }
 
     if (url.pathname === '/api/generate-assessment-report') {
-      return handleGenerateAssessmentReport(request, env, corsHeaders, ctx);
+      return handleGenerateAssessmentReport(request, env, corsHeaders);
     }
 
     if (url.pathname === '/api/generate-onboarding') {
       return handleGenerateOnboarding(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/generate-notes') {
+      return handleGenerateNotes(request, env, corsHeaders);
     }
 
     if (url.pathname.startsWith('/api/temp-files/')) {

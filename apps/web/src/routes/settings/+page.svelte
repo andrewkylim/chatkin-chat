@@ -298,6 +298,33 @@
 
 			if (notesError) throw new Error(`Failed to delete notes: ${notesError.message}`);
 
+			// Delete assessment responses
+			deleteAllStatus = 'Deleting assessment responses...';
+			const { error: responsesError } = await supabase
+				.from('assessment_responses')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (responsesError) throw new Error(`Failed to delete assessment responses: ${responsesError.message}`);
+
+			// Delete assessment results
+			deleteAllStatus = 'Deleting assessment results...';
+			const { error: resultsError } = await supabase
+				.from('assessment_results')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (resultsError) throw new Error(`Failed to delete assessment results: ${resultsError.message}`);
+
+			// Delete user profile
+			deleteAllStatus = 'Deleting user profile...';
+			const { error: profileError } = await supabase
+				.from('user_profiles')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (profileError) throw new Error(`Failed to delete user profile: ${profileError.message}`);
+
 			deleteAllStatus = '✅ Successfully deleted all content. Refreshing...';
 
 			// Refresh after 1.5 seconds
