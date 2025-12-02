@@ -75,8 +75,9 @@
 		</div>
 		<div class="banner-text">
 			<div class="summary-content">
-				{#if extractOverviewSection(results.ai_report)}
-					{@html formatOverviewContent(extractOverviewSection(results.ai_report))}
+				{@const overviewText = extractOverviewSection(results.ai_report)}
+				{#if overviewText}
+					{@html formatOverviewContent(overviewText)}
 				{:else}
 					<p>Your wellness assessment is complete with scores across 6 domains. Last updated {formatDate(results.completed_at)}.</p>
 				{/if}

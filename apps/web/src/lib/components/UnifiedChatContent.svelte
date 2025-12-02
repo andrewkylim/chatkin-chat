@@ -411,7 +411,8 @@
 					await createProject({
 						name: action.name || 'Untitled Project',
 						description: action.description || null,
-						color: action.color || '📁'
+						color: action.color || '📁',
+						domain: null
 					});
 					projectCount++;
 					notificationCounts.incrementCount('projects');
