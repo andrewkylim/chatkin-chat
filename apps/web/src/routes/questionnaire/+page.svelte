@@ -294,7 +294,22 @@
 	}
 
 	async function handleCancelRetake() {
-		// User cancelled retake, navigate back
+		// User cancelled retake, restore has_completed_questionnaire to true
+		if (!$auth.user) return;
+
+		const { error } = await supabase
+			.from('user_profiles')
+			.update({
+				has_completed_questionnaire: true,
+				updated_at: new Date().toISOString()
+			})
+			.eq('user_id', $auth.user.id);
+
+		if (error) {
+			console.error('Error restoring profile:', error);
+		}
+
+		// Navigate back to profile
 		goto('/profile');
 	}
 

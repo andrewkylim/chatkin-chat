@@ -286,44 +286,44 @@
 			</div>
 		{/if}
 	</div>
-</AppLayout>
 
-{#if showRetakeModal}
-	<div class="modal-overlay" onclick={() => showRetakeModal = false}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
-			<h2>⚠️ Retake Assessment?</h2>
-			<p class="warning-text">
-				Retaking this assessment will delete all your existing content:
-			</p>
-			<ul class="delete-list">
-				<li>All projects</li>
-				<li>All tasks</li>
-				<li>All notes</li>
-				<li>Your assessment results</li>
-			</ul>
-			<p class="warning-text">
-				Your current progress will be replaced with new AI-generated content based on your updated responses.
-			</p>
+	{#if showRetakeModal}
+		<div class="modal-overlay" onclick={() => showRetakeModal = false}>
+			<div class="modal" onclick={(e) => e.stopPropagation()}>
+				<h2>⚠️ Retake Assessment?</h2>
+				<p class="warning-text">
+					Retaking this assessment will delete all your existing content:
+				</p>
+				<ul class="delete-list">
+					<li>All projects</li>
+					<li>All tasks</li>
+					<li>All notes</li>
+					<li>Your assessment results</li>
+				</ul>
+				<p class="warning-text">
+					Your current progress will be replaced with new AI-generated content based on your updated responses.
+				</p>
 
-			<div class="modal-actions">
-				<button
-					type="button"
-					class="secondary-btn"
-					onclick={() => showRetakeModal = false}
-				>
-					Cancel
-				</button>
-				<button
-					type="button"
-					class="danger-btn"
-					onclick={handleRetakeAssessment}
-				>
-					Continue & Delete All
-				</button>
+				<div class="modal-actions">
+					<button
+						type="button"
+						class="secondary-btn"
+						onclick={() => showRetakeModal = false}
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="danger-btn"
+						onclick={handleRetakeAssessment}
+					>
+						Continue & Delete All
+					</button>
+				</div>
 			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
+</AppLayout>
 
 <style>
 	.page-header {
