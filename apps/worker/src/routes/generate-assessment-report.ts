@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
+import { handleGenerateOnboarding } from './generate-onboarding';
 
 interface QuestionResponse {
 	question_id: string;
@@ -30,7 +31,8 @@ interface DomainScores {
 export async function handleGenerateAssessmentReport(
 	request: Request,
 	env: Env,
-	corsHeaders: CorsHeaders
+	corsHeaders: CorsHeaders,
+	ctx?: ExecutionContext
 ): Promise<Response> {
 	if (request.method !== 'POST') {
 		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -136,26 +138,40 @@ export async function handleGenerateAssessmentReport(
 
 		logger.info('Assessment report generated successfully', { userId: user.userId });
 
-		// Trigger onboarding content generation in background
-		try {
-			// Create a new request to the onboarding endpoint
-			const onboardingUrl = new URL(request.url);
-			onboardingUrl.pathname = '/api/generate-onboarding';
+		// Trigger onboarding content generation asynchronously using ctx.waitUntil
+		// This ensures it runs to completion even after we return the response
+		logger.info('Triggering onboarding content generation', { userId: user.userId });
 
-			// Get auth token from original request
-			const authHeader = request.headers.get('Authorization');
-
-			fetch(onboardingUrl.toString(), {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					...(authHeader ? { Authorization: authHeader } : {})
+		const onboardingPromise = handleGenerateOnboarding(request, env, corsHeaders)
+			.then(async (response) => {
+				if (response.ok) {
+					const result = (await response.json()) as {
+						success: boolean;
+						created?: { projects: number; tasks: number; notes: number };
+					};
+					logger.info('Onboarding content generated successfully', {
+						userId: user.userId,
+						created: result.created
+					});
+				} else {
+					const errorText = await response.text();
+					logger.error('Onboarding generation failed', {
+						userId: user.userId,
+						status: response.status,
+						error: errorText
+					});
 				}
-			}).catch((err) => {
-				logger.error('Failed to trigger onboarding generation', { error: err });
+			})
+			.catch((err) => {
+				logger.error('Failed to generate onboarding content', {
+					userId: user.userId,
+					error: err
+				});
 			});
-		} catch (err) {
-			logger.warn('Could not trigger onboarding generation', { error: err });
+
+		// Use waitUntil to ensure the promise completes even after response is sent
+		if (ctx) {
+			ctx.waitUntil(onboardingPromise);
 		}
 
 		return new Response(

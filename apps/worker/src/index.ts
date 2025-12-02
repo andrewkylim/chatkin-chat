@@ -23,7 +23,7 @@ export { Env };
 
 // Main handler
 const handler = {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Get CORS headers
@@ -60,7 +60,7 @@ const handler = {
     }
 
     if (url.pathname === '/api/generate-assessment-report') {
-      return handleGenerateAssessmentReport(request, env, corsHeaders);
+      return handleGenerateAssessmentReport(request, env, corsHeaders, ctx);
     }
 
     if (url.pathname === '/api/generate-onboarding') {
