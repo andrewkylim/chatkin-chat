@@ -9,7 +9,7 @@ const config = {
 		adapter: adapter({
 			routes: {
 				include: ['/*'],
-				exclude: ['<all>', '/api/*']
+				exclude: ['<all>']
 			}
 		})
 	}
