@@ -571,7 +571,7 @@
 					} else if (op.type === 'file') {
 						const { updateFileProject } = await import('$lib/db/files');
 						if (op.changes.project_id !== undefined) {
-							await updateFileProject(op.id, op.changes.project_id);
+							await updateFileProject(op.id, op.changes.project_id as string | null);
 						}
 						results.push(`✓ Updated file`);
 					}
