@@ -110,6 +110,7 @@
 	});
 
 	async function loadData() {
+		if (!projectId) return;
 		loading = true;
 		try {
 			[project, tasks, notes, files, projects] = await Promise.all([
@@ -127,6 +128,7 @@
 	}
 
 	async function handleDeleteProject() {
+		if (!projectId) return;
 		try {
 			await deleteProject(projectId);
 			goto('/projects');
@@ -147,6 +149,7 @@
 	}
 
 	async function handleProjectUpdated() {
+		if (!projectId) return;
 		// Reload project data
 		project = await getProject(projectId);
 	}
@@ -206,7 +209,7 @@
 				description: newTaskDescription,
 				priority: newTaskPriority,
 				status: 'todo',
-				project_id: projectId,
+				project_id: projectId || null,
 				due_date: newTaskDueDate || null
 			});
 
@@ -228,7 +231,7 @@
 			await createNote({
 				title: newNoteTitle.trim() || 'Untitled',
 				content: newNoteContent,
-				project_id: projectId
+				project_id: projectId || null
 			});
 
 			// Reset form
