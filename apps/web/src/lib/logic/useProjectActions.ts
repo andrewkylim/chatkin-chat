@@ -6,11 +6,7 @@
  * so the component can manage UI updates appropriately.
  */
 
-import type { Project } from '@chatkin/types';
-import {
-	deleteProject as dbDeleteProject,
-	updateProject as dbUpdateProject
-} from '$lib/db/projects';
+import { updateProject as dbUpdateProject } from '$lib/db/projects';
 import { toggleTaskComplete as dbToggleTaskComplete } from '$lib/db/tasks';
 import { handleError } from '$lib/utils/error-handler';
 
@@ -19,28 +15,14 @@ import { handleError } from '$lib/utils/error-handler';
 // ============================================================================
 
 /**
- * Deletes a project with error handling
- * @param projectId - Project ID to delete
- * @returns Promise that resolves when project is deleted
- */
-export async function deleteProjectAction(projectId: string): Promise<void> {
-	try {
-		await dbDeleteProject(projectId);
-	} catch (error) {
-		handleError(error, { operation: 'Delete project', component: 'ProjectChatPage' });
-		throw error; // Re-throw so caller can handle UI updates
-	}
-}
-
-/**
- * Updates a project with error handling
+ * Updates a project (description only)
  * @param projectId - Project ID to update
- * @param updates - Partial project data to update
+ * @param updates - Only description can be updated for domain projects
  * @returns Promise that resolves when project is updated
  */
 export async function updateProjectAction(
 	projectId: string,
-	updates: Partial<Project>
+	updates: { description: string | null }
 ): Promise<void> {
 	try {
 		await dbUpdateProject(projectId, updates);
@@ -78,7 +60,6 @@ export async function toggleTaskCompleteAction(
  */
 export function useProjectActions() {
 	return {
-		deleteProject: deleteProjectAction,
 		updateProject: updateProjectAction,
 		toggleTaskComplete: toggleTaskCompleteAction
 	};
