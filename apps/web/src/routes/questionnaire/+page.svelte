@@ -170,7 +170,10 @@
 			submitting = true;
 
 			// Generate assessment report
-			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+			// Use direct worker URL to avoid routing conflicts with Pages
+			const workerUrl = import.meta.env.DEV
+				? 'http://localhost:8787'
+				: 'https://chatkin-os-worker.andrewkylim.workers.dev';
 			const response = await fetch(`${workerUrl}/api/generate-assessment-report`, {
 				method: 'POST',
 				headers: {
