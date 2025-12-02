@@ -33,7 +33,7 @@
 		id?: string; // Database message ID for updating metadata
 		role: 'user' | 'ai';
 		content: string;
-		files?: Array<{ name: string; url: string; type: string; temporary?: boolean; saving?: boolean; saved?: boolean }>;
+		files?: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; saving?: boolean; saved?: boolean }>;
 		proposedActions?: AIAction[];
 		awaitingConfirmation?: boolean;
 		isTyping?: boolean;
@@ -496,13 +496,13 @@
 					if (!op.data) throw new Error('Missing data for create operation');
 
 					if (op.type === 'task') {
-						const taskData = op.data as TaskData;
+						const taskData = op.data as unknown as TaskData;
 						// Smart project assignment: use explicit project_id, or context projectId, or the one we just created
 						const targetProjectId = taskData.project_id || lastCreatedProjectId || projectId || null;
-						
+
 						// Sanitize task data to ensure only valid fields are sent to DB
 						const { title, description, priority, status, due_date } = taskData;
-						
+
 						await createTask({
 							title,
 							description: description || null,
@@ -518,22 +518,22 @@
 						notificationCounts.incrementCount('tasks');
 						results.push(`✓ Created task: ${taskData.title}`);
 					} else if (op.type === 'note') {
-						const noteData = op.data as NoteData;
+						const noteData = op.data as unknown as NoteData;
 						// Smart project assignment
 						const targetProjectId = noteData.project_id || lastCreatedProjectId || projectId || null;
-						
+
 						// Sanitize note data
 						const { title: noteTitle, content } = noteData;
-						
-						await createNote({ 
+
+						await createNote({
 							title: noteTitle,
 							content: content || '',
-							project_id: targetProjectId 
+							project_id: targetProjectId
 						});
 						notificationCounts.incrementCount('notes');
 						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
-						const projectData = op.data as ProjectData;
+						const projectData = op.data as unknown as ProjectData;
 						const newProject = await createProject({
 							name: projectData.name,
 							description: projectData.description ?? null,
@@ -1461,7 +1461,7 @@ content: `${parts.join(', ')}!\n\n${results.join('\n')}`
 								<!-- Submit/Cancel Buttons -->
 								<div class="confirmation-buttons">
 									<button class="confirm-btn" type="button" onclick={() => {
-										const answers = {};
+										const answers: Record<string, string> = {};
 										message.questions?.forEach((q, qIdx) => {
 											const questionId = `q${index}_${qIdx}`;
 											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
