@@ -9,6 +9,7 @@ import { moderateImageContent } from '../utils/moderation';
 import { generateImageMetadata, generateDocumentMetadata } from '../utils/file-metadata';
 import { createAnthropicClient } from '../ai/client';
 import { requireAuth } from '../middleware/auth';
+import { fileToBase64, validateImageMediaType } from '../services/image-processor';
 
 // File upload constraints
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
@@ -86,21 +87,16 @@ export async function handleUpload(
     if (file.type.startsWith('image/')) {
       logger.debug('Moderating image content', { fileName: file.name });
 
-      // Convert to base64 using chunking to avoid call stack overflow
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      let binary = '';
-      const chunkSize = 0x8000; // 32KB chunks
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      const base64 = btoa(binary);
+      // Convert to base64 using image processor service
+      const base64 = await fileToBase64(file);
 
       // Moderate content
       const anthropic = createAnthropicClient(env.ANTHROPIC_API_KEY);
-      const mediaType = file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+      const mediaType = validateImageMediaType(file.type);
       const moderation = await moderateImageContent(anthropic, base64, mediaType);
+
+      // Get arrayBuffer for file recreation after moderation
+      const arrayBuffer = await file.arrayBuffer();
 
       if (!moderation.safe || moderation.riskLevel >= 2) {
         logger.warn('Image rejected by moderation', {

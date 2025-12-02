@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Env } from '../types';
 import { EmailService } from '../services/email';
+import { logger } from '../utils/logger';
 
 /**
  * Format time string (HH:MM:SS or HH:MM) to 12-hour format
@@ -16,7 +17,7 @@ function formatTime(time: string | null): string {
 }
 
 export async function checkTaskReminders(env: Env): Promise<void> {
-	console.log('Running task reminder cron job');
+	logger.info('Running task reminder cron job');
 
 	// Create admin Supabase client with service role key
 	const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -28,16 +29,16 @@ export async function checkTaskReminders(env: Env): Promise<void> {
 		.or('email_task_due_soon.eq.true,browser_task_due_soon.eq.true');
 
 	if (prefsError) {
-		console.error('Failed to fetch notification preferences', prefsError);
+		logger.error('Failed to fetch notification preferences', prefsError);
 		return;
 	}
 
 	if (!usersWithPrefs || usersWithPrefs.length === 0) {
-		console.log('No users with task reminders enabled');
+		logger.info('No users with task reminders enabled');
 		return;
 	}
 
-	console.log(`Checking reminders for ${usersWithPrefs.length} users`);
+	logger.info(`Checking reminders for ${usersWithPrefs.length} users`);
 
 	const emailService = new EmailService(env);
 	const now = new Date();
@@ -61,7 +62,7 @@ export async function checkTaskReminders(env: Env): Promise<void> {
 					.not('due_date', 'is', null);
 
 				if (tasksError || !dueTasks) {
-					console.error('Failed to fetch tasks for user', userPref.user_id, tasksError);
+					logger.error('Failed to fetch tasks for user', { userId: userPref.user_id, error: tasksError?.message });
 					continue;
 				}
 
@@ -99,7 +100,7 @@ export async function checkTaskReminders(env: Env): Promise<void> {
 						.single();
 
 					if (existingNotif) {
-						console.log('Reminder already sent for task', task.id);
+						logger.info('Reminder already sent for task', task.id);
 						continue;
 					}
 
@@ -141,7 +142,7 @@ export async function checkTaskReminders(env: Env): Promise<void> {
 							error_message: emailResult.error
 						});
 
-						console.log('Task reminder sent', { taskId: task.id, userId: userPref.user_id, success: emailResult.success });
+						logger.info('Task reminder sent', { taskId: task.id, userId: userPref.user_id, success: emailResult.success });
 					}
 
 					// Create browser notification entry
@@ -160,9 +161,9 @@ export async function checkTaskReminders(env: Env): Promise<void> {
 				}
 			}
 		} catch (error) {
-			console.error('Error processing reminders for user', userPref.user_id, error);
+			logger.error('Error processing reminders for user', { userId: userPref.user_id, error: error instanceof Error ? error.message : String(error) });
 		}
 	}
 
-	console.log('Task reminder cron job completed');
+	logger.info('Task reminder cron job completed');
 }

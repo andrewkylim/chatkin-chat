@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import type { Env } from '../types';
+import { logger } from '../utils/logger';
 
 export interface EmailNotification {
 	to: string;
@@ -27,15 +28,15 @@ export class EmailService {
 			});
 
 			if (result.error) {
-				console.error('Failed to send email', result.error);
+				logger.error('Failed to send email', result.error);
 				return { success: false, error: result.error.message };
 			}
 
-			console.log('Email sent successfully', { id: result.data?.id, to: notification.to });
+			logger.info('Email sent successfully', { id: result.data?.id, to: notification.to });
 			return { success: true };
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-			console.error('Email service error', errorMessage);
+			logger.error('Email service error', errorMessage);
 			return { success: false, error: errorMessage };
 		}
 	}
