@@ -534,7 +534,11 @@
 						results.push(`✓ Created note: ${noteData.title}`);
 					} else if (op.type === 'project') {
 						const projectData = op.data as ProjectData;
-						const newProject = await createProject({ ...projectData, description: projectData.description || null });
+						const newProject = await createProject({
+							name: projectData.name,
+							description: projectData.description ?? null,
+							color: projectData.color
+						});
 						// Capture the new project ID for subsequent items in this batch
 						if (newProject && newProject.id) {
 							lastCreatedProjectId = newProject.id;

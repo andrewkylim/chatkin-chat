@@ -220,8 +220,11 @@
 					if (op.type === 'task') {
 						const taskData = op.data as TaskData;
 						await createTask({
-							...taskData,
+							title: taskData.title,
 							description: taskData.description ?? null,
+							priority: taskData.priority,
+							status: taskData.status,
+							due_date: taskData.due_date ?? null,
 							project_id: taskData.project_id || projectId || null,
 							is_recurring: false,
 							recurrence_pattern: null,
