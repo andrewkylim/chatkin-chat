@@ -75,6 +75,7 @@
 	}
 
 	async function handleDelete() {
+		if (!noteId) return;
 		try {
 			await deleteNote(noteId);
 			goto('/notes');
@@ -96,7 +97,7 @@
 	}
 
 	async function handleSaveEdit() {
-		if (!editTitle.trim()) return;
+		if (!editTitle.trim() || !noteId) return;
 
 		try {
 			// Update note title and project
@@ -137,7 +138,7 @@
 	}
 
 	async function saveInlineChanges() {
-		if (!note || !titleElement || !contentElement) return;
+		if (!note || !titleElement || !contentElement || !noteId) return;
 
 		try {
 			const newTitle = titleElement.innerText.trim();
