@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
 	import { auth } from '$lib/stores/auth';
+	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import QuestionCard from '$lib/components/questionnaire/QuestionCard.svelte';
 	import ProgressBar from '$lib/components/questionnaire/ProgressBar.svelte';
 	import DomainHeader from '$lib/components/questionnaire/DomainHeader.svelte';
@@ -169,7 +170,7 @@
 			submitting = true;
 
 			// Generate assessment report
-			const workerUrl = import.meta.env.PUBLIC_WORKER_URL || 'http://localhost:8787';
+			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
 			const response = await fetch(`${workerUrl}/api/generate-assessment-report`, {
 				method: 'POST',
 				headers: {
