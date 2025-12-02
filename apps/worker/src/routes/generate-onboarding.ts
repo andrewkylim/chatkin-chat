@@ -316,7 +316,7 @@ Return as JSON:
 CRITICAL: This is their first impression of Chatkin's AI capabilities. Every task and note should demonstrate deep understanding of their situation and provide genuine value. Avoid generic advice - everything should feel tailored to THEIR specific assessment responses.`;
 
 	const message = await client.messages.create({
-		model: 'claude-sonnet-4',
+		model: 'claude-sonnet-4-20250514',
 		max_tokens: 8000,
 		messages: [{ role: 'user', content: prompt }]
 	});

@@ -261,7 +261,7 @@ Generate a comprehensive, personalized wellness report (800-1200 words) with:
 Format with clear sections and bullet points for readability.`;
 
 	const message = await client.messages.create({
-		model: 'claude-sonnet-4',
+		model: 'claude-sonnet-4-20250514',
 		max_tokens: 4000,
 		messages: [{ role: 'user', content: prompt }]
 	});
@@ -335,7 +335,7 @@ Analyze like a professional would:
 This profile will inform personalized task/note creation, communication style, and strategic recommendations. Be specific, insightful, and actionable.`;
 
 	const message = await client.messages.create({
-		model: 'claude-sonnet-4',
+		model: 'claude-sonnet-4-20250514',
 		max_tokens: 2000,
 		messages: [{ role: 'user', content: prompt }]
 	});
