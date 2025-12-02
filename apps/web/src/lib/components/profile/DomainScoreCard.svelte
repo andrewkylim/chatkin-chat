@@ -14,17 +14,17 @@
 		return colorMap[domainName] || 'var(--accent-primary)';
 	}
 
-	// Get domain icon/emoji
-	function getDomainEmoji(domainName: string): string {
-		const emojiMap: Record<string, string> = {
-			Body: '💪',
-			Mind: '🧠',
-			Purpose: '🎯',
-			Connection: '🤝',
-			Growth: '🌱',
-			Finance: '💰'
+	// Get domain icon SVG path
+	function getDomainIcon(domainName: string): string {
+		const iconMap: Record<string, string> = {
+			Body: 'M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2',
+			Mind: 'M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4',
+			Purpose: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
+			Connection: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
+			Growth: 'M22 7 13.5 15.5 8.5 10.5 2 17 M16 7h6v6',
+			Finance: 'M2 6h20M2 12h20M2 18h20M6 2v20M12 2v20M18 2v20'
 		};
-		return emojiMap[domainName] || '✨';
+		return iconMap[domainName] || 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5';
 	}
 
 	const percentage = $derived(Math.round((score / 10) * 100));
@@ -33,7 +33,18 @@
 <div class="domain-card">
 	<div class="card-header">
 		<div class="domain-icon" style="background-color: {getDomainColor(domain)}">
-			{getDomainEmoji(domain)}
+			<svg
+				width="28"
+				height="28"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="white"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d={getDomainIcon(domain)} />
+			</svg>
 		</div>
 		<div class="domain-info">
 			<h3 class="domain-name">{domain}</h3>
@@ -83,8 +94,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 2rem;
 		flex-shrink: 0;
+		color: white;
 	}
 
 	.domain-info {
@@ -153,7 +164,11 @@
 		.domain-icon {
 			width: 48px;
 			height: 48px;
-			font-size: 1.75rem;
+		}
+
+		.domain-icon svg {
+			width: 24px;
+			height: 24px;
 		}
 
 		.domain-name {

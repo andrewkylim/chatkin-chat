@@ -284,7 +284,7 @@ async function generateAIReport(
 		.map(([domain, score]) => `- ${domain}: ${score.toFixed(1)}/10`)
 		.join('\n');
 
-	const prompt = `You are a life assessment expert analyzing wellness questionnaire responses.
+	const prompt = `You are a life assessment expert analyzing questionnaire responses.
 
 DOMAIN SCORES:
 ${domainScoresText}
@@ -292,14 +292,21 @@ ${domainScoresText}
 USER RESPONSES:
 ${responsesText}
 
-Generate a comprehensive, personalized wellness report (800-1200 words) with:
+Generate a comprehensive, personalized assessment report (800-1200 words) with:
 1. Overall assessment and key insights
 2. Detailed analysis for each domain (Body, Mind, Purpose, Connection, Growth, Finance)
 3. Specific, actionable recommendations
 4. Patterns and connections across domains
 5. Encouraging tone that acknowledges strengths and growth areas
 
-Format with clear sections and bullet points for readability.`;
+FORMATTING RULES:
+- Do NOT include a title or document heading
+- Use ## for section headings only (e.g., ## Overall Assessment)
+- Use bullet points with - for lists
+- Use **bold** for emphasis
+- Do NOT use --- horizontal rules or separators
+- Write in clear paragraphs with line breaks between sections
+- Start directly with the content`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',
@@ -327,7 +334,7 @@ async function generateProfileSummary(
 		.map(([domain, score]) => `- ${domain}: ${score.toFixed(1)}/10`)
 		.join('\n');
 
-	const prompt = `You are an expert psychologist, life strategist, and executive coach analyzing a comprehensive wellness assessment.
+	const prompt = `You are an expert psychologist, life strategist, and executive coach analyzing a comprehensive life assessment.
 
 DOMAIN SCORES (0-10 scale):
 ${domainScoresText}

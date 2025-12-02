@@ -250,7 +250,7 @@
 			'target': 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
 			'users': 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
 			'trending-up': 'M22 7 13.5 15.5 8.5 10.5 2 17 M16 7h6v6',
-			'dollar-sign': 'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'
+			'dollar-sign': 'M2 6h20M2 12h20M2 18h20M6 2v20M12 2v20M18 2v20'
 		};
 
 		const domainConfig: Record<WellnessDomain, { icon: string; color: string; desc: string }> = {

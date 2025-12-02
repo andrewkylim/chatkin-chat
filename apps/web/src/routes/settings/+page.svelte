@@ -3,6 +3,7 @@
 	import { supabase } from '$lib/supabase';
 	import { auth } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { getNotificationPreferences, updateNotificationPreferences } from '$lib/db/notification-preferences';
 	import { browserNotifications } from '$lib/services/browser-notifications';
 	import type { UserNotificationPreferences } from '@chatkin/types';
@@ -14,6 +15,12 @@
 	let deleteConfirmText = '';
 	let deleteAllStatus = '';
 	let deletingAll = false;
+
+	let showRetakeModal = false;
+
+	// Collapsible sections
+	let notificationsExpanded = false;
+	let dangerZoneExpanded = false;
 
 	// Theme state
 	let theme: 'light' | 'dark' = 'light';
@@ -338,6 +345,79 @@
 			deletingAll = false;
 		}
 	}
+
+	async function handleRetakeAssessment() {
+		if (!$auth.user) return;
+
+		try {
+			const user = $auth.user;
+
+			// Delete all content first (same as handleDeleteAllContent)
+			const { data: { session } } = await supabase.auth.getSession();
+			const accessToken = session?.access_token;
+
+			// Delete files from database and R2 storage
+			const { data: files } = await supabase
+				.from('files')
+				.select('id, r2_key')
+				.eq('user_id', user.id);
+
+			const { error: filesError } = await supabase
+				.from('files')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (filesError) throw filesError;
+
+			if (files && files.length > 0) {
+				const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : 'https://chatkin.ai';
+				await Promise.allSettled(
+					files.map((file) =>
+						fetch(`${workerUrl}/api/delete-file`, {
+							method: 'DELETE',
+							headers: {
+								'Content-Type': 'application/json',
+								...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+							},
+							body: JSON.stringify({ r2_key: file.r2_key }),
+						})
+					)
+				);
+			}
+
+			// Delete all projects
+			await supabase.from('projects').delete().eq('user_id', user.id);
+
+			// Delete all tasks
+			await supabase.from('tasks').delete().eq('user_id', user.id);
+
+			// Delete all notes
+			await supabase.from('notes').delete().eq('user_id', user.id);
+
+			// Delete assessment responses
+			await supabase.from('assessment_responses').delete().eq('user_id', user.id);
+
+			// Delete assessment results
+			await supabase.from('assessment_results').delete().eq('user_id', user.id);
+
+			// NOW update the profile to mark questionnaire as incomplete
+			const { error: updateError } = await supabase
+				.from('user_profiles')
+				.update({
+					has_completed_questionnaire: false,
+					updated_at: new Date().toISOString()
+				})
+				.eq('user_id', user.id);
+
+			if (updateError) throw updateError;
+
+			// Close modal and redirect
+			showRetakeModal = false;
+			goto('/questionnaire');
+		} catch (err) {
+			console.error('Error retaking questionnaire:', err);
+		}
+	}
 </script>
 
 <AppLayout>
@@ -381,10 +461,24 @@
 				</div>
 			</div>
 
-			<div class="settings-section">
-				<div class="section-header">
+			<div class="settings-section collapsible">
+				<button class="section-header collapsible-header" on:click={() => notificationsExpanded = !notificationsExpanded}>
 					<h2>Notifications</h2>
-				</div>
+					<svg
+						class="chevron"
+						class:expanded={notificationsExpanded}
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+					>
+						<path d="M6 8l4 4 4-4"/>
+					</svg>
+				</button>
+				{#if notificationsExpanded}
 				<div class="section-content">
 					{#if loadingPrefs}
 						<p>Loading preferences...</p>
@@ -549,12 +643,27 @@
 						<p class="error">Failed to load notification preferences</p>
 					{/if}
 				</div>
+				{/if}
 			</div>
 
-			<div class="settings-section danger-zone">
-				<div class="section-header">
+			<div class="settings-section danger-zone collapsible">
+				<button class="section-header collapsible-header" on:click={() => dangerZoneExpanded = !dangerZoneExpanded}>
 					<h2>Danger Zone</h2>
-				</div>
+					<svg
+						class="chevron"
+						class:expanded={dangerZoneExpanded}
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+					>
+						<path d="M6 8l4 4 4-4"/>
+					</svg>
+				</button>
+				{#if dangerZoneExpanded}
 				<div class="section-content">
 					<div class="danger-item">
 						<h3 class="danger-item-title">Clear All Chat History</h3>
@@ -580,6 +689,22 @@
 					<div class="danger-divider"></div>
 
 					<div class="danger-item">
+						<h3 class="danger-item-title">Retake Assessment</h3>
+						<p class="section-description">
+							Retake the assessment to update your profile. This will delete all existing projects, tasks, notes, and files. This action cannot be undone.
+						</p>
+
+						<button
+							class="danger-btn"
+							on:click={() => showRetakeModal = true}
+						>
+							Retake Assessment
+						</button>
+					</div>
+
+					<div class="danger-divider"></div>
+
+					<div class="danger-item">
 						<h3 class="danger-item-title">Delete All Content</h3>
 						<p class="section-description">
 							Permanently delete all your content including projects, tasks, notes, files, and images. This action cannot be undone.
@@ -600,6 +725,7 @@
 						{/if}
 					</div>
 				</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -649,6 +775,43 @@
 					disabled={!canDeleteAll}
 				>
 					Delete All Content
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if showRetakeModal}
+	<div class="modal-overlay" on:click={() => showRetakeModal = false}>
+		<div class="modal" on:click|stopPropagation>
+			<h2>⚠️ Retake Assessment?</h2>
+			<p class="warning-text">
+				Retaking this assessment will delete all your existing content:
+			</p>
+			<ul class="delete-list">
+				<li>All projects</li>
+				<li>All tasks</li>
+				<li>All notes</li>
+				<li>Your assessment results</li>
+			</ul>
+			<p class="warning-text">
+				Your current progress will be replaced with new AI-generated content based on your updated responses.
+			</p>
+
+			<div class="modal-actions">
+				<button
+					type="button"
+					class="secondary-btn"
+					on:click={() => showRetakeModal = false}
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					class="danger-btn"
+					on:click={handleRetakeAssessment}
+				>
+					Continue & Delete All
 				</button>
 			</div>
 		</div>
@@ -715,6 +878,10 @@
 		border-radius: var(--radius-lg);
 	}
 
+	.settings-section.collapsible {
+		padding: 16px 24px;
+	}
+
 	.settings-section.danger-zone {
 		border-color: rgba(239, 68, 68, 0.3);
 	}
@@ -728,6 +895,38 @@
 		font-weight: 600;
 		color: var(--text-primary);
 		margin: 0;
+		line-height: 1;
+	}
+
+	.collapsible-header {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		margin-bottom: 0;
+	}
+
+	.collapsible-header:hover h2 {
+		color: var(--accent-primary);
+	}
+
+	.chevron {
+		color: var(--text-secondary);
+		transition: transform 0.3s ease;
+		flex-shrink: 0;
+	}
+
+	.chevron.expanded {
+		transform: rotate(180deg);
+	}
+
+	.collapsible .section-content {
+		margin-top: 16px;
 	}
 
 	.section-content {

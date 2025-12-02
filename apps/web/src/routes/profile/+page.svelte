@@ -16,14 +16,28 @@
 	let results: AssessmentResults | null = $state(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let showRetakeModal = $state(false);
 
 	onMount(async () => {
-		if (!$auth.user) {
-			goto('/login');
-			return;
+		// Wait for auth to finish loading
+		if ($auth.loading) {
+			const unsubscribe = auth.subscribe((state) => {
+				if (!state.loading) {
+					unsubscribe();
+					if (!state.user) {
+						goto('/login');
+					} else {
+						loadResults();
+					}
+				}
+			});
+		} else {
+			if (!$auth.user) {
+				goto('/login');
+				return;
+			}
+			await loadResults();
 		}
-
-		await loadResults();
 	});
 
 	async function loadResults() {
@@ -54,27 +68,145 @@
 		}
 	}
 
-	async function retakeQuestionnaire() {
+	async function handleRetakeAssessment() {
 		if (!$auth.user) return;
 
 		try {
+			const user = $auth.user;
+
+			// Delete all content first
+			const { data: { session } } = await supabase.auth.getSession();
+			const accessToken = session?.access_token;
+
+			// Delete files from database and R2 storage
+			const { data: files } = await supabase
+				.from('files')
+				.select('id, r2_key')
+				.eq('user_id', user.id);
+
+			const { error: filesError } = await supabase
+				.from('files')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (filesError) throw filesError;
+
+			if (files && files.length > 0) {
+				const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : 'https://chatkin.ai';
+				await Promise.allSettled(
+					files.map((file) =>
+						fetch(`${workerUrl}/api/delete-file`, {
+							method: 'DELETE',
+							headers: {
+								'Content-Type': 'application/json',
+								...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+							},
+							body: JSON.stringify({ r2_key: file.r2_key }),
+						})
+					)
+				);
+			}
+
+			// Delete all projects
+			await supabase.from('projects').delete().eq('user_id', user.id);
+
+			// Delete all tasks
+			await supabase.from('tasks').delete().eq('user_id', user.id);
+
+			// Delete all notes
+			await supabase.from('notes').delete().eq('user_id', user.id);
+
+			// Delete assessment responses
+			await supabase.from('assessment_responses').delete().eq('user_id', user.id);
+
+			// Delete assessment results
+			await supabase.from('assessment_results').delete().eq('user_id', user.id);
+
+			// NOW update the profile to mark questionnaire as incomplete
 			const { error: updateError } = await supabase
 				.from('user_profiles')
 				.update({
 					has_completed_questionnaire: false,
 					updated_at: new Date().toISOString()
 				})
-				.eq('user_id', $auth.user.id);
+				.eq('user_id', user.id);
 
-			if (updateError) {
-				console.error('Error updating profile:', updateError);
-				return;
-			}
+			if (updateError) throw updateError;
 
+			// Close modal and redirect
+			showRetakeModal = false;
 			goto('/questionnaire');
 		} catch (err) {
 			console.error('Error retaking questionnaire:', err);
 		}
+	}
+
+	function formatAIReport(report: string): string {
+		// Parse markdown to HTML with proper formatting
+		let html = report;
+
+		// Remove main title (# Title) from the beginning (fallback)
+		html = html.replace(/^#\s+.+$/m, '').trim();
+
+		// Remove horizontal rules (---, ***, ___)
+		html = html.replace(/^[-*_]{3,}$/gm, '').trim();
+
+		// Convert any heading markers (##, ###, ####) to styled h3 elements
+		html = html.replace(/^#{2,4}\s+(.+)$/gm, '<h3 class="section-marker">$1</h3>');
+
+		// Convert **bold** text to strong tags
+		html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+		// Convert bullet points (-, *, •) to list items
+		html = html.replace(/^[-*•]\s+(.+)$/gm, '<li>$1</li>');
+
+		// Wrap consecutive list items in ul tags
+		html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul class="report-list">$&</ul>');
+
+		// Split by double line breaks and process paragraphs
+		const sections = html.split(/\n\n+/);
+		html = sections.map(section => {
+			section = section.trim();
+			if (!section) return '';
+
+			// Don't wrap headings, lists, or already formatted content
+			if (section.startsWith('<h3') || section.startsWith('<ul') || section.includes('</')) {
+				return section;
+			}
+
+			// Wrap plain text in paragraphs
+			return `<p>${section.replace(/\n/g, ' ')}</p>`;
+		}).filter(s => s).join('\n\n');
+
+		// Split by section headings and wrap each in a div
+		const sectionParts = html.split(/(<h3 class="section-marker">.*?<\/h3>)/s);
+		let result = '';
+		let currentContent = '';
+
+		for (let i = 0; i < sectionParts.length; i++) {
+			const part = sectionParts[i];
+			if (!part.trim()) continue;
+
+			if (part.includes('section-marker')) {
+				// If we have previous content, close the div
+				if (currentContent) {
+					result += `<div class="report-section-block">${currentContent}</div>`;
+					currentContent = '';
+				}
+				// Start new section with heading
+				currentContent = part;
+			} else {
+				// Add content to current section
+				currentContent += part;
+			}
+		}
+
+		// Add the last section
+		if (currentContent) {
+			result += `<div class="report-section-block">${currentContent}</div>`;
+		}
+
+		return result;
 	}
 </script>
 
@@ -82,10 +214,7 @@
 	<!-- Desktop Header -->
 	<header class="page-header">
 		<div class="header-content">
-			<h1>Your Wellness Profile</h1>
-			{#if results}
-				<button onclick={retakeQuestionnaire} class="secondary-btn"> Retake Assessment </button>
-			{/if}
+			<h1>Profile</h1>
 		</div>
 	</header>
 
@@ -118,7 +247,6 @@
 			<div class="profile-container">
 				<!-- Domain Scores Section -->
 				<section class="scores-section">
-					<h2 class="section-title">Your Wellness Scores</h2>
 					<div class="scores-grid">
 						{#each Object.entries(results.domain_scores) as [domain, score]}
 							<DomainScoreCard {domain} {score} />
@@ -127,12 +255,9 @@
 				</section>
 
 				<!-- AI Report Section -->
-				<section class="report-section">
-					<h2 class="section-title">Personalized Insights</h2>
-					<div class="report-content">
-						{@html results.ai_report.replace(/\n/g, '<br>')}
-					</div>
-				</section>
+				<div class="report-sections-wrapper">
+					{@html formatAIReport(results.ai_report)}
+				</div>
 
 				<!-- Completed Date -->
 				<div class="completion-info">
@@ -144,10 +269,61 @@
 						})}
 					</p>
 				</div>
+
+				<!-- Retake Assessment Section -->
+				<div class="retake-section">
+					<div class="retake-warning">
+						<h3>Retake Assessment</h3>
+						<p>
+							Retaking the assessment will reset your profile and delete all existing projects, tasks, notes,
+							and files. This action cannot be undone.
+						</p>
+						<button onclick={() => showRetakeModal = true} class="danger-btn">
+							Retake Assessment
+						</button>
+					</div>
+				</div>
 			</div>
 		{/if}
 	</div>
 </AppLayout>
+
+{#if showRetakeModal}
+	<div class="modal-overlay" onclick={() => showRetakeModal = false}>
+		<div class="modal" onclick={(e) => e.stopPropagation()}>
+			<h2>⚠️ Retake Assessment?</h2>
+			<p class="warning-text">
+				Retaking this assessment will delete all your existing content:
+			</p>
+			<ul class="delete-list">
+				<li>All projects</li>
+				<li>All tasks</li>
+				<li>All notes</li>
+				<li>Your assessment results</li>
+			</ul>
+			<p class="warning-text">
+				Your current progress will be replaced with new AI-generated content based on your updated responses.
+			</p>
+
+			<div class="modal-actions">
+				<button
+					type="button"
+					class="secondary-btn"
+					onclick={() => showRetakeModal = false}
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					class="danger-btn"
+					onclick={handleRetakeAssessment}
+				>
+					Continue & Delete All
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.page-header {
@@ -282,22 +458,73 @@
 		gap: 20px;
 	}
 
-	.report-section {
+	.report-sections-wrapper {
 		margin-bottom: 32px;
 	}
 
-	.report-content {
+	.report-sections-wrapper :global(.report-section-block) {
 		background: var(--bg-secondary);
 		border-radius: var(--radius-lg);
-		padding: 32px;
+		padding: 24px 32px;
+		margin-bottom: 24px;
 		line-height: 1.8;
 		color: var(--text-secondary);
 		border: 1px solid var(--border-color);
 	}
 
-	.report-content :global(br) {
+	.report-sections-wrapper :global(.report-section-block:last-child) {
+		margin-bottom: 0;
+	}
+
+	.report-sections-wrapper :global(br) {
 		display: block;
 		margin: 0.5em 0;
+	}
+
+	.report-sections-wrapper :global(.section-marker) {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0 0 1rem 0;
+	}
+
+	.report-sections-wrapper :global(.section-marker:only-child) {
+		margin-bottom: 0;
+	}
+
+	.report-sections-wrapper :global(.report-list) {
+		margin: 1.25rem 0 1.75rem 0;
+		padding-left: 1.5rem;
+		color: var(--text-primary);
+	}
+
+	.report-sections-wrapper :global(.report-list li) {
+		margin: 0.75rem 0;
+		line-height: 1.7;
+		color: var(--text-primary);
+	}
+
+	.report-sections-wrapper :global(p) {
+		margin: 1.25rem 0;
+		line-height: 1.7;
+		color: var(--text-primary);
+	}
+
+	.report-sections-wrapper :global(p:first-of-type) {
+		margin-top: 0;
+	}
+
+	.report-sections-wrapper :global(p:last-of-type) {
+		margin-bottom: 0;
+	}
+
+	.report-sections-wrapper :global(p + p) {
+		margin-top: 1.5rem;
+	}
+
+	.report-sections-wrapper :global(strong) {
+		color: var(--text-primary);
+		font-weight: 600;
 	}
 
 	.completion-info {
@@ -309,6 +536,49 @@
 		font-size: 0.875rem;
 		color: var(--text-muted);
 		font-style: italic;
+	}
+
+	.retake-section {
+		margin-top: 48px;
+	}
+
+	.retake-warning {
+		background: #FEF2F2;
+		border: 2px solid #FCA5A5;
+		border-radius: var(--radius-lg);
+		padding: 24px;
+		max-width: 600px;
+		margin: 0 auto;
+	}
+
+	.retake-warning h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: #991B1B;
+		margin: 0 0 12px 0;
+	}
+
+	.retake-warning p {
+		font-size: 0.9375rem;
+		color: #7F1D1D;
+		line-height: 1.6;
+		margin: 0 0 20px 0;
+	}
+
+	.danger-btn {
+		padding: 12px 24px;
+		border: none;
+		border-radius: var(--radius-md);
+		background: #DC2626;
+		color: white;
+		font-size: 1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background 0.2s ease;
+	}
+
+	.danger-btn:hover {
+		background: #B91C1C;
 	}
 
 	/* Mobile Styles */
@@ -365,12 +635,83 @@
 		}
 
 		.scores-grid {
-			grid-template-columns: 1fr;
-			gap: 16px;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 12px;
 		}
 
 		.report-content {
 			padding: 24px 20px;
+		}
+	}
+
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 20px;
+	}
+
+	.modal {
+		background: var(--bg-secondary);
+		border-radius: var(--radius-lg);
+		padding: 32px;
+		max-width: 500px;
+		width: 100%;
+		box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+	}
+
+	.modal h2 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0 0 20px 0;
+	}
+
+	.warning-text {
+		color: rgb(239, 68, 68);
+		font-size: 0.9375rem;
+		line-height: 1.6;
+		margin: 12px 0;
+	}
+
+	.delete-list {
+		margin: 12px 0;
+		padding-left: 24px;
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		line-height: 1.8;
+	}
+
+	.delete-list li {
+		margin: 4px 0;
+	}
+
+	.modal-actions {
+		display: flex;
+		gap: 12px;
+		margin-top: 24px;
+		justify-content: flex-end;
+	}
+
+	@media (max-width: 640px) {
+		.modal {
+			padding: 24px;
+		}
+
+		.modal-actions {
+			flex-direction: column;
+		}
+
+		.modal-actions button {
+			width: 100%;
 		}
 	}
 </style>
