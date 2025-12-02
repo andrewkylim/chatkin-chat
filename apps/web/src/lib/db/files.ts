@@ -31,17 +31,20 @@ export async function getFile(id: string) {
 	return data as FileType;
 }
 
-export async function createFile(file: Omit<FileInsert, 'user_id'>) {
+export async function createFile(file: Omit<FileInsert, 'user_id' | 'project_id'> & Partial<Pick<FileInsert, 'project_id'>>) {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
 
+	// Provide defaults for optional fields
+	const fileData = {
+		project_id: null,
+		...file,
+		user_id: user.id
+	};
+
 	const { data, error } = await supabase
 		.from('files')
-		.insert({
-			...file,
-			user_id: user.id,
-			project_id: file.project_id || null
-		})
+		.insert(fileData)
 		.select()
 		.single();
 

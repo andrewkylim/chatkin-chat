@@ -29,9 +29,16 @@ export async function createProject(project: Omit<ProjectInsert, 'user_id'>) {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
 
+	// Provide defaults for optional fields
+	const projectData = {
+		...project,
+		domain: project.domain ?? null,
+		user_id: user.id
+	};
+
 	const { data, error } = await supabase
 		.from('projects')
-		.insert({ ...project, user_id: user.id })
+		.insert(projectData)
 		.select()
 		.single();
 

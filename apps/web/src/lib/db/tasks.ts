@@ -31,16 +31,24 @@ export async function getTask(id: string) {
 	return data as Task;
 }
 
-export async function createTask(task: Omit<TaskInsert, 'user_id'>) {
+export async function createTask(
+	task: Omit<TaskInsert, 'user_id' | 'is_all_day' | 'due_time' | 'is_recurring' | 'recurrence_pattern' | 'parent_task_id' | 'recurrence_end_date'> &
+	Partial<Pick<TaskInsert, 'is_all_day' | 'due_time' | 'is_recurring' | 'recurrence_pattern' | 'parent_task_id' | 'recurrence_end_date'>>
+) {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
 
-	// Ensure is_all_day defaults to true if not specified
+	// Provide defaults for optional fields
+	const isAllDay = task.is_all_day ?? true;
 	const taskData = {
 		...task,
 		user_id: user.id,
-		is_all_day: task.is_all_day ?? true,
-		due_time: task.is_all_day ? null : task.due_time
+		is_all_day: isAllDay,
+		due_time: isAllDay ? null : (task.due_time ?? null),
+		is_recurring: task.is_recurring ?? false,
+		recurrence_pattern: task.recurrence_pattern ?? null,
+		parent_task_id: task.parent_task_id ?? null,
+		recurrence_end_date: task.recurrence_end_date ?? null
 	};
 
 	const { data, error } = await supabase
