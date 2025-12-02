@@ -7,8 +7,6 @@
 		projectCount,
 		totalTasks,
 		completedTasks,
-		totalNotes,
-		totalFiles,
 		onclick
 	}: {
 		domain: WellnessDomain | null;
@@ -16,8 +14,6 @@
 		projectCount: number;
 		totalTasks: number;
 		completedTasks: number;
-		totalNotes: number;
-		totalFiles: number;
 		onclick: () => void;
 	} = $props();
 

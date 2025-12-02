@@ -20,13 +20,13 @@
 	} = $props();
 
 	let textValue = $state('');
-	let selectedSuggestion = $state<string | null>(null);
+	let _selectedSuggestion = $state<string | null>(null);
 	let showCustomInput = $state(false);
 
 	// Initialize text value when question changes
 	$effect(() => {
 		// Only run effect when question changes, not when value changes during auto-advance
-		const questionId = question.id;
+		const _questionId = question.id;
 
 		if (question.question_type === 'open_ended') {
 			textValue = value || '';
@@ -35,19 +35,19 @@
 			if (suggestions && value) {
 				const matchingSuggestion = suggestions.find((s) => s.value === value);
 				if (matchingSuggestion) {
-					selectedSuggestion = value;
+					_selectedSuggestion = value;
 					showCustomInput = false;
 				} else {
-					selectedSuggestion = null;
+					_selectedSuggestion = null;
 					showCustomInput = true;
 				}
 			} else {
-				selectedSuggestion = null;
+				_selectedSuggestion = null;
 				showCustomInput = false;
 			}
 		} else {
 			textValue = '';
-			selectedSuggestion = null;
+			_selectedSuggestion = null;
 			showCustomInput = false;
 		}
 	});
@@ -74,7 +74,7 @@
 	}
 
 	function handleOtherSelect() {
-		selectedSuggestion = null;
+		_selectedSuggestion = null;
 		showCustomInput = true;
 		textValue = '';
 		value = '';
@@ -94,7 +94,7 @@
 	}
 
 	// Circle fill percentages for emoji_scale (progressive satisfaction)
-	const fillPercentages = [0, 25, 50, 75, 100];
+	const _fillPercentages = [0, 25, 50, 75, 100];
 
 	// Parse multiple choice options (reactive)
 	const multipleChoiceOptions = $derived(
@@ -123,8 +123,8 @@
 			<!-- Standard 1-5 scale with circle icons -->
 			<div class="scale-container">
 				<div class="scale-options">
-					{#each Array.from({ length: (question.scale_max || 5) - (question.scale_min || 1) + 1 }, (_, i) => i + (question.scale_min || 1)) as num, index}
-						{@const fillPercent = fillPercentages[index]}
+					{#each Array.from({ length: (question.scale_max || 5) - (question.scale_min || 1) + 1 }, (__, i) => i + (question.scale_min || 1)) as num, index}
+						{@const fillPercent = _fillPercentages[index]}
 						<button
 							type="button"
 							class="scale-button"
@@ -170,8 +170,8 @@
 			<!-- Emoji scale with circle icons -->
 			<div class="emoji-scale-container">
 				<div class="emoji-container">
-					{#each Array.from({ length: (question.scale_max || 5) - (question.scale_min || 1) + 1 }, (_, i) => i + (question.scale_min || 1)) as num, index}
-						{@const fillPercent = fillPercentages[index]}
+					{#each Array.from({ length: (question.scale_max || 5) - (question.scale_min || 1) + 1 }, (__, i) => i + (question.scale_min || 1)) as num, index}
+						{@const fillPercent = _fillPercentages[index]}
 						<button
 							type="button"
 							class="emoji-button"

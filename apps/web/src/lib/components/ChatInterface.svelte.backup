@@ -3,6 +3,7 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
+	import { updateProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';
@@ -237,6 +238,17 @@
 						await createNote({ ...noteData, project_id: noteData.project_id || projectId || null });
 						notificationCounts.incrementCount('notes');
 						results.push(`✓ Created note: ${noteData.title}`);
+					} else if (op.type === 'project') {
+						const projectData = op.data as ProjectData;
+						// Projects cannot be created - removed for fixed wellness domain projects
+				// await createProject({
+							name: projectData.name,
+							description: projectData.description ?? null,
+							color: projectData.color ?? null,
+							domain: null
+						});
+						notificationCounts.incrementCount('projects');
+						results.push(`✓ Created project: ${projectData.name}`);
 					}
 					successCount++;
 				} else if (op.operation === 'update') {
@@ -253,6 +265,9 @@
 						}
 						await updateNote(op.id, validChanges as Partial<NoteData>);
 						results.push(`✓ Updated note`);
+					} else if (op.type === 'project') {
+						await updateProject(op.id, op.changes as Partial<ProjectData>);
+						results.push(`✓ Updated project`);
 					}
 					successCount++;
 				} else if (op.operation === 'delete') {

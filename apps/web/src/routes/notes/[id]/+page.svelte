@@ -6,7 +6,6 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { handleError } from '$lib/utils/error-handler';
-	import { marked } from 'marked';
 	import type { Note, NoteBlock, Project } from '@chatkin/types';
 
 	$: noteId = $page.params.id;
@@ -70,9 +69,6 @@
 		}
 	}
 
-	function renderMarkdown(text: string): string {
-		return marked(text, { breaks: true }) as string;
-	}
 
 	async function handleDelete() {
 		if (!noteId) return;

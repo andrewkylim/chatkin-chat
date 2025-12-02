@@ -39,7 +39,6 @@
 
 	// Get task utilities and actions (reactive to projects changes)
 	$: ({
-		truncateTitle,
 		formatDueDate,
 		getProjectName,
 		categorize,

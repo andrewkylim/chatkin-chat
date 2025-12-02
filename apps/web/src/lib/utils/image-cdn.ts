@@ -3,9 +3,6 @@
  * Uses Cloudflare Image Resizing for WebP conversion and resizing
  */
 
-import { PUBLIC_WORKER_URL } from '$env/static/public';
-import { dev } from '$app/environment';
-
 export interface ImageOptions {
 	width?: number;
 	height?: number;
@@ -18,7 +15,7 @@ export interface ImageOptions {
  * Generate CDN image URL with transformations
  * Only applies transformations in production (Cloudflare Image Resizing doesn't work in dev)
  */
-export function getCdnImageUrl(fileUrl: string, options: ImageOptions = {}): string {
+export function getCdnImageUrl(fileUrl: string, _options: ImageOptions = {}): string {
 	// NOTE: Cloudflare Image Resizing doesn't work when the Worker fetches from itself
 	// This is a known limitation. For now, we return the original URL.
 	// TODO: Consider using Cloudflare Images product or implementing client-side resizing

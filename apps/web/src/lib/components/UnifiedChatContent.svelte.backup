@@ -6,6 +6,7 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
+	import { updateProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage, updateMessageMetadata, updateConversationMode } from '$lib/db/conversations';
 	import { createFile } from '$lib/db/files';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
@@ -402,11 +403,20 @@
 		);
 
 		// Create all proposed items
-		let taskCount = 0, noteCount = 0;
+		let projectCount = 0, taskCount = 0, noteCount = 0;
 
 		for (const action of message.proposedActions) {
 			try {
-				if (action.type === 'task') {
+				if (action.type === 'project') {
+					await createProject({
+						name: action.name || 'Untitled Project',
+						description: action.description || null,
+						color: action.color || '📁',
+						domain: null
+					});
+					projectCount++;
+					notificationCounts.incrementCount('projects');
+				} else if (action.type === 'task') {
 					await createTask({
 						title: action.title || 'Untitled Task',
 						description: action.description || null,
@@ -433,6 +443,7 @@
 
 		// Show success message
 		const parts: string[] = [];
+		if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
 		if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
 		if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);
 
@@ -522,6 +533,21 @@
 						});
 						notificationCounts.incrementCount('notes');
 						results.push(`✓ Created note: ${noteData.title}`);
+					} else if (op.type === 'project') {
+						const projectData = op.data as unknown as ProjectData;
+						const newProject = await createProject({
+							name: projectData.name,
+							description: projectData.description ?? null,
+							color: projectData.color ?? null,
+							domain: null
+						});
+						// Capture the new project ID for subsequent items in this batch
+						if (newProject && newProject.id) {
+							lastCreatedProjectId = newProject.id;
+							logger.debug('Captured new project ID for smart assignment', { id: lastCreatedProjectId });
+						}
+						notificationCounts.incrementCount('projects');
+						results.push(`✓ Created project: ${projectData.name}`);
 					}
 					successCount++;
 				} else if (op.operation === 'update') {
@@ -539,6 +565,9 @@
 						}
 						await updateNote(op.id, validChanges);
 						results.push(`✓ Updated note`);
+					} else if (op.type === 'project') {
+						await updateProject(op.id, op.changes);
+						results.push(`✓ Updated project`);
 					} else if (op.type === 'file') {
 						const { updateFileProject } = await import('$lib/db/files');
 						if (op.changes.project_id !== undefined) {
@@ -556,6 +585,9 @@
 					} else if (op.type === 'note') {
 						await deleteNote(op.id);
 						results.push(`✓ Deleted note`);
+					} else if (op.type === 'project') {
+						await deleteProject(op.id);
+						results.push(`✓ Deleted project`);
 					} else if (op.type === 'file') {
 						const { deleteFile } = await import('$lib/db/files');
 						const { data: { session } } = await supabase.auth.getSession();

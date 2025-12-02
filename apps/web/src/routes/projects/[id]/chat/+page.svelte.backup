@@ -54,7 +54,7 @@
 	// Get utilities and actions from helper modules
 	const taskHelpers = useProjectTasks();
 	const noteHelpers = useProjectNotes();
-	const { toggleTaskComplete } = useProjectActions();
+	const { deleteProject, toggleTaskComplete } = useProjectActions();
 
 	// Destructure for convenience
 	const { truncateTitle, formatDueDate, categorizeTasks } = taskHelpers;
@@ -129,7 +129,13 @@
 
 	async function handleDeleteProject() {
 		if (!projectId) return;
-		alert('Project deletion is currently unavailable');
+		try {
+			await deleteProject(projectId);
+			goto('/projects');
+		} catch (error) {
+			handleError(error, { operation: 'Delete project', component: 'ProjectChatPage' });
+			alert('Failed to delete project');
+		}
 	}
 
 	function startEditProject() {

@@ -57,7 +57,7 @@
 		}
 	}
 
-	function handleToggle(e?: Event) {
+	function handleToggle(_e?: Event) {
 		dispatch('toggle');
 	}
 

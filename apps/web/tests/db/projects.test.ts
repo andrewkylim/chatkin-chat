@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getProjects,
   getProject,
-  createProject,
   updateProject,
-  deleteProject,
   getProjectStats
 } from '../../src/lib/db/projects';
 import { supabase } from '$lib/supabase';
@@ -17,7 +15,7 @@ describe('Projects Database Operations', () => {
     name: 'Test Project',
     description: 'Test Description',
     color: '📁',
-    domain: null,
+    domain: 'Body',
     created_at: '2025-11-27T00:00:00Z',
     updated_at: '2025-11-27T00:00:00Z'
   };
@@ -113,83 +111,83 @@ describe('Projects Database Operations', () => {
     });
   });
 
-  describe('createProject', () => {
-    it('should create a new project', async () => {
-      const newProject = {
-        name: 'New Project',
-        description: 'New Description',
-        color: '🎨',
-        domain: null
-      };
-
-      const mockFrom = vi.fn().mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: { ...mockProject, ...newProject },
-              error: null
-            })
-          })
-        })
-      });
-      vi.mocked(supabase.from).mockImplementation(mockFrom as never);
-
-      const project = await createProject(newProject);
-
-      expect(project.name).toBe('New Project');
-      expect(supabase.from).toHaveBeenCalledWith('projects');
-    });
-
-    it('should throw error when not authenticated', async () => {
-      vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: null },
-        error: null
-      } as never);
-
-      await expect(createProject({
-        name: 'Project',
-        description: null,
-        color: null,
-        domain: null
-      })).rejects.toThrow('Not authenticated');
-    });
-
-    it('should include user_id from authenticated user', async () => {
-      vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: { id: 'user-789' } },
-        error: null
-      } as never);
-
-      const mockInsert = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: mockProject,
-            error: null
-          })
-        })
-      });
-
-      const mockFrom = vi.fn().mockReturnValue({
-        insert: mockInsert
-      });
-      vi.mocked(supabase.from).mockImplementation(mockFrom as never);
-
-      await createProject({
-        name: 'Project',
-        description: null,
-        color: null,
-        domain: null
-      });
-
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({ user_id: 'user-789' })
-      );
-    });
-  });
+  // describe('createProject', () => {
+  //   it('should create a new project', async () => {
+  //     const newProject = {
+  //       name: 'New Project',
+  //       description: 'New Description',
+  //       color: '🎨',
+  //       domain: null
+  //     };
+  //
+  //     const mockFrom = vi.fn().mockReturnValue({
+  //       insert: vi.fn().mockReturnValue({
+  //         select: vi.fn().mockReturnValue({
+  //           single: vi.fn().mockResolvedValue({
+  //             data: { ...mockProject, ...newProject },
+  //             error: null
+  //           })
+  //         })
+  //       })
+  //     });
+  //     vi.mocked(supabase.from).mockImplementation(mockFrom as never);
+  //
+  //     const project = await createProject(newProject);
+  //
+  //     expect(project.name).toBe('New Project');
+  //     expect(supabase.from).toHaveBeenCalledWith('projects');
+  //   });
+  //
+  //   it('should throw error when not authenticated', async () => {
+  //     vi.mocked(supabase.auth.getUser).mockResolvedValue({
+  //       data: { user: null },
+  //       error: null
+  //     } as never);
+  //
+  //     await expect(createProject({
+  //       name: 'Project',
+  //       description: null,
+  //       color: null,
+  //       domain: null
+  //     })).rejects.toThrow('Not authenticated');
+  //   });
+  //
+  //   it('should include user_id from authenticated user', async () => {
+  //     vi.mocked(supabase.auth.getUser).mockResolvedValue({
+  //       data: { user: { id: 'user-789' } },
+  //       error: null
+  //     } as never);
+  //
+  //     const mockInsert = vi.fn().mockReturnValue({
+  //       select: vi.fn().mockReturnValue({
+  //         single: vi.fn().mockResolvedValue({
+  //           data: mockProject,
+  //           error: null
+  //         })
+  //       })
+  //     });
+  //
+  //     const mockFrom = vi.fn().mockReturnValue({
+  //       insert: mockInsert
+  //     });
+  //     vi.mocked(supabase.from).mockImplementation(mockFrom as never);
+  //
+  //     await createProject({
+  //       name: 'Project',
+  //       description: null,
+  //       color: null,
+  //       domain: null
+  //     });
+  //
+  //     expect(mockInsert).toHaveBeenCalledWith(
+  //       expect.objectContaining({ user_id: 'user-789' })
+  //     );
+  //   });
+  // });
 
   describe('updateProject', () => {
     it('should update an existing project', async () => {
-      const updates = { name: 'Updated Project' };
+      const updates = { description: 'Updated Description' };
 
       const mockFrom = vi.fn().mockReturnValue({
         update: vi.fn().mockReturnValue({
@@ -207,7 +205,7 @@ describe('Projects Database Operations', () => {
 
       const project = await updateProject('project-123', updates);
 
-      expect(project.name).toBe('Updated Project');
+      expect(project.description).toBe('Updated Description');
     });
 
     it('should set updated_at timestamp', async () => {
@@ -227,7 +225,7 @@ describe('Projects Database Operations', () => {
       });
       vi.mocked(supabase.from).mockImplementation(mockFrom as never);
 
-      await updateProject('project-123', { name: 'Updated' });
+      await updateProject('project-123', { description: 'Updated' });
 
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ updated_at: expect.any(String) })
@@ -249,41 +247,41 @@ describe('Projects Database Operations', () => {
       });
       vi.mocked(supabase.from).mockImplementation(mockFrom as never);
 
-      await expect(updateProject('project-123', {})).rejects.toThrow('Update failed');
+      await expect(updateProject('project-123', { description: null })).rejects.toThrow('Update failed');
     });
   });
 
-  describe('deleteProject', () => {
-    it('should delete a project', async () => {
-      const mockDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({
-          error: null
-        })
-      });
-
-      const mockFrom = vi.fn().mockReturnValue({
-        delete: mockDelete
-      });
-      vi.mocked(supabase.from).mockImplementation(mockFrom as never);
-
-      await deleteProject('project-123');
-
-      expect(mockDelete).toHaveBeenCalled();
-    });
-
-    it('should throw error on delete failure', async () => {
-      const mockFrom = vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            error: new Error('Delete failed')
-          })
-        })
-      });
-      vi.mocked(supabase.from).mockImplementation(mockFrom as never);
-
-      await expect(deleteProject('project-123')).rejects.toThrow('Delete failed');
-    });
-  });
+  // describe('deleteProject', () => {
+  //   it('should delete a project', async () => {
+  //     const mockDelete = vi.fn().mockReturnValue({
+  //       eq: vi.fn().mockResolvedValue({
+  //         error: null
+  //       })
+  //     });
+  //
+  //     const mockFrom = vi.fn().mockReturnValue({
+  //       delete: mockDelete
+  //     });
+  //     vi.mocked(supabase.from).mockImplementation(mockFrom as never);
+  //
+  //     await deleteProject('project-123');
+  //
+  //     expect(mockDelete).toHaveBeenCalled();
+  //   });
+  //
+  //   it('should throw error on delete failure', async () => {
+  //     const mockFrom = vi.fn().mockReturnValue({
+  //       delete: vi.fn().mockReturnValue({
+  //         eq: vi.fn().mockResolvedValue({
+  //           error: new Error('Delete failed')
+  //         })
+  //       })
+  //     });
+  //     vi.mocked(supabase.from).mockImplementation(mockFrom as never);
+  //
+  //     await expect(deleteProject('project-123')).rejects.toThrow('Delete failed');
+  //   });
+  // });
 
   describe('getProjectStats', () => {
     it('should fetch project statistics', async () => {

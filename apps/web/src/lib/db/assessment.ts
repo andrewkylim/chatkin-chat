@@ -23,7 +23,7 @@ export async function getAssessmentResults(): Promise<AssessmentResults | null> 
 	}
 
 	// Fetch profile summary
-	const { data: profileData, error: profileError } = await supabase
+	const { data: profileData, error: _profileError } = await supabase
 		.from('user_profiles')
 		.select('profile_summary')
 		.single();

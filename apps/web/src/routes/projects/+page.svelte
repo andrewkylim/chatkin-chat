@@ -107,19 +107,6 @@
 		return groups;
 	}
 
-	function getRelativeTime(date: string) {
-		const now = new Date();
-		const past = new Date(date);
-		const diff = now.getTime() - past.getTime();
-		const hours = Math.floor(diff / (1000 * 60 * 60));
-		const days = Math.floor(hours / 24);
-
-		if (hours < 1) return 'Just now';
-		if (hours < 24) return `${hours}h ago`;
-		if (days === 1) return 'Yesterday';
-		if (days < 7) return `${days} days ago`;
-		return past.toLocaleDateString();
-	}
 
 	function getProjectEmoji(project: Project) {
 		return project.color || '📁';
@@ -193,7 +180,7 @@
 		return description.substring(0, maxLength) + '...';
 	}
 
-	function startEditProject(project: Project) {
+	function _startEditProject(project: Project) {
 		editProject = project;
 		showEditModal = true;
 	}
@@ -258,8 +245,6 @@
 								projectCount={group.projects.length}
 								totalTasks={group.totalTasks}
 								completedTasks={group.completedTasks}
-								totalNotes={group.totalNotes}
-								totalFiles={group.totalFiles}
 								onclick={() => handleDomainClick(group.domain)}
 							/>
 						{/each}
@@ -377,7 +362,7 @@
 													{/if}
 													{stats.completedTasks} of {stats.totalTasks} completed
 												</span>
-												<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
+												<span class="project-date">Updated {new Date(project.updated_at).toLocaleDateString()}</span>
 											</div>
 										</a>
 									</div>

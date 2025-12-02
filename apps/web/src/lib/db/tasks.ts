@@ -217,7 +217,7 @@ export async function getRecurringTaskInstances(parentTaskId: string): Promise<T
 export function formatRecurrencePattern(pattern: RecurrencePattern): string {
 	const { frequency, interval, days_of_week, day_of_month } = pattern;
 
-	const intervalText = interval === 1 ? '' : `every ${interval} `;
+	const _intervalText = interval === 1 ? '' : `every ${interval} `;
 
 	switch (frequency) {
 		case 'daily':

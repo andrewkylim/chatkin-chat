@@ -39,10 +39,7 @@
 
 		try {
 			await updateProject(project.id, {
-				name: editProjectName,
-				description: editProjectDescription || null,
-				color: editSelectedEmoji,
-				domain: editProjectDomain || null
+				description: editProjectDescription || null
 			});
 
 			onUpdate();

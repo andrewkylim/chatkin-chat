@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Task, Project } from '@chatkin/types';
-	import { truncateText, formatDueDate, formatDueDateTime, getProjectName, isToday, isThisWeek } from '$lib/utils/formatters';
+	import { formatDueDateTime, getProjectName, isToday, isThisWeek } from '$lib/utils/formatters';
 
 	export let tasks: Task[] = [];
 	export let projects: Project[] = [];

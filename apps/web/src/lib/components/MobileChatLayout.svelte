@@ -5,7 +5,6 @@
 	import MobileUserMenu from './MobileUserMenu.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import VoiceInput from './VoiceInput.svelte';
-	import { supabase } from '$lib/supabase';
 
 	interface AIQuestion {
 		question: string;
@@ -52,7 +51,7 @@
 		subtitle = null,
 		backUrl = null,
 		talkModeActive = false,
-		isPlayingAudio = false,
+		isPlayingAudio: _isPlayingAudio = false,
 		toggleTalkMode = undefined,
 		aiMode = 'chat',
 		toggleAiMode = undefined

@@ -47,8 +47,8 @@
 		try {
 			notificationPrefs = await getNotificationPreferences();
 			browserPermissionStatus = Notification.permission;
-		} catch (error) {
-			console.error('Failed to load notification preferences:', error);
+		} catch (_error) {
+			console.error('Failed to load notification preferences:', _error);
 			prefsStatus = 'Failed to load preferences';
 		} finally {
 			loadingPrefs = false;
@@ -84,7 +84,7 @@
 
 			prefsStatus = 'Saved';
 			setTimeout(() => (prefsStatus = ''), 2000);
-		} catch (error) {
+		} catch (_error) {
 			prefsStatus = 'Error saving preferences';
 		} finally {
 			savingPrefs = false;
@@ -117,7 +117,7 @@
 
 			prefsStatus = 'Saved';
 			setTimeout(() => (prefsStatus = ''), 2000);
-		} catch (error) {
+		} catch (_error) {
 			prefsStatus = 'Error saving preferences';
 		} finally {
 			savingPrefs = false;
@@ -150,7 +150,7 @@
 
 			prefsStatus = 'Saved';
 			setTimeout(() => (prefsStatus = ''), 2000);
-		} catch (error) {
+		} catch (_error) {
 			prefsStatus = 'Error saving preferences';
 		} finally {
 			savingPrefs = false;
@@ -174,13 +174,13 @@
 			const user = $auth.user;
 
 			// Get all conversations for this user
-			const { data: conversations, error: convError } = await supabase
+			const { data: conversations, error: _convError } = await supabase
 				.from('conversations')
 				.select('id, scope')
 				.eq('user_id', user.id);
 
-			if (convError) {
-				status = `Error: ${convError.message}`;
+			if (_convError) {
+				status = `Error: ${_convError.message}`;
 				cleaning = false;
 				return;
 			}
@@ -194,25 +194,25 @@
 			// Delete all messages for these conversations
 			const conversationIds = conversations.map(c => c.id);
 
-			const { error: msgError } = await supabase
+			const { error: _msgError } = await supabase
 				.from('messages')
 				.delete()
 				.in('conversation_id', conversationIds);
 
-			if (msgError) {
-				status = `Error deleting messages: ${msgError.message}`;
+			if (_msgError) {
+				status = `Error deleting messages: ${_msgError.message}`;
 				cleaning = false;
 				return;
 			}
 
 			// Delete all conversations
-			const { error: delError } = await supabase
+			const { error: _delError } = await supabase
 				.from('conversations')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (delError) {
-				status = `Error deleting conversations: ${delError.message}`;
+			if (_delError) {
+				status = `Error deleting conversations: ${_delError.message}`;
 				cleaning = false;
 				return;
 			}
@@ -224,8 +224,8 @@
 				window.location.reload();
 			}, 1500);
 
-		} catch (error) {
-			status = `Error: ${error instanceof Error ? error.message : String(error)}`;
+		} catch (_error) {
+			status = `Error: ${_error instanceof Error ? _error.message : String(_error)}`;
 		} finally {
 			cleaning = false;
 		}
@@ -246,20 +246,20 @@
 
 			// First, get all files to retrieve r2_keys for deletion
 			deleteAllStatus = 'Deleting files from storage...';
-			const { data: files, error: filesQueryError } = await supabase
+			const { data: files, error: _filesQueryError } = await supabase
 				.from('files')
 				.select('id, r2_key')
 				.eq('user_id', user.id);
 
-			if (filesQueryError) throw new Error(`Failed to query files: ${filesQueryError.message}`);
+			if (_filesQueryError) throw new Error(`Failed to query files: ${_filesQueryError.message}`);
 
 			// Delete all files from database
-			const { error: filesError } = await supabase
+			const { error: _filesError } = await supabase
 				.from('files')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (filesError) throw new Error(`Failed to delete files: ${filesError.message}`);
+			if (_filesError) throw new Error(`Failed to delete files: ${_filesError.message}`);
 
 			// Delete files from R2 storage in parallel
 			if (files && files.length > 0) {
@@ -280,57 +280,57 @@
 
 			// Delete all projects (cascades to project conversations and messages)
 			deleteAllStatus = 'Deleting projects...';
-			const { error: projectsError } = await supabase
+			const { error: _projectsError } = await supabase
 				.from('projects')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (projectsError) throw new Error(`Failed to delete projects: ${projectsError.message}`);
+			if (_projectsError) throw new Error(`Failed to delete projects: ${_projectsError.message}`);
 
 			// Delete all tasks
 			deleteAllStatus = 'Deleting tasks...';
-			const { error: tasksError } = await supabase
+			const { error: _tasksError } = await supabase
 				.from('tasks')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (tasksError) throw new Error(`Failed to delete tasks: ${tasksError.message}`);
+			if (_tasksError) throw new Error(`Failed to delete tasks: ${_tasksError.message}`);
 
 			// Delete all notes (cascades to note_blocks)
 			deleteAllStatus = 'Deleting notes...';
-			const { error: notesError } = await supabase
+			const { error: _notesError } = await supabase
 				.from('notes')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (notesError) throw new Error(`Failed to delete notes: ${notesError.message}`);
+			if (_notesError) throw new Error(`Failed to delete notes: ${_notesError.message}`);
 
 			// Delete assessment responses
 			deleteAllStatus = 'Deleting assessment responses...';
-			const { error: responsesError } = await supabase
+			const { error: _responsesError } = await supabase
 				.from('assessment_responses')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (responsesError) throw new Error(`Failed to delete assessment responses: ${responsesError.message}`);
+			if (_responsesError) throw new Error(`Failed to delete assessment responses: ${_responsesError.message}`);
 
 			// Delete assessment results
 			deleteAllStatus = 'Deleting assessment results...';
-			const { error: resultsError } = await supabase
+			const { error: _resultsError } = await supabase
 				.from('assessment_results')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (resultsError) throw new Error(`Failed to delete assessment results: ${resultsError.message}`);
+			if (_resultsError) throw new Error(`Failed to delete assessment results: ${_resultsError.message}`);
 
 			// Delete user profile
 			deleteAllStatus = 'Deleting user profile...';
-			const { error: profileError } = await supabase
+			const { error: _profileError } = await supabase
 				.from('user_profiles')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (profileError) throw new Error(`Failed to delete user profile: ${profileError.message}`);
+			if (_profileError) throw new Error(`Failed to delete user profile: ${_profileError.message}`);
 
 			deleteAllStatus = '✅ Successfully deleted all content. Refreshing...';
 
@@ -339,8 +339,8 @@
 				window.location.reload();
 			}, 1500);
 
-		} catch (error) {
-			deleteAllStatus = `Error: ${error instanceof Error ? error.message : String(error)}`;
+		} catch (_error) {
+			deleteAllStatus = `Error: ${_error instanceof Error ? _error.message : String(_error)}`;
 		} finally {
 			deletingAll = false;
 		}
@@ -362,12 +362,12 @@
 				.select('id, r2_key')
 				.eq('user_id', user.id);
 
-			const { error: filesError } = await supabase
+			const { error: _filesError } = await supabase
 				.from('files')
 				.delete()
 				.eq('user_id', user.id);
 
-			if (filesError) throw filesError;
+			if (_filesError) throw _filesError;
 
 			if (files && files.length > 0) {
 				const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : 'https://chatkin.ai';
@@ -401,7 +401,7 @@
 			await supabase.from('assessment_results').delete().eq('user_id', user.id);
 
 			// NOW update the profile to mark questionnaire as incomplete
-			const { error: updateError } = await supabase
+			const { error: _updateError } = await supabase
 				.from('user_profiles')
 				.update({
 					has_completed_questionnaire: false,
@@ -409,13 +409,13 @@
 				})
 				.eq('user_id', user.id);
 
-			if (updateError) throw updateError;
+			if (_updateError) throw _updateError;
 
 			// Close modal and redirect
 			showRetakeModal = false;
 			goto('/questionnaire');
-		} catch (err) {
-			console.error('Error retaking questionnaire:', err);
+		} catch (_err) {
+			console.error('Error retaking questionnaire:', _err);
 		}
 	}
 </script>

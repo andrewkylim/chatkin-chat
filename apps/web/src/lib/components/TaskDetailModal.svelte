@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Task, Project } from '@chatkin/types';
 	import { formatRecurrencePattern, updateTask } from '$lib/db/tasks';
-	import { formatDueDateTime } from '$lib/utils/formatters';
 	import { handleError } from '$lib/utils/error-handler';
 
 	export let show = false;
@@ -17,21 +16,6 @@
 	let titleElement: HTMLElement;
 	let descriptionElement: HTMLElement;
 
-	function formatDueDate(date: string | null) {
-		if (!date) return 'No due date';
-		const taskDate = new Date(date);
-		const today = new Date();
-
-		// Check if today
-		if (taskDate.toDateString() === today.toDateString()) return 'Due today';
-
-		// Compare dates without time component
-		taskDate.setHours(0, 0, 0, 0);
-		today.setHours(0, 0, 0, 0);
-		if (taskDate < today) return 'Overdue';
-
-		return taskDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-	}
 
 	function getProjectName(projectId: string | null) {
 		if (!projectId) return null;

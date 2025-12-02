@@ -62,7 +62,7 @@
 		}
 	}
 
-	function handleCardClick(e: MouseEvent) {
+	function handleCardClick(_e: MouseEvent) {
 		// If in select mode, toggle selection
 		if (selectMode) {
 			dispatch('toggle');
