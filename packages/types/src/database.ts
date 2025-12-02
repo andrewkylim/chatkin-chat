@@ -3,12 +3,15 @@
  * Based on the schema defined in docs/chatkin-os/DRAFT-NOTES.md
  */
 
+export type WellnessDomain = 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
+
 export interface Project {
   id: string;
   user_id: string;
   name: string;
   description: string | null;
   color: string | null;
+  domain: WellnessDomain | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { updateProject } from '$lib/db/projects';
 	import { handleError } from '$lib/utils/error-handler';
-	import type { Project } from '@chatkin/types';
+	import type { Project, WellnessDomain } from '@chatkin/types';
 
 	export let show = false;
 	export let project: Project | null = null;
@@ -10,6 +10,7 @@
 
 	let editProjectName = '';
 	let editProjectDescription = '';
+	let editProjectDomain: WellnessDomain | '' = '';
 	let editSelectedEmoji = '📁';
 	let editShowAllEmojis = false;
 
@@ -28,6 +29,7 @@
 	$: if (show && project) {
 		editProjectName = project.name;
 		editProjectDescription = project.description || '';
+		editProjectDomain = project.domain || '';
 		editSelectedEmoji = project.color || '📁';
 		editShowAllEmojis = false;
 	}
@@ -39,7 +41,8 @@
 			await updateProject(project.id, {
 				name: editProjectName,
 				description: editProjectDescription || null,
-				color: editSelectedEmoji
+				color: editSelectedEmoji,
+				domain: editProjectDomain || null
 			});
 
 			onUpdate();
@@ -53,6 +56,7 @@
 	function handleClose() {
 		editProjectName = '';
 		editProjectDescription = '';
+		editProjectDomain = '';
 		editSelectedEmoji = '📁';
 		editShowAllEmojis = false;
 		onClose();
@@ -103,6 +107,18 @@
 								</button>
 							</div>
 						</div>
+					</div>
+					<div class="form-group">
+						<label for="edit-project-domain">Domain (optional)</label>
+						<select id="edit-project-domain" bind:value={editProjectDomain}>
+							<option value="">Unassigned</option>
+							<option value="Body">💪 Body - Physical health</option>
+							<option value="Mind">🧠 Mind - Mental wellbeing</option>
+							<option value="Purpose">🎯 Purpose - Work & meaning</option>
+							<option value="Connection">🤝 Connection - Relationships</option>
+							<option value="Growth">🌱 Growth - Learning</option>
+							<option value="Finance">💰 Finance - Financial stability</option>
+						</select>
 					</div>
 					<div class="form-group">
 						<label for="edit-project-name">Project Name</label>
@@ -201,7 +217,8 @@
 	}
 
 	.form-group input,
-	.form-group textarea {
+	.form-group textarea,
+	.form-group select {
 		width: 100%;
 		padding: 12px 16px;
 		background: var(--bg-tertiary);
@@ -213,7 +230,8 @@
 	}
 
 	.form-group input:focus,
-	.form-group textarea:focus {
+	.form-group textarea:focus,
+	.form-group select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
 		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);

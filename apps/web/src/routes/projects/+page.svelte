@@ -2,10 +2,15 @@
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
+	import ProfileSummaryBanner from '$lib/components/projects/ProfileSummaryBanner.svelte';
+	import DomainProjectCard from '$lib/components/projects/DomainProjectCard.svelte';
 	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
+	import { getAssessmentResults } from '$lib/db/assessment';
+	import type { AssessmentResults } from '$lib/db/assessment';
 	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
-	import type { Project } from '@chatkin/types';
+	import type { Project, WellnessDomain } from '@chatkin/types';
+	import { handleError } from '$lib/utils/error-handler';
 
 	interface ProjectStats {
 		totalTasks: number;
@@ -14,12 +19,26 @@
 		totalFiles: number;
 	}
 
+	interface DomainWithProjects {
+		domain: WellnessDomain | null;
+		domainScore: number;
+		projects: Project[];
+		totalTasks: number;
+		completedTasks: number;
+		totalNotes: number;
+		totalFiles: number;
+	}
+
 	let projects: Project[] = [];
 	let projectStats: Record<string, ProjectStats> = {};
+	let assessmentResults: AssessmentResults | null = null;
+	let domainGroups: DomainWithProjects[] = [];
+	let expandedDomain: WellnessDomain | null = null;
 	let loading = true;
 	let showNewProjectModal = false;
 	let newProjectName = '';
 	let newProjectDescription = '';
+	let newProjectDomain: WellnessDomain | '' = '';
 	let selectedEmoji = '📁';
 	let showAllEmojis = false;
 	let deleteConfirmProject: Project | null = null;
@@ -27,41 +46,146 @@
 	let showEditModal = false;
 	let openMenuId: string | null = null;
 
-	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨'];
+	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
 
+	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨'];
 	const allEmojis = [
-		'📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨',
-		'🌟', '💡', '🎉', '🔥', '⚡', '🎵', '🎮',
-		'✈️', '🍕', '☕', '🌈', '🎭', '🎬', '📸',
-		'🎪', '🌱', '🌸', '🌻', '🌷', '🍀', '🦄',
-		'🐶', '🐱', '🎄', '🦊', '🦁', '🐯', '🎃',
-		'⭐', '🎁', '💝', '🎈'
+		'📁',
+		'💼',
+		'🏠',
+		'🎯',
+		'🚀',
+		'📚',
+		'🎨',
+		'🌟',
+		'💡',
+		'🎉',
+		'🔥',
+		'⚡',
+		'🎵',
+		'🎮',
+		'✈️',
+		'🍕',
+		'☕',
+		'🌈',
+		'🎭',
+		'🎬',
+		'📸',
+		'🎪',
+		'🌱',
+		'🌸',
+		'🌻',
+		'🌷',
+		'🍀',
+		'🦄',
+		'🐶',
+		'🐱',
+		'🎄',
+		'🦊',
+		'🦁',
+		'🐯',
+		'🎃',
+		'⭐',
+		'🎁',
+		'💝',
+		'🎈'
 	];
 
 	$: availableEmojis = showAllEmojis ? allEmojis : quickEmojis;
 
 	onMount(async () => {
-		// Set current section and clear notification count
 		notificationCounts.setCurrentSection('projects');
 		notificationCounts.clearCount('projects');
-
 		await loadProjects();
 	});
 
 	async function loadProjects() {
 		loading = true;
 		try {
-			projects = await getProjects();
+			// Fetch projects and assessment results in parallel
+			const [projectsData, assessmentData] = await Promise.all([
+				getProjects(),
+				getAssessmentResults()
+			]);
+
+			projects = projectsData;
+			assessmentResults = assessmentData;
 
 			// Load stats for each project
 			for (const project of projects) {
 				projectStats[project.id] = await getProjectStats(project.id);
 			}
+
+			// Group projects by domain
+			domainGroups = groupProjectsByDomain(projects, assessmentResults);
 		} catch (error) {
 			handleError(error, { operation: 'Load projects', component: 'ProjectsPage' });
 		} finally {
 			loading = false;
 		}
+	}
+
+	function groupProjectsByDomain(
+		projects: Project[],
+		results: AssessmentResults | null
+	): DomainWithProjects[] {
+		const groups: DomainWithProjects[] = [];
+
+		// Create group for each domain
+		for (const domain of domains) {
+			const domainProjects = projects.filter((p) => p.domain === domain);
+			const group: DomainWithProjects = {
+				domain,
+				domainScore: results?.domain_scores[domain] || 0,
+				projects: domainProjects,
+				totalTasks: 0,
+				completedTasks: 0,
+				totalNotes: 0,
+				totalFiles: 0
+			};
+
+			// Aggregate stats for this domain
+			for (const project of domainProjects) {
+				const stats = projectStats[project.id];
+				if (stats) {
+					group.totalTasks += stats.totalTasks;
+					group.completedTasks += stats.completedTasks;
+					group.totalNotes += stats.totalNotes;
+					group.totalFiles += stats.totalFiles;
+				}
+			}
+
+			groups.push(group);
+		}
+
+		// Add unassigned group if there are projects without a domain
+		const unassignedProjects = projects.filter((p) => p.domain === null);
+		if (unassignedProjects.length > 0) {
+			const group: DomainWithProjects = {
+				domain: null,
+				domainScore: 0,
+				projects: unassignedProjects,
+				totalTasks: 0,
+				completedTasks: 0,
+				totalNotes: 0,
+				totalFiles: 0
+			};
+
+			// Aggregate stats for unassigned
+			for (const project of unassignedProjects) {
+				const stats = projectStats[project.id];
+				if (stats) {
+					group.totalTasks += stats.totalTasks;
+					group.completedTasks += stats.completedTasks;
+					group.totalNotes += stats.totalNotes;
+					group.totalFiles += stats.totalFiles;
+				}
+			}
+
+			groups.push(group);
+		}
+
+		return groups;
 	}
 
 	async function handleCreateProject() {
@@ -71,12 +195,14 @@
 			await createProject({
 				name: newProjectName,
 				description: newProjectDescription || null,
-				color: selectedEmoji
+				color: selectedEmoji,
+				domain: newProjectDomain || null
 			});
 
 			// Reset form
 			newProjectName = '';
 			newProjectDescription = '';
+			newProjectDomain = '';
 			selectedEmoji = '📁';
 			showAllEmojis = false;
 			showNewProjectModal = false;
@@ -106,9 +232,16 @@
 		return project.color || '📁';
 	}
 
-	function truncateProjectName(name: string, maxLength: number = 30) {
-		if (name.length <= maxLength) return name;
-		return name.substring(0, maxLength) + '...';
+	function getDomainColor(domain: WellnessDomain | null): string {
+		const colorMap: Record<WellnessDomain, string> = {
+			Body: 'var(--domain-body)',
+			Mind: 'var(--domain-mind)',
+			Purpose: 'var(--domain-purpose)',
+			Connection: 'var(--domain-connection)',
+			Growth: 'var(--domain-growth)',
+			Finance: 'var(--domain-finance)'
+		};
+		return domain ? colorMap[domain] : 'rgba(199, 124, 92, 0.2)';
 	}
 
 	function truncateDescription(description: string, maxLength: number = 50) {
@@ -146,408 +279,504 @@
 	function toggleMenu(projectId: string) {
 		openMenuId = openMenuId === projectId ? null : projectId;
 	}
+
+	function handleDomainClick(domain: WellnessDomain | null) {
+		expandedDomain = domain;
+	}
+
+	function handleBackToAllDomains() {
+		expandedDomain = null;
+	}
 </script>
 
 <AppLayout>
-<div class="projects-page">
-	<header class="page-header">
-		<div class="header-content">
-			<h1>Projects</h1>
-			<button class="primary-btn" on:click={() => showNewProjectModal = true}>
-				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M8 2v12M2 8h12"/>
-				</svg>
-				New Project
-			</button>
-		</div>
-	</header>
-
-	<!-- Mobile Header -->
-	<header class="mobile-header">
-		<div class="mobile-header-left">
-			<a href="/chat" class="mobile-logo-button">
-				<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
-			</a>
-			<h1>Projects</h1>
-		</div>
-		<MobileUserMenu />
-	</header>
-
-	<div class="page-content">
-		{#if loading}
-			<div class="loading-state">
-				<div class="spinner"></div>
-				<p>Loading projects...</p>
+	<div class="projects-page">
+		<header class="page-header">
+			<div class="header-content">
+				<h1>Projects</h1>
+				<button class="primary-btn" on:click={() => (showNewProjectModal = true)}>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path d="M8 2v12M2 8h12" />
+					</svg>
+					New Project
+				</button>
 			</div>
-		{:else if projects.length === 0}
-			<div class="empty-state">
-				<img src="/projects.webp" alt="Projects" class="empty-icon" />
-				<h2>No projects yet</h2>
-				<p>Create your first project to get started</p>
+		</header>
+
+		<!-- Mobile Header -->
+		<header class="mobile-header">
+			<div class="mobile-header-left">
+				<a href="/chat" class="mobile-logo-button">
+					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+				</a>
+				<h1>Projects</h1>
 			</div>
-		{:else}
-			<div class="projects-grid">
-				{#each projects as project (project.id)}
-					{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0, totalFiles: 0 }}
-					<div class="project-card">
-						<a href="/projects/{project.id}/chat" class="project-card-link">
-							<div class="project-header">
-								<div class="project-icon" style="background: rgba(199, 124, 92, 0.1);">
-									{getProjectEmoji(project)}
-								</div>
-								<div class="project-info">
-									<h3>{project.name}</h3>
-									<p class="project-meta">{stats.totalTasks} tasks · {stats.totalNotes} notes · {stats.totalFiles} files</p>
-								</div>
-							</div>
-							{#if project.description}
-								<p class="project-description">{truncateDescription(project.description)}</p>
-							{/if}
-							<div class="project-footer">
-								<span class="task-status">
-									{#if stats.totalTasks > 0}
-										<span class="status-dot {stats.completedTasks === stats.totalTasks ? 'completed' : 'in-progress'}"></span>
-									{/if}
-									{stats.completedTasks} of {stats.totalTasks} completed
-								</span>
-								<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
-							</div>
-						</a>
-						<div class="card-actions">
-							<button class="menu-btn" on:click|stopPropagation={() => toggleMenu(project.id)} title="Actions">
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-									<circle cx="8" cy="3" r="1.5"/>
-									<circle cx="8" cy="8" r="1.5"/>
-									<circle cx="8" cy="13" r="1.5"/>
-								</svg>
-							</button>
-							{#if openMenuId === project.id}
-								<div class="dropdown-menu">
-									<button class="menu-item" on:click|stopPropagation={() => { startEditProject(project); openMenuId = null; }}>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
-										</svg>
-										Edit
-									</button>
-									<button class="menu-item delete" on:click|stopPropagation={() => { deleteConfirmProject = project; openMenuId = null; }}>
-										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-										</svg>
-										Delete
-									</button>
-								</div>
-							{/if}
-						</div>
+			<MobileUserMenu />
+		</header>
+
+		<div class="page-content">
+			{#if loading}
+				<div class="loading-state">
+					<div class="spinner"></div>
+					<p>Loading projects...</p>
+				</div>
+			{:else if projects.length === 0}
+				<div class="empty-state">
+					<img src="/projects.webp" alt="Projects" class="empty-icon" />
+					<h2>No projects yet</h2>
+					<p>Create your first project to get started</p>
+				</div>
+			{:else}
+				<!-- Profile Summary Banner -->
+				<ProfileSummaryBanner results={assessmentResults} />
+
+				{#if expandedDomain === null}
+					<!-- Domain Cards Grid View -->
+					<div class="domains-grid">
+						{#each domainGroups as group (group.domain || 'unassigned')}
+							<DomainProjectCard
+								domain={group.domain}
+								domainScore={group.domainScore}
+								projectCount={group.projects.length}
+								totalTasks={group.totalTasks}
+								completedTasks={group.completedTasks}
+								totalNotes={group.totalNotes}
+								totalFiles={group.totalFiles}
+								onclick={() => handleDomainClick(group.domain)}
+							/>
+						{/each}
 					</div>
-				{/each}
+				{:else}
+					<!-- Expanded Domain View -->
+					{@const group = domainGroups.find((g) => g.domain === expandedDomain)}
+					{#if group}
+						<div class="expanded-domain-view">
+							<button class="back-button" on:click={handleBackToAllDomains}>
+								<svg
+									width="16"
+									height="16"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path d="M10 4L6 8l4 4" />
+								</svg>
+								Back to All Domains
+							</button>
+
+							<div class="domain-header">
+								<h2>{group.domain || 'Unassigned'}</h2>
+								{#if group.domain}
+									<div class="domain-score-badge">
+										<span class="score-value">{group.domainScore.toFixed(1)}</span>
+										<span class="score-max">/10</span>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Projects Grid for this domain -->
+							<div class="projects-grid">
+								{#each group.projects as project (project.id)}
+									{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0, totalFiles: 0 }}
+									<div class="project-card">
+										<a href="/projects/{project.id}/chat" class="project-card-link">
+											<div class="project-header">
+												<div class="project-icon-circle" style="background-color: {getDomainColor(project.domain)};">
+													<span class="icon">{getProjectEmoji(project)}</span>
+												</div>
+												<div class="project-info">
+													<h3>{project.name}</h3>
+													<p class="project-meta">
+														{stats.totalTasks} tasks · {stats.totalNotes} notes · {stats.totalFiles} files
+													</p>
+												</div>
+											</div>
+											{#if project.description}
+												<p class="project-description">{truncateDescription(project.description)}</p>
+											{/if}
+											<div class="project-footer">
+												<span class="task-status">
+													{#if stats.totalTasks > 0}
+														<span
+															class="status-dot {stats.completedTasks === stats.totalTasks
+																? 'completed'
+																: 'in-progress'}"
+														></span>
+													{/if}
+													{stats.completedTasks} of {stats.totalTasks} completed
+												</span>
+												<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
+											</div>
+										</a>
+										<div class="card-actions">
+											<button
+												class="menu-btn"
+												on:click|stopPropagation={() => toggleMenu(project.id)}
+												title="Actions"
+											>
+												<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+													<circle cx="8" cy="3" r="1.5" />
+													<circle cx="8" cy="8" r="1.5" />
+													<circle cx="8" cy="13" r="1.5" />
+												</svg>
+											</button>
+											{#if openMenuId === project.id}
+												<div class="dropdown-menu">
+													<button
+														class="menu-item"
+														on:click|stopPropagation={() => {
+															startEditProject(project);
+															openMenuId = null;
+														}}
+													>
+														<svg
+															width="16"
+															height="16"
+															viewBox="0 0 16 16"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+														>
+															<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z" />
+														</svg>
+														Edit
+													</button>
+													<button
+														class="menu-item delete"
+														on:click|stopPropagation={() => {
+															deleteConfirmProject = project;
+															openMenuId = null;
+														}}
+													>
+														<svg
+															width="16"
+															height="16"
+															viewBox="0 0 16 16"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+														>
+															<path
+																d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"
+															/>
+														</svg>
+														Delete
+													</button>
+												</div>
+											{/if}
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				{/if}
+			{/if}
+		</div>
+
+		<!-- New Project Modal -->
+		{#if showNewProjectModal}
+			<div class="modal-overlay" on:click={() => (showNewProjectModal = false)}>
+				<div class="modal" on:click|stopPropagation>
+					<h2>Create New Project</h2>
+					<form on:submit|preventDefault={handleCreateProject}>
+						<div class="form-content">
+							<div class="form-group">
+								<label>Project Icon</label>
+								<div class="emoji-selector">
+									<div class="emoji-row">
+										{#each availableEmojis as emoji}
+											<button
+												type="button"
+												class="emoji-btn"
+												class:selected={selectedEmoji === emoji}
+												on:click={() => (selectedEmoji = emoji)}
+											>
+												{emoji}
+											</button>
+										{/each}
+										<button
+											type="button"
+											class="emoji-more-btn"
+											class:active={showAllEmojis}
+											on:click={() => (showAllEmojis = !showAllEmojis)}
+											title={showAllEmojis ? 'Show less' : 'More emojis'}
+										>
+											{#if showAllEmojis}
+												<svg
+													width="20"
+													height="20"
+													viewBox="0 0 20 20"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+												>
+													<path d="M5 15l5-5 5 5" />
+												</svg>
+											{:else}
+												<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+													<circle cx="4" cy="10" r="1.5" />
+													<circle cx="10" cy="10" r="1.5" />
+													<circle cx="16" cy="10" r="1.5" />
+												</svg>
+											{/if}
+										</button>
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="project-domain">Domain (optional)</label>
+								<select id="project-domain" bind:value={newProjectDomain}>
+									<option value="">Unassigned</option>
+									<option value="Body">💪 Body - Physical health</option>
+									<option value="Mind">🧠 Mind - Mental wellbeing</option>
+									<option value="Purpose">🎯 Purpose - Work & meaning</option>
+									<option value="Connection">🤝 Connection - Relationships</option>
+									<option value="Growth">🌱 Growth - Learning</option>
+									<option value="Finance">💰 Finance - Financial stability</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="project-name">Project Name</label>
+								<input
+									type="text"
+									id="project-name"
+									bind:value={newProjectName}
+									placeholder="e.g., Wedding Planning"
+									maxlength="50"
+									required
+								/>
+							</div>
+							<div class="form-group">
+								<label for="project-description">Description (optional)</label>
+								<textarea
+									id="project-description"
+									bind:value={newProjectDescription}
+									placeholder="Briefly describe your project..."
+									maxlength="200"
+									rows="3"
+								></textarea>
+							</div>
+						</div>
+						<div class="modal-actions">
+							<button type="button" class="secondary-btn" on:click={() => (showNewProjectModal = false)}>
+								Cancel
+							</button>
+							<button type="submit" class="primary-btn"> Create Project </button>
+						</div>
+					</form>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Edit Project Modal -->
+		<EditProjectModal
+			show={showEditModal}
+			project={editProject}
+			onClose={handleCloseEditModal}
+			onUpdate={handleProjectUpdated}
+		/>
+
+		<!-- Delete Confirmation Modal -->
+		{#if deleteConfirmProject}
+			<div class="modal-overlay" on:click={() => (deleteConfirmProject = null)}>
+				<div class="modal" on:click|stopPropagation>
+					<h2>Delete Project?</h2>
+					<p>
+						Are you sure you want to delete "{deleteConfirmProject.name}"? This will also delete all
+						tasks and notes in this project. This action cannot be undone.
+					</p>
+					<div class="modal-actions">
+						<button type="button" class="secondary-btn" on:click={() => (deleteConfirmProject = null)}>
+							Cancel
+						</button>
+						<button type="button" class="danger-btn" on:click={handleDeleteProject}>
+							Delete Project
+						</button>
+					</div>
+				</div>
 			</div>
 		{/if}
 	</div>
-
-	<!-- New Project Modal -->
-	{#if showNewProjectModal}
-		<div class="modal-overlay" on:click={() => showNewProjectModal = false}>
-			<div class="modal" on:click|stopPropagation>
-				<h2>Create New Project</h2>
-				<form on:submit|preventDefault={handleCreateProject}>
-					<div class="form-content">
-						<div class="form-group">
-							<label>Project Icon</label>
-							<div class="emoji-selector">
-								<div class="emoji-row">
-									{#each availableEmojis as emoji}
-										<button
-											type="button"
-											class="emoji-btn"
-											class:selected={selectedEmoji === emoji}
-											on:click={() => selectedEmoji = emoji}
-										>
-											{emoji}
-										</button>
-									{/each}
-									<button
-										type="button"
-										class="emoji-more-btn"
-										class:active={showAllEmojis}
-										on:click={() => showAllEmojis = !showAllEmojis}
-										title={showAllEmojis ? "Show less" : "More emojis"}
-									>
-										{#if showAllEmojis}
-											<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-												<path d="M5 15l5-5 5 5"/>
-											</svg>
-										{:else}
-											<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-												<circle cx="4" cy="10" r="1.5"/>
-												<circle cx="10" cy="10" r="1.5"/>
-												<circle cx="16" cy="10" r="1.5"/>
-											</svg>
-										{/if}
-									</button>
-								</div>
-							</div>
-						</div>
-						<div class="form-group">
-							<label for="project-name">Project Name</label>
-							<input
-								type="text"
-								id="project-name"
-								bind:value={newProjectName}
-								placeholder="e.g., Wedding Planning"
-								maxlength="50"
-								required
-							/>
-						</div>
-						<div class="form-group">
-							<label for="project-description">Description (optional)</label>
-							<textarea
-								id="project-description"
-								bind:value={newProjectDescription}
-								placeholder="Briefly describe your project..."
-								maxlength="200"
-								rows="3"
-							></textarea>
-						</div>
-					</div>
-					<div class="modal-actions">
-						<button type="button" class="secondary-btn" on:click={() => showNewProjectModal = false}>
-							Cancel
-						</button>
-						<button type="submit" class="primary-btn">
-							Create Project
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Edit Project Modal -->
-	<EditProjectModal
-		show={showEditModal}
-		project={editProject}
-		onClose={handleCloseEditModal}
-		onUpdate={handleProjectUpdated}
-	/>
-
-	<!-- Delete Confirmation Modal -->
-	{#if deleteConfirmProject}
-		<div class="modal-overlay" on:click={() => deleteConfirmProject = null}>
-			<div class="modal" on:click|stopPropagation>
-				<h2>Delete Project?</h2>
-				<p>Are you sure you want to delete "{deleteConfirmProject.name}"? This will also delete all tasks and notes in this project. This action cannot be undone.</p>
-				<div class="modal-actions">
-					<button type="button" class="secondary-btn" on:click={() => deleteConfirmProject = null}>
-						Cancel
-					</button>
-					<button type="button" class="danger-btn" on:click={handleDeleteProject}>
-						Delete Project
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- Floating Action Button (Mobile Only) -->
-	<button class="fab" on:click={() => showNewProjectModal = true} aria-label="Create new project">
-		<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-			<path d="M12 5v14M5 12h14"/>
-		</svg>
-	</button>
-</div>
 </AppLayout>
 
 <style>
 	.projects-page {
-		min-height: 100vh;
-		background: var(--bg-primary);
+		height: 100%;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.page-header {
-		background: var(--bg-secondary);
+		padding: 32px 48px 24px;
 		border-bottom: 1px solid var(--border-color);
-		padding: 16px 20px;
-		height: 64px;
-		box-sizing: border-box;
-		display: flex;
-		align-items: center;
-		position: sticky;
-		top: 0;
-		z-index: 10;
 	}
 
 	.header-content {
-		width: 100%;
-		max-width: 1200px;
-		margin: 0 auto;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}
 
 	.page-header h1 {
-		font-size: 1.5rem;
+		font-size: 1.875rem;
 		font-weight: 700;
-		letter-spacing: -0.02em;
-	}
-
-	.primary-btn {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 10px 20px;
-		font-size: 0.9375rem;
+		color: var(--text-primary);
 	}
 
 	.page-content {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 24px 20px;
+		flex: 1;
+		overflow-y: auto;
+		padding: 32px 48px;
 	}
 
-	.projects-grid {
+	/* Domain Cards Grid */
+	.domains-grid {
 		display: grid;
-		grid-template-columns: 1fr;
-		gap: 16px;
+		grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+		gap: 24px;
 	}
 
-	.project-card {
-		position: relative;
-		width: 100%;
-		min-width: 0;
+	/* Expanded Domain View */
+	.expanded-domain-view {
+		max-width: 1200px;
 	}
 
-	.project-card-link {
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-lg);
-		padding: 20px;
-		text-decoration: none;
-		color: var(--text-primary);
-		transition: all 0.2s ease;
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		min-height: 180px;
-		width: 100%;
-		box-sizing: border-box;
-	}
-
-	.project-card-link:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-		border-color: var(--accent-primary);
-	}
-
-	.project-card-link:active {
-		transform: scale(0.98);
-	}
-
-	.card-actions {
-		position: absolute;
-		top: 16px;
-		right: 16px;
-		opacity: 1;
-		transition: opacity 0.2s ease;
-		z-index: 1;
-	}
-
-	.menu-btn {
-		width: 32px;
-		height: 32px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: all 0.2s ease;
-		color: var(--text-secondary);
-	}
-
-	.menu-btn:hover {
-		background: var(--bg-primary);
-		border-color: var(--text-secondary);
-		color: var(--text-primary);
-	}
-
-	.dropdown-menu {
-		position: absolute;
-		top: 40px;
-		right: 0;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		overflow: hidden;
-		min-width: 120px;
-		z-index: 10;
-	}
-
-	.menu-item {
-		width: 100%;
+	.back-button {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		padding: 10px 14px;
-		background: transparent;
+		padding: 8px 16px;
+		background: none;
 		border: none;
-		text-align: left;
+		color: var(--text-secondary);
 		font-size: 0.9375rem;
-		color: var(--text-primary);
+		font-weight: 500;
 		cursor: pointer;
-		transition: background 0.2s ease;
+		transition: color 0.2s ease;
+		margin-bottom: 24px;
 	}
 
-	.menu-item:hover {
-		background: var(--bg-tertiary);
+	.back-button:hover {
+		color: var(--text-primary);
 	}
 
-	.menu-item.delete {
-		color: rgb(239, 68, 68);
+	.domain-header {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		margin-bottom: 32px;
 	}
 
-	.menu-item.delete:hover {
-		background: rgba(239, 68, 68, 0.1);
+	.domain-header h2 {
+		font-size: 2rem;
+		font-weight: 700;
+		color: var(--text-primary);
 	}
 
-	.menu-item svg {
-		flex-shrink: 0;
+	.domain-score-badge {
+		display: flex;
+		align-items: baseline;
+		gap: 4px;
+		padding: 8px 16px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
+	}
+
+	.domain-score-badge .score-value {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: var(--accent-primary);
+	}
+
+	.domain-score-badge .score-max {
+		font-size: 1rem;
+		color: var(--text-secondary);
+		font-weight: 500;
+	}
+
+	/* Projects Grid */
+	.projects-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+		gap: 24px;
+	}
+
+	.project-card {
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-lg);
+		transition: all 0.2s ease;
+		position: relative;
+	}
+
+	.project-card:hover {
+		border-color: var(--accent-primary);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+	}
+
+	.project-card-link {
+		display: block;
+		padding: 24px;
+		text-decoration: none;
+		color: inherit;
 	}
 
 	.project-header {
 		display: flex;
-		gap: 12px;
-		align-items: flex-start;
+		gap: 16px;
+		margin-bottom: 16px;
 	}
 
 	.project-icon {
-		width: 48px;
-		height: 48px;
-		border-radius: var(--radius-md);
+		width: 56px;
+		height: 56px;
+		border-radius: 12px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 24px;
+		font-size: 2rem;
 		flex-shrink: 0;
+	}
+
+	.project-icon-circle {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		position: relative;
+	}
+
+	.project-icon-circle .icon {
+		font-size: 1.75rem;
+		filter: brightness(0) invert(1);
 	}
 
 	.project-info {
 		flex: 1;
 		min-width: 0;
-		padding-right: 40px;
 	}
 
 	.project-info h3 {
 		font-size: 1.125rem;
 		font-weight: 600;
-		margin-bottom: 4px;
-		letter-spacing: -0.02em;
+		color: var(--text-primary);
+		margin-bottom: 6px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		word-break: break-all;
 	}
 
 	.project-meta {
@@ -559,11 +788,8 @@
 	.project-description {
 		font-size: 0.9375rem;
 		color: var(--text-secondary);
+		margin-bottom: 16px;
 		line-height: 1.5;
-		margin: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
 	.project-footer {
@@ -571,16 +797,13 @@
 		justify-content: space-between;
 		align-items: center;
 		font-size: 0.875rem;
-		color: var(--text-muted);
-		padding-top: 8px;
-		border-top: 1px solid var(--border-color);
-		margin-top: auto;
+		color: var(--text-secondary);
 	}
 
 	.task-status {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 8px;
 	}
 
 	.status-dot {
@@ -589,42 +812,69 @@
 		border-radius: 50%;
 	}
 
-	.status-dot.completed {
-		background: var(--accent-success);
-	}
-
 	.status-dot.in-progress {
 		background: var(--accent-primary);
 	}
 
-	.project-date {
-		color: var(--text-muted);
+	.status-dot.completed {
+		background: #10b981;
 	}
 
-	/* Empty State */
-	.empty-state {
-		padding: 60px 20px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		min-height: 400px;
+	.card-actions {
+		position: absolute;
+		top: 16px;
+		right: 16px;
 	}
 
-	.empty-icon {
-		width: 100px;
-		height: 100px;
-		margin-bottom: 12px;
-	}
-
-	.empty-state h2 {
-		font-size: 1.5rem;
-		margin-bottom: 8px;
-	}
-
-	.empty-state p {
+	.menu-btn {
+		padding: 8px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
 		color: var(--text-secondary);
-		margin-bottom: 24px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.menu-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	.dropdown-menu {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		margin-top: 8px;
+		background: var(--bg-primary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		z-index: 10;
+		min-width: 160px;
+	}
+
+	.menu-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		padding: 12px 16px;
+		background: none;
+		border: none;
+		text-align: left;
+		font-size: 0.9375rem;
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: background 0.2s ease;
+	}
+
+	.menu-item:hover {
+		background: var(--bg-secondary);
+	}
+
+	.menu-item.delete {
+		color: var(--danger);
 	}
 
 	/* Loading State */
@@ -633,8 +883,8 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 180px 20px 60px;
 		gap: 16px;
+		padding: 80px 20px;
 	}
 
 	.spinner {
@@ -647,12 +897,34 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
-	.loading-state p {
+	/* Empty State */
+	.empty-state {
+		text-align: center;
+		padding: 80px 20px;
+	}
+
+	.empty-icon {
+		width: 200px;
+		height: auto;
+		margin-bottom: 24px;
+		opacity: 0.8;
+	}
+
+	.empty-state h2 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin-bottom: 8px;
+	}
+
+	.empty-state p {
+		font-size: 1rem;
 		color: var(--text-secondary);
-		margin: 0;
 	}
 
 	/* Modal */
@@ -666,234 +938,201 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 1000;
+		z-index: 50;
 		padding: 20px;
 	}
 
 	.modal {
-		background: var(--bg-secondary);
+		background: var(--bg-primary);
+		border: 2px solid var(--border-color);
 		border-radius: var(--radius-lg);
-		padding: 24px;
+		padding: 32px;
 		max-width: 500px;
 		width: 100%;
 		max-height: 90vh;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-		display: flex;
-		flex-direction: column;
+		overflow-y: auto;
 	}
 
 	.modal h2 {
 		font-size: 1.5rem;
-		margin-bottom: 20px;
-		flex-shrink: 0;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin-bottom: 24px;
 	}
 
-	.modal form {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-height: 0;
-		overflow: hidden;
+	.modal p {
+		font-size: 1rem;
+		color: var(--text-secondary);
+		line-height: 1.6;
+		margin-bottom: 24px;
 	}
 
 	.form-content {
-		flex: 1;
-		overflow-y: auto;
-		padding-right: 4px;
-		margin-bottom: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		margin-bottom: 24px;
 	}
 
 	.form-group {
-		margin-bottom: 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
 	}
 
 	.form-group label {
-		display: block;
-		font-weight: 600;
-		font-size: 0.875rem;
-		margin-bottom: 8px;
+		font-size: 0.9375rem;
+		font-weight: 500;
 		color: var(--text-primary);
 	}
 
 	.form-group input,
-	.form-group textarea {
-		width: 100%;
-		padding: 12px 16px;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
+	.form-group textarea,
+	.form-group select {
+		padding: 12px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
 		border-radius: var(--radius-md);
+		font-size: 1rem;
 		color: var(--text-primary);
-		font-size: 0.9375rem;
-		font-family: 'Inter', sans-serif;
+		transition: border-color 0.2s ease;
 	}
 
 	.form-group input:focus,
-	.form-group textarea:focus {
+	.form-group textarea:focus,
+	.form-group select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
-		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
 	}
 
 	.form-group textarea {
 		resize: vertical;
+		font-family: inherit;
 	}
 
-	.modal-actions {
-		display: flex;
-		gap: 12px;
-		justify-content: flex-end;
-		flex-shrink: 0;
-		padding-top: 16px;
-		border-top: 1px solid var(--border-color);
-		margin-top: 0;
-	}
-
-	.secondary-btn {
-		padding: 10px 20px;
-		background: transparent;
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		font-weight: 600;
-		font-size: 0.9375rem;
-		color: var(--text-primary);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.secondary-btn:hover {
-		background: var(--bg-tertiary);
-	}
-
-	.danger-btn {
-		padding: 10px 20px;
-		background: rgb(239, 68, 68);
-		border: none;
-		border-radius: var(--radius-md);
-		font-weight: 600;
-		font-size: 0.9375rem;
-		color: white;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.danger-btn:hover {
-		background: rgb(220, 38, 38);
-		transform: translateY(-1px);
-	}
-
-	.danger-btn:active {
-		transform: translateY(0);
-	}
-
-	/* Emoji Selector */
 	.emoji-selector {
-		padding: 12px;
-		background: var(--bg-tertiary);
+		padding: 16px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
 		border-radius: var(--radius-md);
-		border: 1px solid var(--border-color);
-		max-height: 300px;
-		overflow-y: auto;
-	}
-
-	@media (max-width: 768px) {
-		.emoji-selector {
-			max-height: 150px;
-		}
-
-		.modal {
-			max-height: 85vh;
-		}
 	}
 
 	.emoji-row {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		justify-content: center;
 	}
 
 	.emoji-btn {
 		width: 44px;
 		height: 44px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--bg-secondary);
-		border: 2px solid transparent;
-		border-radius: var(--radius-sm);
+		padding: 0;
+		background: var(--bg-primary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
 		font-size: 1.5rem;
 		cursor: pointer;
 		transition: all 0.2s ease;
-		flex-shrink: 0;
 	}
 
 	.emoji-btn:hover {
-		background: var(--bg-primary);
-		transform: scale(1.1);
+		border-color: var(--accent-primary);
+		transform: scale(1.05);
 	}
 
 	.emoji-btn.selected {
-		background: var(--bg-primary);
 		border-color: var(--accent-primary);
-		transform: scale(1.05);
+		background: rgba(199, 124, 92, 0.1);
 	}
 
 	.emoji-more-btn {
 		width: 44px;
 		height: 44px;
+		padding: 0;
+		background: var(--bg-primary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.2s ease;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--bg-secondary);
-		border: 2px solid var(--border-color);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: all 0.2s ease;
-		flex-shrink: 0;
-		color: var(--text-muted);
 	}
 
 	.emoji-more-btn:hover {
-		background: var(--bg-primary);
-		color: var(--text-secondary);
-	}
-
-	.emoji-more-btn.active {
-		background: var(--bg-primary);
 		border-color: var(--accent-primary);
-		color: var(--accent-primary);
+		color: var(--text-primary);
 	}
 
-	/* Responsive - max 2 columns */
-	@media (min-width: 640px) {
-		.projects-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
+	.modal-actions {
+		display: flex;
+		gap: 12px;
+		justify-content: flex-end;
 	}
 
-	/* Mobile Layout */
+	.primary-btn,
+	.secondary-btn,
+	.danger-btn {
+		padding: 12px 24px;
+		border-radius: var(--radius-md);
+		font-size: 0.9375rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.primary-btn {
+		background: var(--accent-primary);
+		border: none;
+		color: white;
+	}
+
+	.primary-btn:hover {
+		background: var(--accent-hover);
+	}
+
+	.secondary-btn {
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		color: var(--text-primary);
+	}
+
+	.secondary-btn:hover {
+		border-color: var(--accent-primary);
+	}
+
+	.danger-btn {
+		background: var(--danger);
+		border: none;
+		color: white;
+	}
+
+	.danger-btn:hover {
+		background: #dc2626;
+	}
+
+	/* Mobile Header */
 	.mobile-header {
 		display: none;
 	}
 
-	@media (max-width: 1023px) {
+	/* Mobile Styles */
+	@media (max-width: 768px) {
 		.page-header {
 			display: none;
 		}
 
 		.mobile-header {
 			display: flex;
-			flex-shrink: 0;
-			padding: 16px 20px;
-			background: var(--bg-secondary);
-			border-bottom: 1px solid var(--border-color);
-			height: 64px;
-			box-sizing: border-box;
 			justify-content: space-between;
 			align-items: center;
-			position: sticky;
-			top: 0;
-			z-index: 10;
+			padding: 16px 20px;
+			border-bottom: 1px solid var(--border-color);
+			background: var(--bg-primary);
 		}
 
 		.mobile-header-left {
@@ -905,68 +1144,35 @@
 		.mobile-logo-button {
 			display: flex;
 			align-items: center;
-			background: none;
-			border: none;
-			padding: 0;
-			cursor: pointer;
 		}
 
 		.mobile-logo {
-			width: 62px;
-			height: 62px;
-			border-radius: var(--radius-sm);
-			transition: all 0.15s ease;
-		}
-
-		.mobile-logo-button:active .mobile-logo {
-			transform: translateY(4px) scale(0.95);
+			width: 32px;
+			height: 32px;
 		}
 
 		.mobile-header h1 {
-			font-size: 1.5rem;
-			font-weight: 700;
-			letter-spacing: -0.02em;
-			margin: 0;
-		}
-
-		.page-content {
-			padding-bottom: 100px;
-		}
-
-		.fab {
-			position: fixed;
-			bottom: 80px;
-			left: 27px;
-			width: 56px;
-			height: 56px;
-			border-radius: 50%;
-			background: var(--accent-primary);
-			color: white;
-			border: none;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			cursor: pointer;
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-			transition: transform 0.3s ease;
-			z-index: 50;
-			margin-bottom: env(safe-area-inset-bottom);
-			opacity: 0.7;
-		}
-
-		.fab:active {
-			transform: scale(0.95);
+			font-size: 1.25rem;
+			font-weight: 600;
+			color: var(--text-primary);
 		}
 
 		.page-content {
 			padding: 20px;
 		}
-	}
 
-	/* Hide FAB on desktop */
-	@media (min-width: 1024px) {
-		.fab {
-			display: none;
+		.domains-grid,
+		.projects-grid {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+
+		.modal {
+			padding: 24px;
+		}
+
+		.modal h2 {
+			font-size: 1.25rem;
 		}
 	}
 </style>
