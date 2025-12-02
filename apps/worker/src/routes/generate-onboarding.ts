@@ -236,20 +236,19 @@ async function generateProjects(
 	profileSummary: string,
 	domainScoresText: string
 ): Promise<OnboardingContent['projects']> {
-	const prompt = `Create 7 personalized project titles for a life organization system.
+	const prompt = `Create 6 personalized project titles for a life organization system - one for each life domain.
 
 PROFILE: ${profileSummary.substring(0, 500)}
 SCORES: ${domainScoresText}
 
-Return ONLY JSON array with 7 projects:
+Return ONLY JSON array with 6 projects (one per domain):
 [
-  {"name": "Getting Started with Chatkin", "description": "Learn the system and set up your workspace", "color": "blue"},
   {"name": "Personalized Body Project Title", "description": "Description based on physical health needs", "color": "green"},
   {"name": "Personalized Mind Project Title", "description": "Description for mental/emotional wellbeing", "color": "purple"},
   {"name": "Personalized Purpose Project Title", "description": "Description for career/work goals", "color": "orange"},
   {"name": "Personalized Connection Project Title", "description": "Description for relationships", "color": "red"},
   {"name": "Personalized Growth Project Title", "description": "Description for learning goals", "color": "yellow"},
-  {"name": "Personalized Finance Project Title", "description": "Description for financial stability", "color": "blue"}
+  {"name": "Personalized Finance/Security Project Title", "description": "Description for financial stability and security", "color": "blue"}
 ]
 
 Keep names under 40 chars, descriptions under 100 chars.`;
@@ -286,7 +285,7 @@ async function generateAllTasks(
 ): Promise<OnboardingContent['tasks']> {
 	const projectNames = projects.map((p) => p.name).join('\n- ');
 
-	const prompt = `Generate 40-50 specific, actionable tasks across these projects:
+	const prompt = `Generate 36-48 specific, actionable tasks across these projects:
 - ${projectNames}
 
 PROFILE: ${profileSummary.substring(0, 600)}
@@ -296,7 +295,7 @@ KEY RESPONSES: ${responsesText.substring(0, 800)}
 Create tasks that are:
 - Specific and actionable (e.g., "Schedule annual physical exam" not "improve health")
 - Personalized to their situation
-- Distributed across all projects (5-7 tasks per project)
+- Distributed across all projects (6-8 tasks per project)
 - Varied priority (20% high, 50% medium, 30% low)
 
 Return ONLY JSON array:
@@ -304,7 +303,7 @@ Return ONLY JSON array:
   {"project_name": "exact project name", "title": "Task title (max 50 chars)", "description": "What and why (max 150 chars)", "priority": "high|medium|low", "status": "todo"}
 ]
 
-CRITICAL: Use EXACT project names from the list. Generate 40-50 tasks total.`;
+CRITICAL: Use EXACT project names from the list. Generate 36-48 tasks total.`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',

@@ -96,40 +96,58 @@ export async function handleGenerateNotes(
 			allNotes.push(...batchNotes);
 		}
 
-		// Create notes in database
-		const notesToCreate = allNotes
-			.map((note) => {
-				const project = projects.find((p) => p.name === note.project_name);
-				if (!project) return null;
+		// Create notes in database with note_blocks
+		for (const note of allNotes) {
+			const project = projects.find((p) => p.name === note.project_name);
+			if (!project) {
+				logger.warn('Project not found for note', { project_name: note.project_name });
+				continue;
+			}
 
-				return {
+			// Create note entry
+			const { data: createdNote, error: noteError } = await supabaseAdmin
+				.from('notes')
+				.insert({
 					user_id: user.userId,
 					project_id: project.id,
-					title: note.title,
-					content: note.content
-				};
-			})
-			.filter((n) => n !== null);
+					title: note.title
+				})
+				.select('id')
+				.single();
 
-		if (notesToCreate.length > 0) {
-			const { error: notesError } = await supabaseAdmin.from('notes').insert(notesToCreate);
+			if (noteError) {
+				logger.error('Failed to create note', { error: noteError, note });
+				continue;
+			}
 
-			if (notesError) {
-				logger.error('Failed to create notes', { error: notesError });
-				throw new WorkerError('Failed to save notes', 500);
+			// Create note_block with content
+			if (createdNote) {
+				const { error: blockError } = await supabaseAdmin
+					.from('note_blocks')
+					.insert({
+						note_id: createdNote.id,
+						type: 'text',
+						content: { text: note.content },
+						position: 0
+					});
+
+				if (blockError) {
+					logger.error('Failed to create note block', { error: blockError, noteId: createdNote.id });
+					// Don't throw - note was created successfully
+				}
 			}
 		}
 
 		logger.info('Notes generated successfully', {
 			userId: user.userId,
-			notes: notesToCreate.length
+			notes: allNotes.length
 		});
 
 		return new Response(
 			JSON.stringify({
 				success: true,
 				created: {
-					notes: notesToCreate.length
+					notes: allNotes.length
 				}
 			}),
 			{
