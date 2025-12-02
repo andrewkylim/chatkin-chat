@@ -61,7 +61,7 @@ SET options = '[
 ]'::jsonb
 WHERE position = 30 AND question_type = 'open_ended';
 
--- Position 35 (Security): What would make you feel more financially secure?
+-- Position 35 (Finance): What would make you feel more financially secure?
 UPDATE assessment_questions
 SET options = '[
   {"value": "Higher income or salary", "label": "Higher income or salary"},

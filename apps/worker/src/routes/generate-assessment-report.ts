@@ -253,7 +253,7 @@ ${responsesText}
 
 Generate a comprehensive, personalized wellness report (800-1200 words) with:
 1. Overall assessment and key insights
-2. Detailed analysis for each domain (Body, Mind, Purpose, Connection, Growth, Security)
+2. Detailed analysis for each domain (Body, Mind, Purpose, Connection, Growth, Finance)
 3. Specific, actionable recommendations
 4. Patterns and connections across domains
 5. Encouraging tone that acknowledges strengths and growth areas
@@ -315,7 +315,7 @@ Analyze like a professional would:
    - Purpose: Career/work alignment, meaning-making, direction
    - Connection: Relationship quality, support systems, social needs
    - Growth: Learning orientation, development areas, potential
-   - Security: Financial/stability concerns, resource management
+   - Finance: Financial/stability concerns, resource management
 
 4. **Core Challenges & Blockers**
    - Primary obstacles across domains

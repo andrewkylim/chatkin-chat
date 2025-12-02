@@ -254,8 +254,8 @@ Generate a multi-project system with detailed tasks and strategic notes:
 6. **Growth Domain Project** - Learning/development
    - Title reflects their goals (e.g., "Skill Development Roadmap", "Personal Growth Journey")
 
-7. **Security Domain Project** - Financial/stability
-   - Title reflects their situation (e.g., "Financial Stability Plan", "Resource Security Framework")
+7. **Finance Domain Project** - Financial/stability
+   - Title reflects their situation (e.g., "Financial Stability Plan", "Resource Management Framework")
 
 ### TASKS (40-60 total across all projects):
 

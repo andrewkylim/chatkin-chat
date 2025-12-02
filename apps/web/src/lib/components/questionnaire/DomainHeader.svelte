@@ -15,7 +15,7 @@
 			Purpose: 'var(--domain-purpose)',
 			Connection: 'var(--domain-connection)',
 			Growth: 'var(--domain-growth)',
-			Security: 'var(--domain-security)'
+			Finance: 'var(--domain-finance)'
 		};
 		return colorMap[domainName] || 'var(--accent-primary)';
 	}
@@ -27,7 +27,7 @@
 		Purpose: 'Work, meaning, and fulfillment',
 		Connection: 'Relationships and community',
 		Growth: 'Learning and personal development',
-		Security: 'Financial and resource stability'
+		Finance: 'Financial and resource stability'
 	};
 </script>
 

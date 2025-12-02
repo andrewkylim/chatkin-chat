@@ -9,7 +9,7 @@
 			Purpose: 'var(--domain-purpose)',
 			Connection: 'var(--domain-connection)',
 			Growth: 'var(--domain-growth)',
-			Security: 'var(--domain-security)'
+			Finance: 'var(--domain-finance)'
 		};
 		return colorMap[domainName] || 'var(--accent-primary)';
 	}
@@ -22,7 +22,7 @@
 			Purpose: '🎯',
 			Connection: '🤝',
 			Growth: '🌱',
-			Security: '🛡️'
+			Finance: '💰'
 		};
 		return emojiMap[domainName] || '✨';
 	}

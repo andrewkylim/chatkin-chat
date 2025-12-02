@@ -7,7 +7,8 @@
 	import QuestionCard from '$lib/components/questionnaire/QuestionCard.svelte';
 	import ProgressBar from '$lib/components/questionnaire/ProgressBar.svelte';
 	import DomainHeader from '$lib/components/questionnaire/DomainHeader.svelte';
-	import type { Database } from '$lib/types/database';
+	import IntroPage from '$lib/components/questionnaire/IntroPage.svelte';
+	import type { Database} from '$lib/types/database';
 
 	type Question = Database['public']['Tables']['assessment_questions']['Row'];
 
@@ -21,6 +22,9 @@
 	let showDomainTransition = $state(false);
 	let previousDomain = $state<string | null>(null);
 	let pendingSaves: Promise<any>[] = [];
+	let showIntro = $state(true); // Show intro by default
+	let canExit = $state(false);  // Can user exit mid-assessment?
+	let existingResponseCount = $state(0); // Track progress for resume notification
 
 	const currentQuestion = $derived(questions[currentQuestionIndex]);
 	const currentDomain = $derived(currentQuestion?.domain);
@@ -34,8 +38,26 @@
 			return;
 		}
 
+		// Check if user wants to skip intro
+		const skipIntro = localStorage.getItem('skip_questionnaire_intro');
+		if (skipIntro === 'true') {
+			showIntro = false;
+		}
+
+		// Check if this is a retake (user has existing results)
+		const { data: existingResults } = await supabase
+			.from('assessment_results')
+			.select('id')
+			.eq('user_id', $auth.user.id)
+			.maybeSingle();
+
+		canExit = existingResults !== null;
+
 		await loadQuestions();
 		await loadExistingResponses();
+
+		// Count existing responses for progress tracking
+		existingResponseCount = responses.size;
 	});
 
 	async function loadQuestions() {
@@ -163,6 +185,65 @@
 		}
 	}
 
+	async function handleExit() {
+		const confirmed = confirm(
+			'Exit assessment?\n\n' +
+			'Your progress has been saved. You can return anytime to continue where you left off.\n\n' +
+			'Your previous results will remain visible until you complete the new assessment.'
+		);
+
+		if (!confirmed) return;
+
+		if (!$auth.user) return;
+
+		try {
+			// Restore has_completed_questionnaire flag
+			const { error } = await supabase
+				.from('user_profiles')
+				.update({
+					has_completed_questionnaire: true,
+					updated_at: new Date().toISOString()
+				})
+				.eq('user_id', $auth.user.id);
+
+			if (error) throw error;
+
+			goto('/profile');
+		} catch (err) {
+			console.error('Error exiting questionnaire:', err);
+			alert('Failed to exit. Please try again.');
+		}
+	}
+
+	async function handleReset() {
+		if (!$auth.user) return;
+
+		try {
+			loading = true;
+
+			// Delete all responses
+			const { error: deleteError } = await supabase
+				.from('assessment_responses')
+				.delete()
+				.eq('user_id', $auth.user.id);
+
+			if (deleteError) throw deleteError;
+
+			// Clear local state
+			responses.clear();
+			currentQuestionIndex = 0;
+			existingResponseCount = 0;
+			localStorage.removeItem('skip_questionnaire_intro');
+
+			// Reload the page to show intro again
+			window.location.reload();
+		} catch (err) {
+			console.error('Error resetting questionnaire:', err);
+			alert('Failed to reset questionnaire. Please try again.');
+			loading = false;
+		}
+	}
+
 	async function submitQuestionnaire() {
 		if (!$auth.user) return;
 
@@ -208,53 +289,82 @@
 </script>
 
 <div class="questionnaire-page">
-	{#if loading}
-		<div class="loading-container">
-			<div class="spinner"></div>
-			<p>Loading questionnaire...</p>
-		</div>
-	{:else if error}
-		<div class="error-container">
-			<p class="error-message">{error}</p>
-			<button onclick={() => window.location.reload()} class="retry-button"> Retry </button>
-		</div>
-	{:else if submitting}
-		<div class="analysis-container">
-			<div class="spinner-large"></div>
-			<h2 class="analysis-title">Creating Your Profile</h2>
-			<p class="analysis-description">
-				Analyzing your responses and generating a comprehensive report with personalized
-				recommendations.
-			</p>
-			<p class="analysis-note">This may take up to 30 seconds</p>
-		</div>
-	{:else if showDomainTransition && previousDomain !== currentDomain}
-		<div class="transition-container">
-			<DomainHeader domain={questions[currentQuestionIndex + 1]?.domain || ''} />
-		</div>
-	{:else if currentQuestion}
-		<div class="question-container">
-			<ProgressBar
-				current={currentQuestionIndex + 1}
-				total={questions.length}
-				domain={currentDomain}
-			/>
+	{#if showIntro}
+		<IntroPage
+			onBegin={() => { showIntro = false; }}
+			onReset={handleReset}
+			existingResponseCount={existingResponseCount}
+			totalQuestions={questions.length}
+		/>
+	{:else}
+		<!-- Exit button header (only if retaking) -->
+		{#if canExit && !loading && !submitting}
+			<div class="questionnaire-header">
+				<button class="exit-button" onclick={handleExit}>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M18 6L6 18M6 6l12 12"/>
+					</svg>
+					Exit Assessment
+				</button>
+			</div>
+		{/if}
 
-			{#key currentQuestion.id}
-				<QuestionCard
-					question={currentQuestion}
-					value={currentResponse}
-					onNext={handleNext}
-					onBack={handleBack}
-					canGoBack={currentQuestionIndex > 0}
-					isLast={currentQuestionIndex === questions.length - 1}
+		{#if loading}
+			<div class="loading-container">
+				<div class="spinner"></div>
+				<p>Loading questionnaire...</p>
+			</div>
+		{:else if error}
+			<div class="error-container">
+				<p class="error-message">{error}</p>
+				<button onclick={() => window.location.reload()} class="retry-button"> Retry </button>
+			</div>
+		{:else if submitting}
+			<div class="analysis-container">
+				<div class="spinner-large"></div>
+				<h2 class="analysis-title">Creating Your Profile</h2>
+				<p class="analysis-description">
+					Analyzing your responses and generating a comprehensive report with personalized
+					recommendations.
+				</p>
+				<p class="analysis-note">This may take up to 30 seconds</p>
+			</div>
+		{:else if showDomainTransition && previousDomain !== currentDomain}
+			<div class="transition-container">
+				<DomainHeader domain={questions[currentQuestionIndex + 1]?.domain || ''} />
+			</div>
+		{:else if currentQuestion}
+			<div class="question-container">
+				<ProgressBar
+					current={currentQuestionIndex + 1}
+					total={questions.length}
+					domain={currentDomain}
 				/>
-			{/key}
 
-			{#if saving}
-				<p class="saving-indicator">Saving...</p>
-			{/if}
-		</div>
+				{#key currentQuestion.id}
+					<QuestionCard
+						question={currentQuestion}
+						value={currentResponse}
+						onNext={handleNext}
+						onBack={handleBack}
+						canGoBack={currentQuestionIndex > 0}
+						isLast={currentQuestionIndex === questions.length - 1}
+					/>
+				{/key}
+
+				{#if saving}
+					<p class="saving-indicator">Saving...</p>
+				{/if}
+
+				<!-- Estimated time remaining -->
+				{#if currentQuestionIndex < questions.length - 1}
+					<p class="time-estimate">
+						About {Math.ceil(((questions.length - currentQuestionIndex - 1) * 25) / 60)}
+						{Math.ceil(((questions.length - currentQuestionIndex - 1) * 25) / 60) === 1 ? 'minute' : 'minutes'} remaining
+					</p>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -263,6 +373,47 @@
 		min-height: 100vh;
 		background: var(--bg-primary);
 		padding: 40px 20px;
+	}
+
+	.questionnaire-header {
+		max-width: 1200px;
+		margin: 0 auto 24px;
+		padding: 16px 20px;
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.exit-button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 20px;
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		background: var(--bg-secondary);
+		color: var(--text-secondary);
+		font-size: 0.9375rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.exit-button:hover {
+		background: var(--bg-tertiary);
+		border-color: var(--text-muted);
+		color: var(--text-primary);
+	}
+
+	.exit-button svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	.time-estimate {
+		text-align: center;
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		margin-top: 16px;
 	}
 
 	.loading-container,
@@ -412,6 +563,16 @@
 	@media (max-width: 768px) {
 		.questionnaire-page {
 			padding: 20px 12px;
+		}
+
+		.questionnaire-header {
+			padding: 12px;
+			margin-bottom: 16px;
+		}
+
+		.exit-button {
+			padding: 8px 16px;
+			font-size: 0.875rem;
 		}
 	}
 </style>

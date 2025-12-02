@@ -12,7 +12,7 @@
 -- Assessment Questions Table (question bank)
 CREATE TABLE IF NOT EXISTS assessment_questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  domain TEXT NOT NULL, -- 'Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Security'
+  domain TEXT NOT NULL, -- 'Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'
   question_text TEXT NOT NULL,
   question_type TEXT NOT NULL CHECK (question_type IN ('scale', 'emoji_scale', 'multiple_choice', 'open_ended')),
   options JSONB, -- For multiple_choice: [{"value": "...", "label": "...", "score": X}, ...]
@@ -174,13 +174,13 @@ INSERT INTO assessment_questions (question_text, question_type, domain, scale_mi
 ('How often do you seek feedback to improve yourself?', 'scale', 'Growth', 1, 5, 'Rarely', 'Frequently', 29, 0.9),
 ('What skill or area would you most like to develop?', 'open_ended', 'Growth', NULL, NULL, NULL, NULL, 30, 0.8);
 
--- SECURITY DOMAIN (5 questions)
+-- FINANCE DOMAIN (5 questions)
 INSERT INTO assessment_questions (question_text, question_type, domain, scale_min, scale_max, scale_min_label, scale_max_label, position, weight) VALUES
-('How would you rate your current financial stability?', 'emoji_scale', 'Security', 1, 5, 'Very unstable', 'Very stable', 31, 1.3),
-('How confident are you in your ability to handle unexpected expenses?', 'scale', 'Security', 1, 5, 'Not confident', 'Very confident', 32, 1.2),
-('Do you have a plan for your financial future?', 'multiple_choice', 'Security', NULL, NULL, NULL, NULL, 33, 1.0),
-('How safe and secure do you feel in your living situation?', 'scale', 'Security', 1, 5, 'Very unsafe', 'Very safe', 34, 1.1),
-('What would make you feel more financially secure?', 'open_ended', 'Security', NULL, NULL, NULL, NULL, 35, 0.8);
+('How would you rate your current financial stability?', 'emoji_scale', 'Finance', 1, 5, 'Very unstable', 'Very stable', 31, 1.3),
+('How confident are you in your ability to handle unexpected expenses?', 'scale', 'Finance', 1, 5, 'Not confident', 'Very confident', 32, 1.2),
+('Do you have a plan for your financial future?', 'multiple_choice', 'Finance', NULL, NULL, NULL, NULL, 33, 1.0),
+('How safe and secure do you feel in your living situation?', 'scale', 'Finance', 1, 5, 'Very unsafe', 'Very safe', 34, 1.1),
+('What would make you feel more financially secure?', 'open_ended', 'Finance', NULL, NULL, NULL, NULL, 35, 0.8);
 
 -- ============================================================================
 -- PART 6: ADD OPTIONS TO MULTIPLE CHOICE QUESTIONS
@@ -236,7 +236,7 @@ UPDATE assessment_questions SET options = '[
   {"value": "daily", "label": "Daily", "score": 5}
 ]'::jsonb WHERE position = 26;
 
--- Security Q3: Financial planning
+-- Finance Q3: Financial planning
 UPDATE assessment_questions SET options = '[
   {"value": "no", "label": "No plan at all", "score": 1},
   {"value": "vague", "label": "A vague idea", "score": 2},
