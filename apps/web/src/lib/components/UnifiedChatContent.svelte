@@ -538,7 +538,8 @@
 						const newProject = await createProject({
 							name: projectData.name,
 							description: projectData.description ?? null,
-							color: projectData.color
+							color: projectData.color ?? null,
+							domain: null
 						});
 						// Capture the new project ID for subsequent items in this batch
 						if (newProject && newProject.id) {

@@ -243,7 +243,8 @@
 						await createProject({
 							name: projectData.name,
 							description: projectData.description ?? null,
-							color: projectData.color
+							color: projectData.color ?? null,
+							domain: null
 						});
 						notificationCounts.incrementCount('projects');
 						results.push(`✓ Created project: ${projectData.name}`);
