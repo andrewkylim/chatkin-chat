@@ -31,7 +31,7 @@
 		selectedOperations?: Operation[];
 		proposedActions?: Array<{ type: string; title?: string; name?: string; [key: string]: unknown }>;
 		awaitingConfirmation?: boolean;
-		files?: Array<{ name: string; url: string; type: string; temporary?: boolean; saving?: boolean; saved?: boolean }>;
+		files?: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; saving?: boolean; saved?: boolean }>;
 	}
 
 	let {

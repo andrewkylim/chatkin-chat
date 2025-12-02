@@ -175,7 +175,7 @@
 								<div class="note-header">
 									<h3>{truncateTitle(note.title)}</h3>
 									{#if note.project_id && projectsMap[note.project_id]}
-										<span class="note-project">{projectsMap[note.project_id].name}</span>
+										<span class="note-project">{projectsMap[note.project_id]?.name}</span>
 									{:else}
 										<span class="note-badge">Standalone</span>
 									{/if}
@@ -257,7 +257,7 @@
 							<div class="note-header">
 								<h3>{truncateTitle(note.title)}</h3>
 								{#if note.project_id && projectsMap[note.project_id]}
-									<span class="note-project">{projectsMap[note.project_id].name}</span>
+									<span class="note-project">{projectsMap[note.project_id]?.name}</span>
 								{:else}
 									<span class="note-badge">Standalone</span>
 								{/if}

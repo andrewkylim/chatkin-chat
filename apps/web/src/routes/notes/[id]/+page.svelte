@@ -85,6 +85,7 @@
 	}
 
 	function startEdit() {
+		if (!note) return;
 		editTitle = note.title;
 		editProjectId = note.project_id || null;
 		// Get the first text block's content
