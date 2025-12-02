@@ -441,7 +441,7 @@
 		}
 
 		// Show success message
-		const parts = [];
+		const parts: string[] = [];
 		if (projectCount > 0) parts.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`);
 		if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
 		if (noteCount > 0) parts.push(`${noteCount} note${noteCount > 1 ? 's' : ''}`);

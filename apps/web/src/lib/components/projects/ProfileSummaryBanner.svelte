@@ -36,7 +36,8 @@
 		}).join('');
 	};
 
-	const extractOverviewSection = (report: string) => {
+	const extractOverviewSection = (report: string | null) => {
+		if (!report) return null;
 		// Extract the "Overall Assessment & Key Insights" section from the AI report
 		const overviewMatch = report.match(/## Overall Assessment & Key Insights\s+([\s\S]*?)(?=\n##|$)/);
 		if (overviewMatch) {
