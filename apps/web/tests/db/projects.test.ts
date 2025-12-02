@@ -17,6 +17,7 @@ describe('Projects Database Operations', () => {
     name: 'Test Project',
     description: 'Test Description',
     color: '📁',
+    domain: null,
     created_at: '2025-11-27T00:00:00Z',
     updated_at: '2025-11-27T00:00:00Z'
   };
@@ -117,7 +118,8 @@ describe('Projects Database Operations', () => {
       const newProject = {
         name: 'New Project',
         description: 'New Description',
-        color: '🎨'
+        color: '🎨',
+        domain: null
       };
 
       const mockFrom = vi.fn().mockReturnValue({
@@ -147,7 +149,8 @@ describe('Projects Database Operations', () => {
       await expect(createProject({
         name: 'Project',
         description: null,
-        color: null
+        color: null,
+        domain: null
       })).rejects.toThrow('Not authenticated');
     });
 
@@ -174,7 +177,8 @@ describe('Projects Database Operations', () => {
       await createProject({
         name: 'Project',
         description: null,
-        color: null
+        color: null,
+        domain: null
       });
 
       expect(mockInsert).toHaveBeenCalledWith(
