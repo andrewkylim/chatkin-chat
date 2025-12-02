@@ -36,7 +36,7 @@ export interface NoteWithBlocks extends Note {
  * @param maxLength - Maximum length (default: 30)
  * @returns Truncated title with ellipsis if needed, or 'Untitled' if empty
  */
-export function truncateTitle(title: string, maxLength: number = 30): string {
+export function truncateTitle(title: string | null, maxLength: number = 30): string {
 	if (!title) return 'Untitled';
 	if (title.length <= maxLength) return title;
 	return title.substring(0, maxLength) + '...';

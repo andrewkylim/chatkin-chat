@@ -101,10 +101,10 @@
 
 	function startEditNote(note: NoteWithBlocks) {
 		editNoteId = note.id;
-		editNoteTitle = note.title;
+		editNoteTitle = note.title || '';
 		editNoteProjectId = note.project_id;
 		const firstTextBlock = note.note_blocks?.find((b) => b.type === 'text');
-		editNoteContent = firstTextBlock?.content?.text || '';
+		editNoteContent = (firstTextBlock?.content?.text as string) || '';
 		editBlockId = firstTextBlock?.id || '';
 	}
 
