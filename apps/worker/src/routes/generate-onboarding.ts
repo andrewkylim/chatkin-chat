@@ -11,21 +11,15 @@ import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
 
 interface OnboardingContent {
-	projects: Array<{
-		name: string;
-		description: string;
-		color: string;
-		domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
-	}>;
 	tasks: Array<{
-		project_name: string;
+		domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
 		title: string;
 		description: string;
 		priority: 'low' | 'medium' | 'high';
 		status: 'todo';
 	}>;
 	notes: Array<{
-		project_name: string;
+		domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
 		title: string;
 		content: string;
 	}>;
@@ -92,6 +86,23 @@ export async function handleGenerateOnboarding(
 			throw new WorkerError('Failed to fetch questionnaire responses', 500);
 		}
 
+		// Fetch existing 6 domain projects (created by database trigger)
+		const { data: existingProjects, error: projectsError } = await supabaseAdmin
+			.from('projects')
+			.select('id, domain')
+			.eq('user_id', user.userId);
+
+		if (projectsError || !existingProjects || existingProjects.length === 0) {
+			logger.error('Failed to fetch user projects', { error: projectsError });
+			throw new WorkerError('User projects not found. Please contact support.', 404);
+		}
+
+		// Create domain -> project_id mapping
+		const domainMap = new Map<string, string>();
+		for (const project of existingProjects) {
+			domainMap.set(project.domain, project.id);
+		}
+
 		// Generate onboarding content via multiple fast calls
 		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
 		const onboardingContent = await generateOnboardingContentMultiCall(
@@ -101,37 +112,14 @@ export async function handleGenerateOnboarding(
 			responses || []
 		);
 
-		// Create projects first
-		const projectMap = new Map<string, string>();
-
-		for (const project of onboardingContent.projects) {
-			const { data: createdProject, error: projectError } = await supabaseAdmin
-				.from('projects')
-				.insert({
-					user_id: user.userId,
-					name: project.name,
-					description: project.description,
-					color: project.color,
-					domain: project.domain
-				})
-				.select('id, name')
-				.single();
-
-			if (projectError) {
-				logger.error('Failed to create project', { error: projectError, project });
-				continue;
-			}
-
-			if (createdProject) {
-				projectMap.set(project.name, createdProject.id);
-			}
-		}
-
-		// Create tasks
+		// Create tasks (using domain -> project_id mapping)
 		const tasksToCreate = onboardingContent.tasks
 			.map((task) => {
-				const projectId = projectMap.get(task.project_name);
-				if (!projectId) return null;
+				const projectId = domainMap.get(task.domain);
+				if (!projectId) {
+					logger.warn('No project found for domain', { domain: task.domain });
+					return null;
+				}
 
 				return {
 					user_id: user.userId,
@@ -152,11 +140,14 @@ export async function handleGenerateOnboarding(
 			}
 		}
 
-		// Create notes
+		// Create notes (using domain -> project_id mapping)
 		const notesToCreate = onboardingContent.notes
 			.map((note) => {
-				const projectId = projectMap.get(note.project_name);
-				if (!projectId) return null;
+				const projectId = domainMap.get(note.domain);
+				if (!projectId) {
+					logger.warn('No project found for domain', { domain: note.domain });
+					return null;
+				}
 
 				return {
 					user_id: user.userId,
@@ -177,7 +168,6 @@ export async function handleGenerateOnboarding(
 
 		logger.info('Onboarding content generated successfully', {
 			userId: user.userId,
-			projects: onboardingContent.projects.length,
 			tasks: tasksToCreate.length,
 			notes: notesToCreate.length
 		});
@@ -186,7 +176,6 @@ export async function handleGenerateOnboarding(
 			JSON.stringify({
 				success: true,
 				created: {
-					projects: onboardingContent.projects.length,
 					tasks: tasksToCreate.length,
 					notes: notesToCreate.length
 				}
@@ -218,123 +207,52 @@ async function generateOnboardingContentMultiCall(
 		})
 		.join('\n\n');
 
-	// Call 1: Generate projects (5-7s)
-	logger.info('Generating projects...');
-	const projects = await generateProjects(client, profileSummary, domainScoresText);
-
-	// Call 2: Generate all tasks in one optimized call (8-12s)
+	// Generate all tasks in one optimized call (8-12s)
 	logger.info('Generating tasks...');
-	const tasks = await generateAllTasks(client, profileSummary, domainScoresText, responsesText, projects);
+	const tasks = await generateAllTasks(client, profileSummary, domainScoresText, responsesText);
 
 	// Notes will be generated separately via /api/generate-notes endpoint
-	// This keeps the main onboarding flow fast (<30s)
+	// This keeps the main onboarding flow fast (<20s)
 	const notes: OnboardingContent['notes'] = [];
 
-	return { projects, tasks, notes };
-}
-
-async function generateProjects(
-	client: any,
-	profileSummary: string,
-	domainScoresText: string
-): Promise<OnboardingContent['projects']> {
-	const prompt = `Create EXACTLY 6 personalized project titles - one for each life domain below.
-
-PROFILE: ${profileSummary.substring(0, 500)}
-SCORES: ${domainScoresText}
-
-CRITICAL: Generate EXACTLY 6 projects in this exact order:
-1. Body domain (physical health) - color: "green"
-2. Mind domain (mental/emotional) - color: "purple"
-3. Purpose domain (career/work) - color: "orange"
-4. Connection domain (relationships) - color: "red"
-5. Growth domain (learning) - color: "yellow"
-6. Finance/Security domain (financial stability) - color: "blue"
-
-Return ONLY a JSON array with EXACTLY 6 objects. Do not add extra projects.
-
-[
-  {"name": "Personalized Body Title", "description": "Physical health description", "color": "green", "domain": "Body"},
-  {"name": "Personalized Mind Title", "description": "Mental wellbeing description", "color": "purple", "domain": "Mind"},
-  {"name": "Personalized Purpose Title", "description": "Career/work description", "color": "orange", "domain": "Purpose"},
-  {"name": "Personalized Connection Title", "description": "Relationships description", "color": "red", "domain": "Connection"},
-  {"name": "Personalized Growth Title", "description": "Learning description", "color": "yellow", "domain": "Growth"},
-  {"name": "Personalized Finance Title", "description": "Financial stability description", "color": "blue", "domain": "Finance"}
-]
-
-Keep names under 40 chars, descriptions under 100 chars. Return EXACTLY 6 projects, no more, no less.`;
-
-	const message = await client.messages.create({
-		model: 'claude-sonnet-4-20250514',
-		max_tokens: 1000,
-		messages: [{ role: 'user', content: prompt }]
-	});
-
-	const responseText = message.content[0].text.trim();
-	let jsonText = responseText;
-
-	// Remove markdown code blocks if present
-	if (responseText.startsWith('```')) {
-		jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-	}
-
-	const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
-	if (!jsonMatch) {
-		logger.error('Failed to parse projects response', { responseText: responseText.substring(0, 300) });
-		throw new WorkerError('Failed to parse projects', 500);
-	}
-
-	const allProjects = JSON.parse(jsonMatch[0]);
-
-	// Enforce exactly 6 projects - truncate if AI generated more
-	if (allProjects.length > 6) {
-		logger.warn('AI generated more than 6 projects, truncating to 6', {
-			generated: allProjects.length
-		});
-		return allProjects.slice(0, 6);
-	}
-
-	if (allProjects.length < 6) {
-		logger.error('AI generated fewer than 6 projects', {
-			generated: allProjects.length
-		});
-		throw new WorkerError('Failed to generate all 6 projects', 500);
-	}
-
-	return allProjects;
+	return { tasks, notes };
 }
 
 async function generateAllTasks(
 	client: any,
 	profileSummary: string,
 	domainScoresText: string,
-	responsesText: string,
-	projects: OnboardingContent['projects']
+	responsesText: string
 ): Promise<OnboardingContent['tasks']> {
-	const projectNames = projects.map((p) => p.name).join('\n- ');
-
-	const prompt = `Generate 36-48 specific, actionable tasks across these projects:
-- ${projectNames}
+	const prompt = `Generate 36-48 specific, actionable tasks across the 6 wellness domains.
 
 PROFILE: ${profileSummary.substring(0, 600)}
 SCORES: ${domainScoresText}
 KEY RESPONSES: ${responsesText.substring(0, 800)}
 
+Create tasks distributed across these 6 domains (6-8 tasks per domain):
+1. Body - Physical health, fitness, nutrition, sleep
+2. Mind - Mental & emotional wellbeing, stress management
+3. Purpose - Career, work, goals, meaning, productivity
+4. Connection - Relationships, family, friends, community
+5. Growth - Learning, education, skills, hobbies
+6. Finance - Money, budgets, investments, savings
+
 Create tasks that are:
 - Specific and actionable (e.g., "Schedule annual physical exam" not "improve health")
-- Personalized to their situation
-- Distributed across all projects (6-8 tasks per project)
+- Personalized to their situation and domain scores
+- Distributed evenly across all 6 domains (6-8 tasks per domain)
 - Varied priority (20% high, 50% medium, 30% low)
 
 Return ONLY JSON array:
 [
-  {"project_name": "exact project name", "title": "Task title (max 50 chars)", "description": "What and why (max 150 chars)", "priority": "high|medium|low", "status": "todo"}
+  {"domain": "Body|Mind|Purpose|Connection|Growth|Finance", "title": "Task title (max 50 chars)", "description": "What and why (max 150 chars)", "priority": "high|medium|low", "status": "todo"}
 ]
 
-CRITICAL: Use EXACT project names from the list. Generate 36-48 tasks total.`;
+CRITICAL: Use EXACT domain names (Body, Mind, Purpose, Connection, Growth, Finance). Generate 36-48 tasks total.`;
 
 	const message = await client.messages.create({
-		model: 'claude-sonnet-4-20250514',
+		model: 'claude-3-5-haiku-20241022',
 		max_tokens: 4000,
 		messages: [{ role: 'user', content: prompt }]
 	});

@@ -3,7 +3,7 @@
 	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import DomainProjectCard from '$lib/components/projects/DomainProjectCard.svelte';
-	import { getProjects, getProjectStats, createProject, deleteProject } from '$lib/db/projects';
+	import { getProjects, getProjectStats } from '$lib/db/projects';
 	import { getAssessmentResults } from '$lib/db/assessment';
 	import type { AssessmentResults } from '$lib/db/assessment';
 	import { onMount } from 'svelte';
@@ -34,63 +34,10 @@
 	let domainGroups: DomainWithProjects[] = [];
 	let expandedDomain: WellnessDomain | null = null;
 	let loading = true;
-	let showNewProjectModal = false;
-	let newProjectName = '';
-	let newProjectDescription = '';
-	let newProjectDomain: WellnessDomain | '' = '';
-	let selectedEmoji = '📁';
-	let showAllEmojis = false;
-	let deleteConfirmProject: Project | null = null;
 	let editProject: Project | null = null;
 	let showEditModal = false;
-	let openMenuId: string | null = null;
 
 	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
-
-	const quickEmojis = ['📁', '💼', '🏠', '🎯', '🚀', '📚', '🎨'];
-	const allEmojis = [
-		'📁',
-		'💼',
-		'🏠',
-		'🎯',
-		'🚀',
-		'📚',
-		'🎨',
-		'🌟',
-		'💡',
-		'🎉',
-		'🔥',
-		'⚡',
-		'🎵',
-		'🎮',
-		'✈️',
-		'🍕',
-		'☕',
-		'🌈',
-		'🎭',
-		'🎬',
-		'📸',
-		'🎪',
-		'🌱',
-		'🌸',
-		'🌻',
-		'🌷',
-		'🍀',
-		'🦄',
-		'🐶',
-		'🐱',
-		'🎄',
-		'🦊',
-		'🦁',
-		'🐯',
-		'🎃',
-		'⭐',
-		'🎁',
-		'💝',
-		'🎈'
-	];
-
-	$: availableEmojis = showAllEmojis ? allEmojis : quickEmojis;
 
 	onMount(async () => {
 		notificationCounts.setCurrentSection('projects');
@@ -130,7 +77,7 @@
 	): DomainWithProjects[] {
 		const groups: DomainWithProjects[] = [];
 
-		// Create group for each domain
+		// Create group for each domain (each domain should have exactly 1 project)
 		for (const domain of domains) {
 			const domainProjects = projects.filter((p) => p.domain === domain);
 			const group: DomainWithProjects = {
@@ -143,7 +90,7 @@
 				totalFiles: 0
 			};
 
-			// Aggregate stats for this domain
+			// Aggregate stats for this domain (should be just 1 project)
 			for (const project of domainProjects) {
 				const stats = projectStats[project.id];
 				if (stats) {
@@ -157,60 +104,7 @@
 			groups.push(group);
 		}
 
-		// Add unassigned group if there are projects without a domain
-		const unassignedProjects = projects.filter((p) => p.domain === null);
-		if (unassignedProjects.length > 0) {
-			const group: DomainWithProjects = {
-				domain: null,
-				domainScore: 0,
-				projects: unassignedProjects,
-				totalTasks: 0,
-				completedTasks: 0,
-				totalNotes: 0,
-				totalFiles: 0
-			};
-
-			// Aggregate stats for unassigned
-			for (const project of unassignedProjects) {
-				const stats = projectStats[project.id];
-				if (stats) {
-					group.totalTasks += stats.totalTasks;
-					group.completedTasks += stats.completedTasks;
-					group.totalNotes += stats.totalNotes;
-					group.totalFiles += stats.totalFiles;
-				}
-			}
-
-			groups.push(group);
-		}
-
 		return groups;
-	}
-
-	async function handleCreateProject() {
-		if (!newProjectName.trim()) return;
-
-		try {
-			await createProject({
-				name: newProjectName,
-				description: newProjectDescription || null,
-				color: selectedEmoji,
-				domain: newProjectDomain || null
-			});
-
-			// Reset form
-			newProjectName = '';
-			newProjectDescription = '';
-			newProjectDomain = '';
-			selectedEmoji = '📁';
-			showAllEmojis = false;
-			showNewProjectModal = false;
-
-			// Reload projects
-			await loadProjects();
-		} catch (error) {
-			handleError(error, { operation: 'Create project', component: 'ProjectsPage' });
-		}
 	}
 
 	function getRelativeTime(date: string) {
@@ -299,19 +193,6 @@
 		return description.substring(0, maxLength) + '...';
 	}
 
-	async function handleDeleteProject() {
-		if (!deleteConfirmProject) return;
-
-		try {
-			await deleteProject(deleteConfirmProject.id);
-			deleteConfirmProject = null;
-			await loadProjects();
-		} catch (error) {
-			handleError(error, { operation: 'Delete project', component: 'ProjectsPage' });
-			alert('Failed to delete project');
-		}
-	}
-
 	function startEditProject(project: Project) {
 		editProject = project;
 		showEditModal = true;
@@ -324,10 +205,6 @@
 
 	async function handleProjectUpdated() {
 		await loadProjects();
-	}
-
-	function toggleMenu(projectId: string) {
-		openMenuId = openMenuId === projectId ? null : projectId;
 	}
 
 	function handleDomainClick(domain: WellnessDomain | null) {
@@ -344,19 +221,6 @@
 		<header class="page-header">
 			<div class="header-content">
 				<h1>Projects</h1>
-				<button class="primary-btn" on:click={() => (showNewProjectModal = true)}>
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<path d="M8 2v12M2 8h12" />
-					</svg>
-					New Project
-				</button>
 			</div>
 		</header>
 
@@ -516,63 +380,6 @@
 												<span class="project-date">Updated {getRelativeTime(project.updated_at)}</span>
 											</div>
 										</a>
-										<div class="card-actions">
-											<button
-												class="menu-btn"
-												on:click|stopPropagation={() => toggleMenu(project.id)}
-												title="Actions"
-											>
-												<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-													<circle cx="8" cy="3" r="1.5" />
-													<circle cx="8" cy="8" r="1.5" />
-													<circle cx="8" cy="13" r="1.5" />
-												</svg>
-											</button>
-											{#if openMenuId === project.id}
-												<div class="dropdown-menu">
-													<button
-														class="menu-item"
-														on:click|stopPropagation={() => {
-															startEditProject(project);
-															openMenuId = null;
-														}}
-													>
-														<svg
-															width="16"
-															height="16"
-															viewBox="0 0 16 16"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-														>
-															<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z" />
-														</svg>
-														Edit
-													</button>
-													<button
-														class="menu-item delete"
-														on:click|stopPropagation={() => {
-															deleteConfirmProject = project;
-															openMenuId = null;
-														}}
-													>
-														<svg
-															width="16"
-															height="16"
-															viewBox="0 0 16 16"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-														>
-															<path
-																d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"
-															/>
-														</svg>
-														Delete
-													</button>
-												</div>
-											{/if}
-										</div>
 									</div>
 								{/each}
 							</div>
@@ -582,101 +389,6 @@
 			{/if}
 		</div>
 
-		<!-- New Project Modal -->
-		{#if showNewProjectModal}
-			<div class="modal-overlay" on:click={() => (showNewProjectModal = false)}>
-				<div class="modal" on:click|stopPropagation>
-					<h2>Create New Project</h2>
-					<form on:submit|preventDefault={handleCreateProject}>
-						<div class="form-content">
-							<div class="form-group">
-								<label>Project Icon</label>
-								<div class="emoji-selector">
-									<div class="emoji-row">
-										{#each availableEmojis as emoji}
-											<button
-												type="button"
-												class="emoji-btn"
-												class:selected={selectedEmoji === emoji}
-												on:click={() => (selectedEmoji = emoji)}
-											>
-												{emoji}
-											</button>
-										{/each}
-										<button
-											type="button"
-											class="emoji-more-btn"
-											class:active={showAllEmojis}
-											on:click={() => (showAllEmojis = !showAllEmojis)}
-											title={showAllEmojis ? 'Show less' : 'More emojis'}
-										>
-											{#if showAllEmojis}
-												<svg
-													width="20"
-													height="20"
-													viewBox="0 0 20 20"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-												>
-													<path d="M5 15l5-5 5 5" />
-												</svg>
-											{:else}
-												<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-													<circle cx="4" cy="10" r="1.5" />
-													<circle cx="10" cy="10" r="1.5" />
-													<circle cx="16" cy="10" r="1.5" />
-												</svg>
-											{/if}
-										</button>
-									</div>
-								</div>
-							</div>
-							<div class="form-group">
-								<label for="project-domain">Domain (optional)</label>
-								<select id="project-domain" bind:value={newProjectDomain}>
-									<option value="">Unassigned</option>
-									<option value="Body">💪 Body - Physical health</option>
-									<option value="Mind">🧠 Mind - Mental wellbeing</option>
-									<option value="Purpose">🎯 Purpose - Work & meaning</option>
-									<option value="Connection">🤝 Connection - Relationships</option>
-									<option value="Growth">🌱 Growth - Learning</option>
-									<option value="Finance">💰 Finance - Financial stability</option>
-								</select>
-							</div>
-							<div class="form-group">
-								<label for="project-name">Project Name</label>
-								<input
-									type="text"
-									id="project-name"
-									bind:value={newProjectName}
-									placeholder="e.g., Wedding Planning"
-									maxlength="50"
-									required
-								/>
-							</div>
-							<div class="form-group">
-								<label for="project-description">Description (optional)</label>
-								<textarea
-									id="project-description"
-									bind:value={newProjectDescription}
-									placeholder="Briefly describe your project..."
-									maxlength="200"
-									rows="3"
-								></textarea>
-							</div>
-						</div>
-						<div class="modal-actions">
-							<button type="button" class="secondary-btn" on:click={() => (showNewProjectModal = false)}>
-								Cancel
-							</button>
-							<button type="submit" class="primary-btn"> Create Project </button>
-						</div>
-					</form>
-				</div>
-			</div>
-		{/if}
-
 		<!-- Edit Project Modal -->
 		<EditProjectModal
 			show={showEditModal}
@@ -684,27 +396,6 @@
 			onClose={handleCloseEditModal}
 			onUpdate={handleProjectUpdated}
 		/>
-
-		<!-- Delete Confirmation Modal -->
-		{#if deleteConfirmProject}
-			<div class="modal-overlay" on:click={() => (deleteConfirmProject = null)}>
-				<div class="modal" on:click|stopPropagation>
-					<h2>Delete Project?</h2>
-					<p>
-						Are you sure you want to delete "{deleteConfirmProject.name}"? This will also delete all
-						tasks and notes in this project. This action cannot be undone.
-					</p>
-					<div class="modal-actions">
-						<button type="button" class="secondary-btn" on:click={() => (deleteConfirmProject = null)}>
-							Cancel
-						</button>
-						<button type="button" class="danger-btn" on:click={handleDeleteProject}>
-							Delete Project
-						</button>
-					</div>
-				</div>
-			</div>
-		{/if}
 	</div>
 </AppLayout>
 
@@ -918,17 +609,6 @@
 		margin-bottom: 16px;
 	}
 
-	.project-icon {
-		width: 56px;
-		height: 56px;
-		border-radius: 12px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 2rem;
-		flex-shrink: 0;
-	}
-
 	.project-icon-circle {
 		width: 56px;
 		height: 56px;
@@ -999,63 +679,6 @@
 
 	.status-dot.completed {
 		background: #10b981;
-	}
-
-	.card-actions {
-		position: absolute;
-		top: 16px;
-		right: 16px;
-	}
-
-	.menu-btn {
-		padding: 8px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		color: var(--text-secondary);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.menu-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.dropdown-menu {
-		position: absolute;
-		top: 100%;
-		right: 0;
-		margin-top: 8px;
-		background: var(--bg-primary);
-		border: 2px solid var(--border-color);
-		border-radius: var(--radius-md);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		z-index: 10;
-		min-width: 160px;
-	}
-
-	.menu-item {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		width: 100%;
-		padding: 12px 16px;
-		background: none;
-		border: none;
-		text-align: left;
-		font-size: 0.9375rem;
-		color: var(--text-primary);
-		cursor: pointer;
-		transition: background 0.2s ease;
-	}
-
-	.menu-item:hover {
-		background: var(--bg-secondary);
-	}
-
-	.menu-item.delete {
-		color: var(--danger);
 	}
 
 	/* Loading State */
@@ -1179,6 +802,17 @@
 		transition: border-color 0.2s ease;
 	}
 
+	.form-group select {
+		cursor: pointer;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
+		padding-right: 36px;
+	}
+
 	.form-group input:focus,
 	.form-group textarea:focus,
 	.form-group select:focus {
@@ -1189,6 +823,12 @@
 	.form-group textarea {
 		resize: vertical;
 		font-family: inherit;
+	}
+
+	.form-group select option {
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		padding: 8px;
 	}
 
 	.emoji-selector {

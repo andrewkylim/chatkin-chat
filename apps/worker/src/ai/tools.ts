@@ -6,7 +6,7 @@ export function getTools() {
   return [
     {
       name: 'ask_questions',
-      description: 'REQUIRED FIRST STEP for all create operations. When a user asks to create a task/note/project, you MUST call this tool immediately - do NOT respond with text. This tool shows a modal with multiple choice questions. Only after receiving answers should you use propose_operations.',
+      description: 'REQUIRED FIRST STEP for all create operations. When a user asks to create a task/note, you MUST call this tool immediately - do NOT respond with text. This tool shows a modal with multiple choice questions. Only after receiving answers should you use propose_operations.',
       input_schema: {
         type: 'object' as const,
         properties: {
@@ -54,8 +54,8 @@ export function getTools() {
                 },
                 type: {
                   type: 'string' as const,
-                  enum: ['task', 'note', 'project'],
-                  description: 'The type of item'
+                  enum: ['task', 'note'],
+                  description: 'The type of item (projects cannot be created/deleted)'
                 },
                 id: {
                   type: 'string' as const,

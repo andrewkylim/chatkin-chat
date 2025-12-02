@@ -8,10 +8,10 @@ export type WellnessDomain = 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growt
 export interface Project {
   id: string;
   user_id: string;
-  name: string;
+  name: string; // Fixed to match domain name
   description: string | null;
-  color: string | null;
-  domain: WellnessDomain | null;
+  color: string | null; // Fixed emoji per domain
+  domain: WellnessDomain; // NOT NULL - unique per user (each user has exactly 6 projects)
   created_at: string;
   updated_at: string;
 }

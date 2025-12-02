@@ -360,14 +360,7 @@
 				);
 			}
 
-			// Delete projects
-			deleteStatus = 'Deleting projects...';
-			const { error: projectsError } = await supabase
-				.from('projects')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (projectsError) throw projectsError;
+			// Note: We do NOT delete projects - the 6 domain projects are fixed and will be reused
 
 			// Delete tasks
 			deleteStatus = 'Deleting tasks...';
@@ -451,13 +444,12 @@
 					Retaking this assessment will <strong>delete all your existing content</strong>:
 				</p>
 				<ul>
-					<li>All projects</li>
 					<li>All tasks</li>
 					<li>All notes</li>
 					<li>Your assessment results</li>
 				</ul>
 				<p>
-					Your current progress will be replaced with new AI-generated content based on your updated responses.
+					Your 6 domain projects will remain intact. New tasks and notes will be generated based on your updated responses.
 				</p>
 
 				{#if deletingContent}

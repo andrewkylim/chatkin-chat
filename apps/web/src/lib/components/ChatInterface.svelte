@@ -3,7 +3,7 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
-	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
+	import { updateProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage } from '$lib/db/conversations';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 	import type { Conversation } from '@chatkin/types';

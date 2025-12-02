@@ -1,8 +1,5 @@
 import { supabase } from '$lib/supabase';
-import type { Project } from '@chatkin/types';
-
-type ProjectInsert = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
-type ProjectUpdate = Partial<Omit<Project, 'id' | 'user_id' | 'created_at'>>;
+import type { Project, WellnessDomain } from '@chatkin/types';
 
 export async function getProjects() {
 	const { data, error } = await supabase
@@ -25,46 +22,30 @@ export async function getProject(id: string) {
 	return data as Project;
 }
 
-export async function createProject(project: Omit<ProjectInsert, 'user_id'>) {
-	const { data: { user } } = await supabase.auth.getUser();
-	if (!user) throw new Error('Not authenticated');
-
-	// Provide defaults for optional fields
-	const projectData = {
-		...project,
-		domain: project.domain ?? null,
-		user_id: user.id
-	};
-
+export async function getProjectByDomain(domain: WellnessDomain): Promise<Project> {
 	const { data, error } = await supabase
 		.from('projects')
-		.insert(projectData)
-		.select()
+		.select('*')
+		.eq('domain', domain)
 		.single();
 
 	if (error) throw error;
 	return data as Project;
 }
 
-export async function updateProject(id: string, updates: ProjectUpdate) {
+export async function updateProject(id: string, updates: { description: string | null }) {
 	const { data, error } = await supabase
 		.from('projects')
-		.update({ ...updates, updated_at: new Date().toISOString() })
+		.update({
+			description: updates.description,
+			updated_at: new Date().toISOString()
+		})
 		.eq('id', id)
 		.select()
 		.single();
 
 	if (error) throw error;
 	return data as Project;
-}
-
-export async function deleteProject(id: string) {
-	const { error } = await supabase
-		.from('projects')
-		.delete()
-		.eq('id', id);
-
-	if (error) throw error;
 }
 
 // Get project statistics

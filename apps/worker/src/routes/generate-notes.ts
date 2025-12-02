@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
 
 interface Note {
-	project_name: string;
+	domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
 	title: string;
 	content: string;
 }
@@ -57,10 +57,10 @@ export async function handleGenerateNotes(
 			throw new WorkerError('Assessment results not found', 404);
 		}
 
-		// Fetch user's projects
+		// Fetch user's 6 domain projects
 		const { data: projects, error: projectsError } = await supabaseAdmin
 			.from('projects')
-			.select('id, name')
+			.select('id, domain')
 			.eq('user_id', user.userId)
 			.order('created_at', { ascending: true });
 
@@ -69,38 +69,28 @@ export async function handleGenerateNotes(
 			throw new WorkerError('No projects found for user', 404);
 		}
 
-		// Generate notes in batches (3-4 projects per batch)
-		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
-		const batchSize = 3;
-		const batches = Math.ceil(projects.length / batchSize);
-
-		const allNotes: Note[] = [];
-
-		for (let i = 0; i < batches; i++) {
-			const start = i * batchSize;
-			const end = Math.min(start + batchSize, projects.length);
-			const batchProjects = projects.slice(start, end);
-
-			logger.info(`Generating notes batch ${i + 1}/${batches}`, {
-				projects: batchProjects.length
-			});
-
-			const batchNotes = await generateNotesBatch(
-				client,
-				profile.profile_summary,
-				results.domain_scores,
-				batchProjects,
-				i + 1
-			);
-
-			allNotes.push(...batchNotes);
+		// Create domain -> project_id mapping
+		const domainMap = new Map<string, string>();
+		for (const project of projects) {
+			domainMap.set(project.domain, project.id);
 		}
+
+		// Generate all notes in one call (faster for 6 domains)
+		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
+
+		logger.info('Generating notes for all 6 domains');
+
+		const allNotes = await generateAllNotes(
+			client,
+			profile.profile_summary,
+			results.domain_scores
+		);
 
 		// Create notes in database with note_blocks
 		for (const note of allNotes) {
-			const project = projects.find((p) => p.name === note.project_name);
-			if (!project) {
-				logger.warn('Project not found for note', { project_name: note.project_name });
+			const projectId = domainMap.get(note.domain);
+			if (!projectId) {
+				logger.warn('Project not found for note', { domain: note.domain });
 				continue;
 			}
 
@@ -109,7 +99,7 @@ export async function handleGenerateNotes(
 				.from('notes')
 				.insert({
 					user_id: user.userId,
-					project_id: project.id,
+					project_id: projectId,
 					title: note.title
 				})
 				.select('id')
@@ -159,23 +149,26 @@ export async function handleGenerateNotes(
 	}
 }
 
-async function generateNotesBatch(
+async function generateAllNotes(
 	client: any,
 	profileSummary: string,
-	domainScores: any,
-	projects: Array<{ id: string; name: string }>,
-	batchNumber: number
+	domainScores: any
 ): Promise<Note[]> {
 	const domainScoresText = Object.entries(domainScores)
 		.map(([domain, score]) => `- ${domain}: ${score}/10`)
 		.join('\n');
 
-	const projectNames = projects.map((p) => p.name).join('\n- ');
-	const notesPerProject = 2;
-	const expectedNotes = projects.length * notesPerProject;
+	const notesPerDomain = 2;
+	const expectedNotes = 6 * notesPerDomain; // 12 notes total
 
-	const prompt = `Generate ${expectedNotes} strategic, actionable reference notes for these ${projects.length} projects (${notesPerProject} notes per project):
-- ${projectNames}
+	const prompt = `Generate ${expectedNotes} strategic, actionable reference notes across the 6 wellness domains (${notesPerDomain} notes per domain):
+
+1. Body - Physical health, fitness, nutrition, sleep
+2. Mind - Mental & emotional wellbeing, stress management
+3. Purpose - Career, work, goals, meaning, productivity
+4. Connection - Relationships, family, friends, community
+5. Growth - Learning, education, skills, hobbies
+6. Finance - Money, budgets, investments, savings
 
 USER PROFILE CONTEXT:
 ${profileSummary.substring(0, 600)}
@@ -192,28 +185,28 @@ Create notes that provide genuine value:
 CONTENT REQUIREMENTS:
 - Each note: 200-400 words of genuinely useful, detailed content
 - Use markdown formatting (headers, lists, bold for emphasis)
-- Make it actionable and specific to their situation
-- ${notesPerProject} comprehensive notes per project
+- Make it actionable and specific to their situation and domain scores
+- ${notesPerDomain} comprehensive notes per domain
 - Total: ${expectedNotes} notes
 
 Return ONLY a valid JSON array:
 [
   {
-    "project_name": "exact project name from list above",
+    "domain": "Body|Mind|Purpose|Connection|Growth|Finance",
     "title": "Clear, descriptive note title (max 60 chars)",
     "content": "Detailed markdown content (200-400 words)"
   }
 ]
 
 CRITICAL REQUIREMENTS:
-1. Use EXACT project names from the list
-2. Generate exactly ${expectedNotes} notes (${notesPerProject} per project)
+1. Use EXACT domain names (Body, Mind, Purpose, Connection, Growth, Finance)
+2. Generate exactly ${expectedNotes} notes (${notesPerDomain} per domain)
 3. Each note should be 200-400 words of useful content
 4. Return ONLY valid JSON - start with [ and end with ]
 5. Ensure complete, parseable JSON (don't truncate)`;
 
 	const message = await client.messages.create({
-		model: 'claude-sonnet-4-20250514',
+		model: 'claude-3-5-haiku-20241022',
 		max_tokens: 8000, // Higher limit for quality content
 		messages: [{ role: 'user', content: prompt }]
 	});
@@ -229,26 +222,24 @@ CRITICAL REQUIREMENTS:
 	// Find the JSON array
 	const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
 	if (!jsonMatch) {
-		logger.error(`Failed to parse notes batch ${batchNumber}`, {
-			responseText: responseText.substring(0, 500),
-			batchNumber
+		logger.error('Failed to parse notes response', {
+			responseText: responseText.substring(0, 500)
 		});
-		throw new WorkerError(`Failed to parse notes batch ${batchNumber}`, 500);
+		throw new WorkerError('Failed to parse notes', 500);
 	}
 
 	try {
 		const parsed = JSON.parse(jsonMatch[0]);
-		logger.info(`Notes batch ${batchNumber} generated successfully`, {
+		logger.info('Notes generated successfully', {
 			count: parsed.length,
 			expected: expectedNotes
 		});
 		return parsed;
 	} catch (err) {
-		logger.error(`Failed to parse notes batch ${batchNumber} JSON`, {
+		logger.error('Failed to parse notes JSON', {
 			error: err,
-			json: jsonMatch[0].substring(0, 500),
-			batchNumber
+			json: jsonMatch[0].substring(0, 500)
 		});
-		throw new WorkerError(`Failed to parse notes batch ${batchNumber} JSON`, 500);
+		throw new WorkerError('Failed to parse notes JSON', 500);
 	}
 }

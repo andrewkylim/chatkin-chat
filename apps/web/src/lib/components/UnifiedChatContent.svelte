@@ -6,7 +6,7 @@
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 	import { createNote, updateNote, deleteNote } from '$lib/db/notes';
-	import { createProject, updateProject, deleteProject } from '$lib/db/projects';
+	import { updateProject } from '$lib/db/projects';
 	import { getOrCreateConversation, getRecentMessages, addMessage, updateMessageMetadata, updateConversationMode } from '$lib/db/conversations';
 	import { createFile } from '$lib/db/files';
 	import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
