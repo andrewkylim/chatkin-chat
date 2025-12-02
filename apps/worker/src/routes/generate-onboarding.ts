@@ -236,22 +236,31 @@ async function generateProjects(
 	profileSummary: string,
 	domainScoresText: string
 ): Promise<OnboardingContent['projects']> {
-	const prompt = `Create 6 personalized project titles for a life organization system - one for each life domain.
+	const prompt = `Create EXACTLY 6 personalized project titles - one for each life domain below.
 
 PROFILE: ${profileSummary.substring(0, 500)}
 SCORES: ${domainScoresText}
 
-Return ONLY JSON array with 6 projects (one per domain):
+CRITICAL: Generate EXACTLY 6 projects in this exact order:
+1. Body domain (physical health) - color: "green"
+2. Mind domain (mental/emotional) - color: "purple"
+3. Purpose domain (career/work) - color: "orange"
+4. Connection domain (relationships) - color: "red"
+5. Growth domain (learning) - color: "yellow"
+6. Finance/Security domain (financial stability) - color: "blue"
+
+Return ONLY a JSON array with EXACTLY 6 objects. Do not add extra projects.
+
 [
-  {"name": "Personalized Body Project Title", "description": "Description based on physical health needs", "color": "green"},
-  {"name": "Personalized Mind Project Title", "description": "Description for mental/emotional wellbeing", "color": "purple"},
-  {"name": "Personalized Purpose Project Title", "description": "Description for career/work goals", "color": "orange"},
-  {"name": "Personalized Connection Project Title", "description": "Description for relationships", "color": "red"},
-  {"name": "Personalized Growth Project Title", "description": "Description for learning goals", "color": "yellow"},
-  {"name": "Personalized Finance/Security Project Title", "description": "Description for financial stability and security", "color": "blue"}
+  {"name": "Personalized Body Title", "description": "Physical health description", "color": "green"},
+  {"name": "Personalized Mind Title", "description": "Mental wellbeing description", "color": "purple"},
+  {"name": "Personalized Purpose Title", "description": "Career/work description", "color": "orange"},
+  {"name": "Personalized Connection Title", "description": "Relationships description", "color": "red"},
+  {"name": "Personalized Growth Title", "description": "Learning description", "color": "yellow"},
+  {"name": "Personalized Finance Title", "description": "Financial stability description", "color": "blue"}
 ]
 
-Keep names under 40 chars, descriptions under 100 chars.`;
+Keep names under 40 chars, descriptions under 100 chars. Return EXACTLY 6 projects, no more, no less.`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',
@@ -273,7 +282,24 @@ Keep names under 40 chars, descriptions under 100 chars.`;
 		throw new WorkerError('Failed to parse projects', 500);
 	}
 
-	return JSON.parse(jsonMatch[0]);
+	const allProjects = JSON.parse(jsonMatch[0]);
+
+	// Enforce exactly 6 projects - truncate if AI generated more
+	if (allProjects.length > 6) {
+		logger.warn('AI generated more than 6 projects, truncating to 6', {
+			generated: allProjects.length
+		});
+		return allProjects.slice(0, 6);
+	}
+
+	if (allProjects.length < 6) {
+		logger.error('AI generated fewer than 6 projects', {
+			generated: allProjects.length
+		});
+		throw new WorkerError('Failed to generate all 6 projects', 500);
+	}
+
+	return allProjects;
 }
 
 async function generateAllTasks(
