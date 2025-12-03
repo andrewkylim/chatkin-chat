@@ -24,6 +24,7 @@
 	let silenceTimeout: number | null = null;
 	let audioContext: AudioContext | null = null;
 	let processor: ScriptProcessorNode | null = null;
+	let cachedApiKey: string | null = null; // Cache API key to avoid repeated fetches
 
 	const SILENCE_DURATION = 5000; // 5 seconds of silence to auto-stop
 	const MAX_RECORDING_TIME = 60000; // 60 seconds max
@@ -33,12 +34,15 @@
 			error = null;
 			fullTranscript = '';
 
-			// Get API key from server
-			const keyResponse = await fetch('/api/deepgram-key');
-			if (!keyResponse.ok) {
-				throw new Error('Failed to get API key');
+			// Get API key from server (cache it after first fetch)
+			if (!cachedApiKey) {
+				const keyResponse = await fetch('/api/deepgram-key');
+				if (!keyResponse.ok) {
+					throw new Error('Failed to get API key');
+				}
+				const { apiKey } = await keyResponse.json();
+				cachedApiKey = apiKey;
 			}
-			const { apiKey } = await keyResponse.json();
 
 			// Request microphone access
 			mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -46,7 +50,7 @@
 			// Connect to Deepgram WebSocket
 			socket = new WebSocket(
 				'wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true&encoding=linear16&sample_rate=16000',
-				['token', apiKey]
+				['token', cachedApiKey]
 			);
 
 			socket.onopen = () => {
