@@ -5,7 +5,7 @@
 	export let onStopTalkMode: (() => void) | undefined = undefined;
 
 	$: isActive = talkModeActive; // Always show when talk mode is active
-	$: statusText = isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : '';
+	$: statusText = isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Processing...';
 	$: waveClass = isListening ? 'listening' : isSpeaking ? 'speaking' : 'idle';
 </script>
 
@@ -93,16 +93,16 @@
 		animation: idle-pulse 2s ease-in-out infinite;
 	}
 
-	.wave.idle .bar:nth-child(1) { height: 1.5rem; animation-delay: 0s; }
-	.wave.idle .bar:nth-child(2) { height: 1.75rem; animation-delay: 0.1s; }
-	.wave.idle .bar:nth-child(3) { height: 2rem; animation-delay: 0.2s; }
-	.wave.idle .bar:nth-child(4) { height: 1.75rem; animation-delay: 0.3s; }
-	.wave.idle .bar:nth-child(5) { height: 1.5rem; animation-delay: 0.4s; }
+	.wave.idle .bar:nth-child(1) { height: 2rem; animation-delay: 0s; }
+	.wave.idle .bar:nth-child(2) { height: 2.75rem; animation-delay: 0.1s; }
+	.wave.idle .bar:nth-child(3) { height: 3.5rem; animation-delay: 0.2s; }
+	.wave.idle .bar:nth-child(4) { height: 2.75rem; animation-delay: 0.3s; }
+	.wave.idle .bar:nth-child(5) { height: 2rem; animation-delay: 0.4s; }
 
 	/* Listening state - orange bars with active pulse */
 	.wave.listening .bar {
 		background: linear-gradient(180deg, var(--accent-primary), var(--accent-hover));
-		animation: listening-pulse 1.2s ease-in-out infinite;
+		animation: listening-pulse 1.8s ease-in-out infinite;
 	}
 
 	.wave.listening .bar:nth-child(1) { height: 2rem; animation-delay: 0s; }
@@ -126,10 +126,10 @@
 	@keyframes idle-pulse {
 		0%, 100% {
 			transform: scaleY(1);
-			opacity: 0.8;
+			opacity: 1;
 		}
 		50% {
-			transform: scaleY(1.1);
+			transform: scaleY(1);
 			opacity: 1;
 		}
 	}
@@ -211,10 +211,10 @@
 		}
 
 		.wave.idle .bar:nth-child(1),
-		.wave.idle .bar:nth-child(5) { height: 1.25rem; }
+		.wave.idle .bar:nth-child(5) { height: 1.75rem; }
 		.wave.idle .bar:nth-child(2),
-		.wave.idle .bar:nth-child(4) { height: 1.5rem; }
-		.wave.idle .bar:nth-child(3) { height: 1.75rem; }
+		.wave.idle .bar:nth-child(4) { height: 2.25rem; }
+		.wave.idle .bar:nth-child(3) { height: 3rem; }
 
 		.wave.listening .bar:nth-child(1),
 		.wave.listening .bar:nth-child(5) { height: 1.75rem; }

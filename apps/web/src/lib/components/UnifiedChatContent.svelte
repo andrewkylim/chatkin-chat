@@ -217,6 +217,10 @@
 						}
 					: msg
 			);
+			// Trigger auto-listen even on error if talk mode is active
+			if (talkModeActive) {
+				triggerAutoListen();
+			}
 		} finally {
 			isStreaming = false;
 			await tick();
