@@ -64,10 +64,12 @@ export class TalkModeService {
 			let audio: HTMLAudioElement;
 			if (this.ttsAudioElement) {
 				audio = this.ttsAudioElement;
-				// Stop looping and restore full volume
-				audio.loop = false;
-				audio.volume = 1.0;
-				logger.debug('Using warm pre-created audio element for TTS');
+				logger.debug('Using warm pre-created audio element for TTS', {
+					loop: audio.loop,
+					volume: audio.volume,
+					paused: audio.paused,
+					currentSrc: audio.src.substring(0, 50)
+				});
 			} else {
 				// Fallback: create new audio element (for desktop or if unlockAudio wasn't called)
 				audio = new Audio();
@@ -98,14 +100,32 @@ export class TalkModeService {
 			const audioUrl = URL.createObjectURL(audioBlob);
 			logger.debug('Created object URL');
 
-			// Set the new source - audio element is already "warm" and playing
+			// For iOS: Stop looping, set new source, then restart playback
+			if (this.ttsAudioElement) {
+				audio.loop = false;
+				audio.volume = 1.0;
+				logger.debug('Stopped looping, setting new source');
+			}
+
 			audio.src = audioUrl;
-			logger.debug('Set new TTS source on warm audio element', {
+			logger.debug('Set new TTS source', {
 				hasAudio: !!audio,
 				hasSrc: !!audio.src,
 				readyState: audio.readyState,
 				paused: audio.paused
 			});
+
+			// For iOS warm element: Explicitly call play() after changing src
+			if (this.ttsAudioElement && audio.paused) {
+				logger.debug('Audio paused after src change, calling play()');
+				try {
+					await audio.play();
+					logger.debug('Resumed playback after src change');
+				} catch (playError) {
+					logger.error('Failed to resume playback', playError);
+					throw playError;
+				}
+			}
 
 			// Wait for audio to finish
 			await new Promise<void>((resolve, reject) => {
@@ -116,7 +136,13 @@ export class TalkModeService {
 					resolve();
 				};
 				audio.onerror = (e) => {
-					logger.error('Audio playback error event', e);
+					logger.error('Audio playback error event', {
+						error: e,
+						currentSrc: audio.src.substring(0, 50),
+						readyState: audio.readyState,
+						networkState: audio.networkState,
+						paused: audio.paused
+					});
 					URL.revokeObjectURL(audioUrl);
 					this.currentAudio = null;
 					reject(new Error('Audio playback error'));
