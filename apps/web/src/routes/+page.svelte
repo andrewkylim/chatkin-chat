@@ -34,15 +34,27 @@
 
 	<main class="hero">
 		<div class="hero-container">
+			<div class="animation-container">
+				<div class="orbit">
+					<div class="ball ball-1"></div>
+					<div class="ball ball-2"></div>
+					<div class="ball ball-3"></div>
+					<div class="ball ball-4"></div>
+				</div>
+			</div>
 			<h1 class="hero-title">
 				Sort your life out.
 			</h1>
 			<p class="hero-subtitle">
 				Get a comprehensive assessment and personalized plan covering health, relationships, career, and personal growth
 			</p>
+			<div class="hero-cta">
+				<a href="/signup" class="primary-btn">Get Started</a>
+			</div>
 		</div>
+	</main>
 
-		<section class="features">
+	<section class="features" style="display: none;">
 		<div class="features-container">
 			<h2 class="section-title">How it works</h2>
 			<div class="features-grid">
@@ -96,7 +108,6 @@
 			</div>
 		</div>
 	</section>
-	</main>
 
 	<footer class="footer">
 		<div class="footer-container">
@@ -223,11 +234,68 @@
 	.hero-subtitle {
 		font-size: 1.125rem;
 		color: var(--text-secondary);
-		margin-bottom: 40px;
+		margin-bottom: 32px;
 		line-height: 1.6;
 		max-width: 600px;
 		margin-left: auto;
 		margin-right: auto;
+	}
+
+	.hero-cta {
+		display: flex;
+		justify-content: center;
+		gap: 16px;
+	}
+
+	.animation-container {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 32px;
+	}
+
+	.orbit {
+		position: relative;
+		width: 100px;
+		height: 100px;
+	}
+
+	.ball {
+		position: absolute;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		top: 50%;
+		left: 50%;
+		margin: -8px 0 0 -8px;
+	}
+
+	.ball-1 {
+		background: #3b82f6;
+		animation: orbit 3s linear infinite;
+	}
+
+	.ball-2 {
+		background: #14b8a6;
+		animation: orbit 3s linear infinite 0.75s;
+	}
+
+	.ball-3 {
+		background: #ec4899;
+		animation: orbit 3s linear infinite 1.5s;
+	}
+
+	.ball-4 {
+		background: #f59e0b;
+		animation: orbit 3s linear infinite 2.25s;
+	}
+
+	@keyframes orbit {
+		from {
+			transform: rotate(0deg) translateX(50px) rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg) translateX(50px) rotate(-360deg);
+		}
 	}
 
 	/* Features */
@@ -323,7 +391,7 @@
 
 	/* Footer */
 	.footer {
-		padding: 60px 20px 32px;
+		padding: 40px 20px 24px;
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
 	}
@@ -336,8 +404,8 @@
 	.footer-content {
 		display: grid;
 		grid-template-columns: 2fr 1fr 1fr;
-		gap: 48px;
-		margin-bottom: 48px;
+		gap: 32px;
+		margin-bottom: 32px;
 	}
 
 	.footer-section h3 {
