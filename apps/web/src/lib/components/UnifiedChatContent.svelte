@@ -183,8 +183,8 @@
 					: msg
 			);
 
-			// Play TTS if Talk Mode active
-			if (talkModeActive && response.type === 'message') {
+			// Play TTS if Talk Mode active and we have content (not actions/questions)
+			if (talkModeActive && response.content && !response.operations && !response.questions) {
 				// Ensure message is fully visible before speaking
 				await tick();
 				await scrollToBottom();
