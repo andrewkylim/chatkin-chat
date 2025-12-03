@@ -14,6 +14,7 @@ export class TalkModeService {
 	private audioUnlocked = false;
 	private currentAudio: HTMLAudioElement | null = null;
 	private ttsAudioElement: HTMLAudioElement | null = null;
+	private keepAliveInterval: number | null = null;
 
 	/**
 	 * Unlock audio playback (required for iOS/mobile autoplay)
@@ -22,19 +23,21 @@ export class TalkModeService {
 		if (this.audioUnlocked) return;
 
 		try {
-			// Create silent audio to unlock playback
-			const silentAudio = new Audio(
-				'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T/////////////////'
-			);
-			await silentAudio.play();
-			this.audioUnlocked = true;
-			logger.debug('Audio playback unlocked');
-
-			// Pre-create audio element for iOS
+			// Pre-create audio element for iOS with looping silent audio
 			if (!this.ttsAudioElement) {
 				this.ttsAudioElement = new Audio();
 				this.ttsAudioElement.preload = 'auto';
-				logger.debug('Pre-created TTS audio element for iOS');
+				this.ttsAudioElement.loop = true; // Loop to keep it "warm"
+				this.ttsAudioElement.volume = 0.01; // Very low volume
+
+				// Set a looping silent audio source
+				this.ttsAudioElement.src =
+					'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T/////////////////';
+
+				// Start playing to unlock and keep the element "warm"
+				await this.ttsAudioElement.play();
+				this.audioUnlocked = true;
+				logger.debug('Audio playback unlocked and kept warm with looping silent audio');
 			}
 		} catch (error) {
 			// Silently fail - audio unlock not needed on desktop browsers
@@ -57,16 +60,16 @@ export class TalkModeService {
 				hasTtsElement: !!this.ttsAudioElement
 			});
 
-			// Use pre-created audio element for iOS
+			// Use pre-created audio element for iOS, or create new one as fallback
 			let audio: HTMLAudioElement;
 			if (this.ttsAudioElement) {
 				audio = this.ttsAudioElement;
-				// Reset the audio element for iOS - crucial for reuse
-				audio.pause();
-				audio.currentTime = 0;
-				audio.src = '';
-				logger.debug('Using pre-created audio element for TTS (reset)');
+				// Stop looping and restore full volume
+				audio.loop = false;
+				audio.volume = 1.0;
+				logger.debug('Using warm pre-created audio element for TTS');
 			} else {
+				// Fallback: create new audio element (for desktop or if unlockAudio wasn't called)
 				audio = new Audio();
 				logger.debug('Creating new audio element for TTS');
 			}
@@ -93,21 +96,16 @@ export class TalkModeService {
 			}
 
 			const audioUrl = URL.createObjectURL(audioBlob);
-			logger.debug('Created object URL', { url: audioUrl });
+			logger.debug('Created object URL');
 
+			// Set the new source - audio element is already "warm" and playing
 			audio.src = audioUrl;
-
-			// On iOS, we must call play() immediately without load() in between
-			logger.debug('Attempting to play TTS audio');
-			try {
-				await audio.play();
-				logger.debug('TTS audio.play() promise resolved successfully');
-			} catch (playError) {
-				logger.error('audio.play() failed', playError);
-				URL.revokeObjectURL(audioUrl);
-				this.currentAudio = null;
-				throw playError;
-			}
+			logger.debug('Set new TTS source on warm audio element', {
+				hasAudio: !!audio,
+				hasSrc: !!audio.src,
+				readyState: audio.readyState,
+				paused: audio.paused
+			});
 
 			// Wait for audio to finish
 			await new Promise<void>((resolve, reject) => {
