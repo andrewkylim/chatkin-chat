@@ -65,7 +65,7 @@
 
 		<div class="nav-section">
 			<div class="section-header">
-				<span>Workspace</span>
+				<span>Lifespace</span>
 			</div>
 
 			<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>

@@ -6,6 +6,7 @@
 	import RecurrencePatternPicker from '$lib/components/RecurrencePatternPicker.svelte';
 	import { getTasks, deleteOldCompletedTasks } from '$lib/db/tasks';
 	import { useTasks } from '$lib/logic/useTasks';
+	import { getProjectName } from '$lib/utils/formatters';
 	import type { Task, WellnessDomain, RecurrencePattern } from '@chatkin/types';
 	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';

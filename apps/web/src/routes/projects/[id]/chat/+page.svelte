@@ -760,7 +760,7 @@
 										/>
 										<div class="task-content" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
-												<span class="task-title">{truncateTitle(task.title)}</span>
+												<span class="task-title">{truncateTitle(task.title, 80)}</span>
 											</div>
 											<div class="task-meta">
 												<span class="priority {task.priority}">{task.priority}</span>
@@ -792,7 +792,7 @@
 										/>
 										<div class="task-content" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
-												<span class="task-title">{truncateTitle(task.title)}</span>
+												<span class="task-title">{truncateTitle(task.title, 80)}</span>
 											</div>
 											<div class="task-meta">
 												<span class="priority {task.priority}">{task.priority}</span>
@@ -824,7 +824,7 @@
 										/>
 										<div class="task-content" onclick={() => openTaskDetail(task)}>
 											<div class="task-main">
-												<span class="task-title">{truncateTitle(task.title)}</span>
+												<span class="task-title">{truncateTitle(task.title, 80)}</span>
 											</div>
 											<div class="task-meta">
 												<span class="priority {task.priority}">{task.priority}</span>
@@ -864,7 +864,7 @@
 											/>
 											<div class="task-content completed" onclick={() => openTaskDetail(task)}>
 												<div class="task-main">
-													<span class="task-title">{truncateTitle(task.title)}</span>
+													<span class="task-title">{truncateTitle(task.title, 80)}</span>
 												</div>
 												<div class="task-meta">
 													<span class="task-time">Completed</span>
