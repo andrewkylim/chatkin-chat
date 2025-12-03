@@ -6,7 +6,7 @@
  * The component remains responsible only for UI state and rendering.
  */
 
-import type { Note, NoteBlock } from '@chatkin/types';
+import type { Note, NoteBlock, WellnessDomain } from '@chatkin/types';
 import {
 	createNote as dbCreateNote,
 	updateNote as dbUpdateNote,
@@ -115,6 +115,7 @@ export function getWordCount(note: NoteWithBlocks): number {
 export async function createNoteAction(params: {
 	title: string;
 	content?: string;
+	domain: WellnessDomain;
 	project_id: string | null;
 }): Promise<void> {
 	try {

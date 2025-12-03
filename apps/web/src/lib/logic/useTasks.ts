@@ -6,7 +6,7 @@
  * The component remains responsible only for UI state and rendering.
  */
 
-import type { Task, Project, RecurrencePattern } from '@chatkin/types';
+import type { Task, Project, RecurrencePattern, WellnessDomain } from '@chatkin/types';
 import {
 	createTask as dbCreateTask,
 	toggleTaskComplete,
@@ -151,6 +151,7 @@ export async function createTaskAction(taskData: {
 	description: string | null;
 	priority: 'low' | 'medium' | 'high';
 	due_date: string | null;
+	domain: WellnessDomain;
 	project_id: string | null;
 	status: 'todo' | 'in_progress' | 'completed';
 	due_time?: string | null;

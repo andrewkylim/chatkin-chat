@@ -3,6 +3,7 @@
  * Provides workspace context (projects, tasks, notes) to AI conversations
  */
 import { supabase } from '$lib/supabase';
+import type { WellnessDomain } from '@chatkin/types';
 
 export interface WorkspaceContext {
 	projects: ProjectSummary[];
@@ -30,6 +31,7 @@ interface TaskWithProjectResponse {
 	status: 'todo' | 'in_progress' | 'completed';
 	priority: 'low' | 'medium' | 'high';
 	due_date: string | null;
+	domain: WellnessDomain;
 	project_id: string | null;
 	projects: { name: string } | null;
 }
@@ -38,6 +40,7 @@ interface NoteWithProjectResponse {
 	id: string;
 	title: string | null;
 	updated_at: string;
+	domain: WellnessDomain;
 	project_id: string | null;
 	projects: { name: string } | null;
 }
@@ -58,12 +61,14 @@ export interface TaskSummary {
 	status: 'todo' | 'in_progress' | 'completed';
 	priority: 'low' | 'medium' | 'high';
 	due_date: string | null;
+	domain: WellnessDomain;
 	project_name: string | null;
 }
 
 export interface NoteSummary {
 	id: string;
 	title: string | null;
+	domain: WellnessDomain;
 	project_name: string | null;
 	updated_at: string;
 }
@@ -164,7 +169,7 @@ async function loadProjectsSummary(): Promise<ProjectSummary[]> {
 }
 
 /**
- * Load tasks summary with project names
+ * Load tasks summary with project names and domains
  */
 async function loadTasksSummary(): Promise<TaskSummary[]> {
 	const { data: tasks, error } = await supabase
@@ -175,6 +180,7 @@ async function loadTasksSummary(): Promise<TaskSummary[]> {
 			status,
 			priority,
 			due_date,
+			domain,
 			project_id,
 			projects (name)
 		`)
@@ -190,12 +196,13 @@ async function loadTasksSummary(): Promise<TaskSummary[]> {
 		status: task.status,
 		priority: task.priority,
 		due_date: task.due_date,
+		domain: task.domain,
 		project_name: task.projects?.name || null
 	}));
 }
 
 /**
- * Load notes summary with project names
+ * Load notes summary with project names and domains
  */
 async function loadNotesSummary(): Promise<NoteSummary[]> {
 	const { data: notes, error } = await supabase
@@ -204,6 +211,7 @@ async function loadNotesSummary(): Promise<NoteSummary[]> {
 			id,
 			title,
 			updated_at,
+			domain,
 			project_id,
 			projects (name)
 		`)
@@ -216,6 +224,7 @@ async function loadNotesSummary(): Promise<NoteSummary[]> {
 	return (notes as unknown as NoteWithProjectResponse[]).map(note => ({
 		id: note.id,
 		title: note.title,
+		domain: note.domain,
 		project_name: note.projects?.name || null,
 		updated_at: note.updated_at
 	}));
@@ -267,10 +276,9 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 				formatted += `- ${task.title} [id: ${task.id}]`;
 				if (task.priority === 'high') formatted += ' [HIGH]';
 				if (task.due_date) formatted += ` (due: ${task.due_date})`;
+				formatted += ` [Domain: ${task.domain}]`;
 				if (task.project_name) {
 					formatted += ` [Project: ${task.project_name}]`;
-				} else {
-					formatted += ' [Standalone]';
 				}
 				formatted += '\n';
 			}
@@ -280,10 +288,9 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 			formatted += '**In Progress:**\n';
 			for (const task of inProgressTasks.slice(0, 5)) {
 				formatted += `- ${task.title} [id: ${task.id}]`;
+				formatted += ` [Domain: ${task.domain}]`;
 				if (task.project_name) {
 					formatted += ` [Project: ${task.project_name}]`;
-				} else {
-					formatted += ' [Standalone]';
 				}
 				formatted += '\n';
 			}
@@ -303,10 +310,9 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 		formatted += '### Recent Notes\n';
 		for (const note of context.notes.slice(0, 15)) {
 			formatted += `- ${note.title || 'Untitled'} [id: ${note.id}]`;
+			formatted += ` [Domain: ${note.domain}]`;
 			if (note.project_name) {
 				formatted += ` [Project: ${note.project_name}]`;
-			} else {
-				formatted += ' [Standalone]';
 			}
 			formatted += '\n';
 		}

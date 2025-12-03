@@ -1,12 +1,11 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { getNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
-	import { getProjects } from '$lib/db/projects';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { handleError } from '$lib/utils/error-handler';
-	import type { Note, NoteBlock, Project } from '@chatkin/types';
+	import type { Note, NoteBlock, WellnessDomain } from '@chatkin/types';
 
 	$: noteId = $page.params.id;
 
@@ -15,14 +14,15 @@
 	}
 
 	let note: NoteWithBlocks | null = null;
-	let projects: Project[] = [];
 	let loading = true;
 	let showDeleteConfirm = false;
 	let isEditing = false;
 	let editTitle = '';
 	let editContent = '';
 	let editBlockId = '';
-	let editProjectId: string | null = null;
+	let editDomain: WellnessDomain = 'Body';
+
+	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
 
 	// Inline editing state
 	let isEditingInline = false;
@@ -35,7 +35,7 @@
 	let backText = 'Back to Notes';
 
 	onMount(async () => {
-		await Promise.all([loadNote(), loadProjects()]);
+		await loadNote();
 
 		// Check if user came from a project page
 		const referrer = document.referrer;
@@ -61,15 +61,6 @@
 		}
 	}
 
-	async function loadProjects() {
-		try {
-			projects = await getProjects();
-		} catch (error) {
-			handleError(error, { operation: 'Load projects', component: 'NoteDetailPage' });
-		}
-	}
-
-
 	async function handleDelete() {
 		if (!noteId) return;
 		try {
@@ -84,7 +75,7 @@
 	function startEdit() {
 		if (!note) return;
 		editTitle = note.title || '';
-		editProjectId = note.project_id || null;
+		editDomain = note.domain || 'Body';
 		// Get the first text block's content
 		const firstTextBlock = note.note_blocks?.find((b: NoteBlock) => b.type === 'text');
 		editContent = (firstTextBlock?.content?.text as string) || '';
@@ -96,10 +87,10 @@
 		if (!editTitle.trim() || !noteId) return;
 
 		try {
-			// Update note title and project
+			// Update note title and domain
 			await updateNote(noteId, {
 				title: editTitle,
-				project_id: editProjectId
+				domain: editDomain
 			});
 
 			// Update note block content if it exists
@@ -274,11 +265,10 @@
 						></textarea>
 					</div>
 					<div class="form-group">
-						<label for="edit-project">Project (optional)</label>
-						<select id="edit-project" bind:value={editProjectId}>
-							<option value={null}>Standalone note</option>
-							{#each projects as project}
-								<option value={project.id}>{project.name}</option>
+						<label for="edit-domain">Domain</label>
+						<select id="edit-domain" bind:value={editDomain}>
+							{#each domains as domain}
+								<option value={domain}>{domain}</option>
 							{/each}
 						</select>
 					</div>

@@ -205,7 +205,10 @@ export async function bulkDeleteFiles(fileIds: string[], accessToken?: string): 
 }
 
 /**
- * Update file project association (deprecated - use updateFileDomain)
+ * Update file project association
+ * @deprecated Use updateFileDomain instead - files should be organized by domain, not project
+ * @param fileId - The file ID to update
+ * @param projectId - The project ID (legacy field)
  */
 export async function updateFileProject(
 	fileId: string,
@@ -236,6 +239,9 @@ export async function updateFileDomain(
 
 /**
  * Bulk update multiple files to add to project
+ * @deprecated Files should be organized by domain, not project. Use domain-based organization instead.
+ * @param fileIds - Array of file IDs to update
+ * @param projectId - The project ID (legacy field)
  */
 export async function bulkAddFilesToProject(
 	fileIds: string[],
@@ -251,6 +257,9 @@ export async function bulkAddFilesToProject(
 
 /**
  * Get all files for a specific project
+ * @deprecated Use getDomainFiles instead - files should be retrieved by domain, not project
+ * @param projectId - The project ID (legacy field)
+ * @returns Array of files for the project
  */
 export async function getProjectFiles(projectId: string): Promise<FileType[]> {
 	const { data, error } = await supabase
