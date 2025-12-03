@@ -36,38 +36,65 @@
 
 	function formatMarkdown(text: string): string {
 		if (!text) return '';
-		let html = text;
 
-		// Convert headers (###, ####, #####)
-		html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
-		html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
-		html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-		html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+		// Split into lines for processing
+		const lines = text.split('\n');
+		const processed: string[] = [];
+		let inList = false;
 
-		// Convert **bold** text
-		html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+		for (let i = 0; i < lines.length; i++) {
+			let line = lines[i];
 
-		// Convert numbered lists (1., 2., 3., etc)
-		html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<li>$2</li>');
+			// Skip empty lines
+			if (line.trim() === '') {
+				if (inList) {
+					processed.push('</ul>');
+					inList = false;
+				}
+				continue;
+			}
 
-		// Convert bullet points (-, *, •)
-		html = html.replace(/^[-*•]\s+(.+)$/gm, '<li>$1</li>');
-
-		// Wrap consecutive list items in ul tags
-		html = html.replace(/(<li>.*?<\/li>\n?)+/gs, '<ul>$&</ul>');
-
-		// Convert double line breaks to paragraph breaks
-		html = html.replace(/\n\n+/g, '</p><p>');
-
-		// Convert single line breaks to <br>
-		html = html.replace(/\n/g, '<br>');
-
-		// Wrap in paragraph tags if not already wrapped
-		if (!html.startsWith('<')) {
-			html = '<p>' + html + '</p>';
+			// Headers
+			if (line.match(/^##### /)) {
+				if (inList) { processed.push('</ul>'); inList = false; }
+				processed.push(`<h5>${line.replace(/^##### /, '')}</h5>`);
+			} else if (line.match(/^#### /)) {
+				if (inList) { processed.push('</ul>'); inList = false; }
+				processed.push(`<h4>${line.replace(/^#### /, '')}</h4>`);
+			} else if (line.match(/^### /)) {
+				if (inList) { processed.push('</ul>'); inList = false; }
+				processed.push(`<h3>${line.replace(/^### /, '')}</h3>`);
+			} else if (line.match(/^## /)) {
+				if (inList) { processed.push('</ul>'); inList = false; }
+				processed.push(`<h2>${line.replace(/^## /, '')}</h2>`);
+			}
+			// Numbered lists
+			else if (line.match(/^\d+\.\s/)) {
+				if (!inList) { processed.push('<ul>'); inList = true; }
+				const content = line.replace(/^\d+\.\s+/, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+				processed.push(`<li>${content}</li>`);
+			}
+			// Bullet lists
+			else if (line.match(/^[-*•]\s/)) {
+				if (!inList) { processed.push('<ul>'); inList = true; }
+				const content = line.replace(/^[-*•]\s+/, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+				processed.push(`<li>${content}</li>`);
+			}
+			// Regular text
+			else {
+				if (inList) { processed.push('</ul>'); inList = false; }
+				// Convert **bold** text
+				line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+				processed.push(`<p>${line}</p>`);
+			}
 		}
 
-		return html;
+		// Close any open list
+		if (inList) {
+			processed.push('</ul>');
+		}
+
+		return processed.join('');
 	}
 
 	onMount(async () => {
@@ -240,9 +267,26 @@
 			{#if note.note_blocks && note.note_blocks.length > 0}
 				{#each note.note_blocks.sort((a: NoteBlock, b: NoteBlock) => a.position - b.position) as block (block.id)}
 					{#if block.type === 'text'}
-						<div class="text-block formatted-content">
-							{@html formatMarkdown(block.content.text || '')}
-						</div>
+						{#if isEditingInline}
+							<div
+								bind:this={contentElement}
+								contenteditable="true"
+								on:input={handleContentInput}
+								on:blur={() => isEditingInline = false}
+								class="text-block editable-content editing"
+							>
+								{block.content.text || ''}
+							</div>
+						{:else}
+							<div
+								on:click={handleContentClick}
+								class="text-block formatted-content"
+								role="button"
+								tabindex="0"
+							>
+								{@html formatMarkdown(block.content.text || '')}
+							</div>
+						{/if}
 					{:else if block.type === 'code'}
 						<div class="code-block">
 							<pre><code>{block.content.code || ''}</code></pre>
@@ -484,10 +528,18 @@
 	/* Formatted markdown content styling */
 	.formatted-content {
 		line-height: 1.6;
+		cursor: pointer;
+		padding: 0.5rem;
+		border-radius: var(--radius-md);
+		transition: background 0.2s ease;
+	}
+
+	.formatted-content:hover {
+		background: var(--bg-tertiary);
 	}
 
 	.formatted-content :global(p) {
-		margin: 0.5rem 0;
+		margin: 0.4rem 0;
 	}
 
 	.formatted-content :global(h2) {

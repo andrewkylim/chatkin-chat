@@ -156,7 +156,14 @@ Create notes that provide genuine value:
 
 CONTENT REQUIREMENTS:
 - Each note: 200-400 words of genuinely useful, detailed content
-- Use markdown formatting (headers, lists, bold for emphasis)
+- Use CLEAN markdown formatting with this specific structure:
+  * Use ## for main section headers ONLY (e.g., "## Framework Overview")
+  * Use ### for subsections ONLY (e.g., "### Implementation Steps")
+  * Use **bold** for key terms and emphasis
+  * Use - for bullet points (lists)
+  * Use 1., 2., 3. for numbered steps
+  * NO #### or ##### headers (max depth is ###)
+  * Add blank lines between sections for readability
 - Make it actionable and specific to their situation and domain scores
 - ${notesPerDomain} comprehensive notes per domain
 - Total: ${expectedNotes} notes
