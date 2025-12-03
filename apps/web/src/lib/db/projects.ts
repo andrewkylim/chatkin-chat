@@ -48,21 +48,22 @@ export async function updateProject(id: string, updates: { description: string |
 	return data as Project;
 }
 
-// Get project statistics
-export async function getProjectStats(projectId: string) {
+// Get domain statistics (by domain name or project_id for backward compatibility)
+export async function getProjectStats(domainOrProjectId: string) {
 	const [tasksResult, notesResult, filesResult] = await Promise.all([
 		supabase
 			.from('tasks')
 			.select('id, status')
-			.eq('project_id', projectId),
+			.or(`domain.eq.${domainOrProjectId},project_id.eq.${domainOrProjectId}`),
 		supabase
 			.from('notes')
 			.select('id')
-			.eq('project_id', projectId),
+			.or(`domain.eq.${domainOrProjectId},project_id.eq.${domainOrProjectId}`),
 		supabase
 			.from('files')
 			.select('id')
-			.match({ project_id: projectId, is_hidden_from_library: false })
+			.or(`domain.eq.${domainOrProjectId},project_id.eq.${domainOrProjectId}`)
+			.eq('is_hidden_from_library', false)
 	]);
 
 	const tasks = tasksResult.data || [];

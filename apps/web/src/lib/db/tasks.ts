@@ -4,14 +4,15 @@ import type { Task, RecurrencePattern } from '@chatkin/types';
 type TaskInsert = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'completed_at'>;
 type TaskUpdate = Partial<Omit<Task, 'id' | 'user_id' | 'created_at'>>;
 
-export async function getTasks(projectId?: string) {
+export async function getTasks(domainOrProjectId?: string) {
 	let query = supabase
 		.from('tasks')
 		.select('*')
 		.order('created_at', { ascending: false });
 
-	if (projectId) {
-		query = query.eq('project_id', projectId);
+	if (domainOrProjectId) {
+		// Try domain first (new architecture), fall back to project_id (backward compatibility)
+		query = query.or(`domain.eq.${domainOrProjectId},project_id.eq.${domainOrProjectId}`);
 	}
 
 	const { data, error } = await query;
@@ -180,7 +181,7 @@ export async function createRecurringTaskInstance(
 	if (!user) throw new Error('Not authenticated');
 
 	const newTask: Omit<TaskInsert, 'user_id'> = {
-		project_id: parentTask.project_id,
+		project_id: parentTask.project_id || null,
 		title: parentTask.title,
 		description: parentTask.description,
 		status: 'todo',

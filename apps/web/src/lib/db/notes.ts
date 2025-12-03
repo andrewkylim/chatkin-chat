@@ -5,7 +5,7 @@ import type { Note } from '@chatkin/types';
 type NoteInsert = Omit<Note, 'id' | 'created_at' | 'updated_at'>;
 type NoteUpdate = Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>;
 
-export async function getNotes(projectId?: string) {
+export async function getNotes(domainOrProjectId?: string) {
 	let query = supabase
 		.from('notes')
 		.select(`
@@ -19,8 +19,9 @@ export async function getNotes(projectId?: string) {
 		`)
 		.order('updated_at', { ascending: false });
 
-	if (projectId) {
-		query = query.eq('project_id', projectId);
+	if (domainOrProjectId) {
+		// Try domain first (new architecture), fall back to project_id (backward compatibility)
+		query = query.or(`domain.eq.${domainOrProjectId},project_id.eq.${domainOrProjectId}`);
 	}
 
 	const { data, error} = await query;

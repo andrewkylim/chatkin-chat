@@ -28,14 +28,11 @@
 		totalFiles: number;
 	}
 
-	let projects: Project[] = [];
 	let projectStats: Record<string, ProjectStats> = {};
 	let assessmentResults: AssessmentResults | null = null;
 	let domainGroups: DomainWithProjects[] = [];
 	let expandedDomain: WellnessDomain | null = null;
 	let loading = true;
-	let editProject: Project | null = null;
-	let showEditModal = false;
 
 	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
 
@@ -48,22 +45,17 @@
 	async function loadProjects() {
 		loading = true;
 		try {
-			// Fetch projects and assessment results in parallel
-			const [projectsData, assessmentData] = await Promise.all([
-				getProjects(),
-				getAssessmentResults()
-			]);
-
-			projects = projectsData;
+			// Fetch assessment results
+			const assessmentData = await getAssessmentResults();
 			assessmentResults = assessmentData;
 
-			// Load stats for each project
-			for (const project of projects) {
-				projectStats[project.id] = await getProjectStats(project.id);
+			// Load stats for each domain directly (no need to fetch projects from DB)
+			for (const domain of domains) {
+				projectStats[domain] = await getProjectStats(domain);
 			}
 
-			// Group projects by domain
-			domainGroups = groupProjectsByDomain(projects, assessmentResults);
+			// Group by domain (no projects needed anymore)
+			domainGroups = groupByDomain(assessmentResults);
 		} catch (error) {
 			handleError(error, { operation: 'Load projects', component: 'ProjectsPage' });
 		} finally {
@@ -71,45 +63,28 @@
 		}
 	}
 
-	function groupProjectsByDomain(
-		projects: Project[],
+	function groupByDomain(
 		results: AssessmentResults | null
 	): DomainWithProjects[] {
 		const groups: DomainWithProjects[] = [];
 
-		// Create group for each domain (each domain should have exactly 1 project)
+		// Create group for each domain
 		for (const domain of domains) {
-			const domainProjects = projects.filter((p) => p.domain === domain);
+			const stats = projectStats[domain];
 			const group: DomainWithProjects = {
 				domain,
 				domainScore: results?.domain_scores[domain] || 0,
-				projects: domainProjects,
-				totalTasks: 0,
-				completedTasks: 0,
-				totalNotes: 0,
-				totalFiles: 0
+				projects: [], // No projects needed - domains are built-in
+				totalTasks: stats?.totalTasks || 0,
+				completedTasks: stats?.completedTasks || 0,
+				totalNotes: stats?.totalNotes || 0,
+				totalFiles: stats?.totalFiles || 0
 			};
-
-			// Aggregate stats for this domain (should be just 1 project)
-			for (const project of domainProjects) {
-				const stats = projectStats[project.id];
-				if (stats) {
-					group.totalTasks += stats.totalTasks;
-					group.completedTasks += stats.completedTasks;
-					group.totalNotes += stats.totalNotes;
-					group.totalFiles += stats.totalFiles;
-				}
-			}
 
 			groups.push(group);
 		}
 
 		return groups;
-	}
-
-
-	function getProjectEmoji(project: Project) {
-		return project.color || '📁';
 	}
 
 	function getDomainColor(domain: WellnessDomain | null): string {
@@ -175,25 +150,6 @@
 		};
 	}
 
-	function truncateDescription(description: string, maxLength: number = 50) {
-		if (description.length <= maxLength) return description;
-		return description.substring(0, maxLength) + '...';
-	}
-
-	function _startEditProject(project: Project) {
-		editProject = project;
-		showEditModal = true;
-	}
-
-	function handleCloseEditModal() {
-		editProject = null;
-		showEditModal = false;
-	}
-
-	async function handleProjectUpdated() {
-		await loadProjects();
-	}
-
 	function handleDomainClick(domain: WellnessDomain | null) {
 		expandedDomain = domain;
 	}
@@ -228,11 +184,11 @@
 					<div class="spinner"></div>
 					<p>Loading projects...</p>
 				</div>
-			{:else if projects.length === 0}
+			{:else if domainGroups.length === 0}
 				<div class="empty-state">
 					<img src="/projects.webp" alt="Projects" class="empty-icon" />
-					<h2>No projects yet</h2>
-					<p>Create your first project to get started</p>
+					<h2>No domains available</h2>
+					<p>Complete your assessment to get started</p>
 				</div>
 			{:else}
 				{#if expandedDomain === null}
@@ -331,56 +287,49 @@
 								{/if}
 							</div>
 
-							<!-- Projects Grid for this domain -->
-							<div class="projects-grid">
-								{#each group.projects as project (project.id)}
-									{@const stats = projectStats[project.id] || { totalTasks: 0, completedTasks: 0, totalNotes: 0, totalFiles: 0 }}
-									<div class="project-card">
-										<a href="/projects/{project.id}/chat" class="project-card-link">
-											<div class="project-header">
-												<div class="project-icon-circle" style="background-color: {getDomainColor(project.domain)};">
-													<span class="icon">{getProjectEmoji(project)}</span>
-												</div>
-												<div class="project-info">
-													<h3>{project.name}</h3>
-													<p class="project-meta">
-														{stats.totalTasks} tasks · {stats.totalNotes} notes · {stats.totalFiles} files
-													</p>
-												</div>
+							<!-- Domain Content Summary -->
+							{#if group.domain}
+								{@const stats = projectStats[group.domain]}
+								<div class="domain-summary">
+									{#if stats && (stats.totalTasks > 0 || stats.totalNotes > 0 || stats.totalFiles > 0)}
+										<div class="summary-grid">
+											<div class="summary-card">
+												<div class="summary-value">{stats.totalTasks}</div>
+												<div class="summary-label">Tasks</div>
+												{#if stats.totalTasks > 0}
+													<div class="summary-meta">{stats.completedTasks} completed</div>
+												{/if}
 											</div>
-											{#if project.description}
-												<p class="project-description">{truncateDescription(project.description)}</p>
-											{/if}
-											<div class="project-footer">
-												<span class="task-status">
-													{#if stats.totalTasks > 0}
-														<span
-															class="status-dot {stats.completedTasks === stats.totalTasks
-																? 'completed'
-																: 'in-progress'}"
-														></span>
-													{/if}
-													{stats.completedTasks} of {stats.totalTasks} completed
-												</span>
-												<span class="project-date">Updated {new Date(project.updated_at).toLocaleDateString()}</span>
+											<div class="summary-card">
+												<div class="summary-value">{stats.totalNotes}</div>
+												<div class="summary-label">Notes</div>
 											</div>
-										</a>
-									</div>
-								{/each}
-							</div>
+											<div class="summary-card">
+												<div class="summary-value">{stats.totalFiles}</div>
+												<div class="summary-label">Files</div>
+											</div>
+										</div>
+										<div class="domain-actions">
+											<a href="/tasks" class="action-link">View Tasks →</a>
+											<a href="/notes" class="action-link">View Notes →</a>
+											<a href="/files" class="action-link">View Files →</a>
+										</div>
+									{:else}
+										<div class="empty-domain">
+											<p>No content yet in this domain. Start by creating tasks or notes!</p>
+											<div class="domain-actions">
+												<a href="/tasks" class="action-link primary">Create Task →</a>
+												<a href="/notes" class="action-link">Create Note →</a>
+											</div>
+										</div>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					{/if}
 				{/if}
 			{/if}
 		</div>
-
-		<!-- Edit Project Modal -->
-		<EditProjectModal
-			show={showEditModal}
-			project={editProject}
-			onClose={handleCloseEditModal}
-			onUpdate={handleProjectUpdated}
-		/>
 	</div>
 </AppLayout>
 
@@ -979,5 +928,99 @@
 		.modal h2 {
 			font-size: 1.25rem;
 		}
+
+		.summary-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	/* Domain Summary Styles */
+	.domain-summary {
+		padding: 24px;
+		background: var(--bg-primary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-lg);
+		margin-bottom: 24px;
+	}
+
+	.summary-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+		margin-bottom: 24px;
+	}
+
+	.summary-card {
+		padding: 20px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		text-align: center;
+	}
+
+	.summary-value {
+		font-size: 2rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin-bottom: 8px;
+	}
+
+	.summary-label {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.summary-meta {
+		font-size: 0.8125rem;
+		color: var(--text-muted);
+		margin-top: 4px;
+	}
+
+	.domain-actions {
+		display: flex;
+		gap: 12px;
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+
+	.action-link {
+		padding: 10px 20px;
+		background: var(--bg-secondary);
+		border: 2px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		text-decoration: none;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		transition: all 0.2s ease;
+	}
+
+	.action-link:hover {
+		border-color: var(--accent-primary);
+		background: var(--bg-tertiary);
+	}
+
+	.action-link.primary {
+		background: var(--accent-primary);
+		border-color: var(--accent-primary);
+		color: white;
+	}
+
+	.action-link.primary:hover {
+		background: var(--accent-hover);
+	}
+
+	.empty-domain {
+		text-align: center;
+		padding: 40px 20px;
+	}
+
+	.empty-domain p {
+		color: var(--text-secondary);
+		margin-bottom: 24px;
+		font-size: 0.9375rem;
 	}
 </style>
