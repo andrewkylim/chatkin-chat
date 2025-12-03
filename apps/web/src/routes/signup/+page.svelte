@@ -61,7 +61,7 @@
 <div class="auth-page">
 	<div class="auth-container">
 		<a href="/" class="logo">
-			<img src="/logo.webp" alt="Chatkin" class="logo-icon" />
+			<img src="/logo.svg" alt="Chatkin" class="logo-icon" />
 			<span>Chatkin</span>
 		</a>
 

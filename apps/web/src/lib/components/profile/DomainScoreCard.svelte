@@ -32,20 +32,7 @@
 
 <div class="domain-card">
 	<div class="card-header">
-		<div class="domain-icon" style="background-color: {getDomainColor(domain)}">
-			<svg
-				width="28"
-				height="28"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="white"
-				stroke-width="2.5"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d={getDomainIcon(domain)} />
-			</svg>
-		</div>
+		<div class="domain-icon" style="background-color: {getDomainColor(domain)}"></div>
 		<div class="domain-info">
 			<h3 class="domain-name">{domain}</h3>
 			<div class="domain-score">
@@ -90,12 +77,8 @@
 	.domain-icon {
 		width: 56px;
 		height: 56px;
-		border-radius: 12px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		border-radius: 50%;
 		flex-shrink: 0;
-		color: white;
 	}
 
 	.domain-info {
@@ -164,11 +147,6 @@
 		.domain-icon {
 			width: 48px;
 			height: 48px;
-		}
-
-		.domain-icon svg {
-			width: 24px;
-			height: 24px;
 		}
 
 		.domain-name {

@@ -135,7 +135,7 @@
 				</a>
 			{:else}
 				<button class="logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="chat-logo" />
+					<img src="/logo.svg" alt="Chatkin" class="chat-logo" />
 				</button>
 			{/if}
 			<div class="header-title-group">
@@ -650,9 +650,9 @@
 	}
 
 	.chat-logo {
-		width: 62px;
-		height: 62px;
-		border-radius: var(--radius-sm);
+		width: 48px;
+		height: 48px;
+		border-radius: 8px;
 		transition: all 0.15s ease;
 	}
 
@@ -918,7 +918,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background-color: var(--text-secondary);
+		background-color: #1e40af;
 		animation: typing 1.2s ease-in-out infinite;
 	}
 
@@ -935,13 +935,11 @@
 	}
 
 	@keyframes typing {
-		0%, 80%, 100% {
-			transform: scale(1);
-			opacity: 0.5;
+		0%, 60%, 100% {
+			transform: translateY(0);
 		}
-		40% {
-			transform: scale(1.3);
-			opacity: 1;
+		30% {
+			transform: translateY(-8px);
 		}
 	}
 

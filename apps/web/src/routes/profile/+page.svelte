@@ -222,7 +222,7 @@
 	<header class="mobile-header">
 		<div class="mobile-header-left">
 			<a href="/chat" class="mobile-logo-button">
-				<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+				<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
 			</a>
 			<h1>Profile</h1>
 		</div>
@@ -622,9 +622,9 @@
 		}
 
 		.mobile-logo {
-			width: 36px;
-			height: 36px;
-			border-radius: 6px;
+			width: 48px;
+			height: 48px;
+			border-radius: 8px;
 		}
 
 		.mobile-header h1 {

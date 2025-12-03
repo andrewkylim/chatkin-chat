@@ -19,7 +19,7 @@
 	<nav class="nav">
 		<div class="nav-container">
 			<a href="/" class="logo">
-				<img src="/logo.webp" alt="Chatkin" class="logo-icon" />
+				<img src="/logo.svg" alt="Chatkin" class="logo-icon" />
 				<span>Chatkin</span>
 			</a>
 			<div class="nav-actions">
@@ -73,7 +73,7 @@
 			<div class="features-grid">
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/chat.webp" alt="Chat" />
+						<img src="/chat.svg" alt="Chat" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Chat</h3>
@@ -86,7 +86,7 @@
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/projects.webp" alt="Projects" />
+						<img src="/projects.svg" alt="Projects" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Projects</h3>
@@ -99,7 +99,7 @@
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/tasks.webp" alt="Tasks" />
+						<img src="/tasks.svg" alt="Tasks" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Tasks</h3>
@@ -112,7 +112,7 @@
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/notes.webp" alt="Notes" />
+						<img src="/notes.svg" alt="Notes" />
 					</div>
 					<div class="app-content">
 						<h3 class="app-name">Notes</h3>

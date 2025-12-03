@@ -71,20 +71,7 @@
 	{#if domain && config}
 		<div class="card-top">
 			<div class="left-section">
-				<div class="icon-square" style="background-color: {config.color}">
-					<svg
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="white"
-						stroke-width="2.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d={icons[config.icon]} />
-					</svg>
-				</div>
+				<div class="icon-circle" style="background-color: {config.color}"></div>
 				<div class="domain-text">
 					<h3 class="domain-name">{domain}</h3>
 					<p class="domain-desc">{config.desc}</p>
@@ -122,20 +109,7 @@
 		<!-- Unassigned projects -->
 		<div class="card-top">
 			<div class="left-section">
-				<div class="icon-square unassigned">
-					<svg
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="white"
-						stroke-width="2.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d={icons['folder']} />
-					</svg>
-				</div>
+				<div class="icon-circle unassigned"></div>
 				<div class="domain-text">
 					<h3 class="domain-name">Unassigned</h3>
 				<p class="domain-desc">Items without a domain</p>				</div>
@@ -198,17 +172,14 @@
 		min-width: 0;
 	}
 
-	.icon-square {
+	.icon-circle {
 		width: 48px;
 		height: 48px;
-		border-radius: 12px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		border-radius: 50%;
 		flex-shrink: 0;
 	}
 
-	.icon-square.unassigned {
+	.icon-circle.unassigned {
 		background-color: #94a3b8;
 	}
 
@@ -326,14 +297,9 @@
 			padding: 16px;
 		}
 
-		.icon-square {
+		.icon-circle {
 			width: 40px;
 			height: 40px;
-		}
-
-		.icon-square svg {
-			width: 20px;
-			height: 20px;
 		}
 
 		.domain-name {

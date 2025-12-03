@@ -163,7 +163,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
 				</a>
 				<h1>Projects</h1>
 			</div>
@@ -178,7 +178,7 @@
 				</div>
 			{:else if domainGroups.length === 0}
 				<div class="empty-state">
-					<img src="/projects.webp" alt="Projects" class="empty-icon" />
+					<img src="/projects.svg" alt="Projects" class="empty-icon" />
 					<h2>No domains available</h2>
 					<p>Complete your assessment to get started</p>
 				</div>
@@ -767,8 +767,9 @@
 		}
 
 		.mobile-logo {
-			width: 32px;
-			height: 32px;
+			width: 48px;
+			height: 48px;
+			border-radius: 8px;
 		}
 
 		.mobile-header h1 {

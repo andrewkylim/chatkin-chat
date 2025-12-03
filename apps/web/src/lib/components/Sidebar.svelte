@@ -47,19 +47,19 @@
 <aside class="sidebar">
 	<div class="sidebar-header">
 		<a href="/chat" class="logo">
-			<img src="/logo.webp" alt="Chatkin" class="logo-icon" />
+			<img src="/logo.svg" alt="Chatkin" class="logo-icon" />
 			<span>Chatkin</span>
 		</a>
 	</div>
 
 	<nav class="sidebar-nav">
 		<a href="/chat" class="nav-item" class:active={currentPath === '/chat'}>
-			<img src="/chat.webp" alt="" class="nav-icon" />
+			<img src="/chat.svg" alt="" class="nav-icon" />
 			<span>Chat</span>
 		</a>
 
 		<a href="/profile" class="nav-item" class:active={currentPath === '/profile'}>
-			<img src="/profile.webp" alt="" class="nav-icon" />
+			<img src="/profile.svg" alt="" class="nav-icon" />
 			<span>Profile</span>
 		</a>
 
@@ -69,7 +69,7 @@
 			</div>
 
 			<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-				<img src="/projects.webp" alt="" class="nav-icon" />
+				<img src="/projects.svg" alt="" class="nav-icon" />
 				<span>Projects</span>
 				{#if $notificationCounts.projects > 0}
 					<span class="notification-dot"></span>
@@ -77,7 +77,7 @@
 			</a>
 
 			<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
-				<img src="/tasks.webp" alt="" class="nav-icon" />
+				<img src="/tasks.svg" alt="" class="nav-icon" />
 				<span>Tasks</span>
 				{#if $notificationCounts.tasks > 0}
 					<span class="notification-dot"></span>
@@ -85,7 +85,7 @@
 			</a>
 
 			<a href="/notes" class="nav-item" class:active={currentPath === '/notes'}>
-				<img src="/notes.webp" alt="" class="nav-icon" />
+				<img src="/notes.svg" alt="" class="nav-icon" />
 				<span>Notes</span>
 				{#if $notificationCounts.notes > 0}
 					<span class="notification-dot"></span>
@@ -93,7 +93,7 @@
 			</a>
 
 			<a href="/files" class="nav-item" class:active={currentPath === '/files'}>
-				<img src="/files.webp" alt="" class="nav-icon" />
+				<img src="/files.svg" alt="" class="nav-icon" />
 				<span>Files</span>
 			</a>
 		</div>
@@ -212,8 +212,8 @@
 	}
 
 	.nav-icon {
-		width: 40px;
-		height: 40px;
+		width: 32px;
+		height: 32px;
 		transition: all 0.1s ease;
 	}
 

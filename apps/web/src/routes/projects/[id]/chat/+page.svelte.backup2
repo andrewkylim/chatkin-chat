@@ -131,6 +131,10 @@
 		alert('Domain settings are not editable');
 	}
 
+	function handleCloseEditModal() {
+		showEditModal = false;
+	}
+
 	async function handleProjectUpdated() {
 		await loadData();
 	}
@@ -190,8 +194,7 @@
 				description: newTaskDescription,
 				priority: newTaskPriority,
 				status: 'todo',
-				project_id: null,
-				domain: domain,
+				project_id: projectId || null,
 				due_date: newTaskDueDate || null
 			});
 
@@ -213,8 +216,7 @@
 			await createNote({
 				title: newNoteTitle.trim() || 'Untitled',
 				content: newNoteContent,
-				project_id: null,
-				domain: domain
+				project_id: projectId || null
 			});
 
 			// Reset form
@@ -275,8 +277,7 @@
 				note_id: null,
 				conversation_id: null,
 				message_id: null,
-				project_id: null,
-				domain: domain,
+				project_id: projectId,
 				is_hidden_from_library: false,
 				title: result.file.title || null,
 				description: result.file.description || null,
@@ -625,7 +626,7 @@
 				scope="project"
 				projectId={domain}
 				pageTitle="{domain} Domain"
-				pageIcon="/projects.svg"
+				pageIcon="/projects.webp"
 				pageSubtitle="Manage your {domain} domain"
 				welcomeMessage="Hi! I can help you manage tasks and notes in your {domain} domain. What would you like to work on?"
 				onDataChange={loadData}
@@ -639,16 +640,13 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
+					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
 				</a>
 				<a href="/projects" class="back-btn">
 					<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M14 2l-8 8 8 8"/>
 					</svg>
 				</a>
-				<div class="project-info-mobile">
-					<span class="domain-title-mobile">{domain}</span>
-				</div>
 			</div>
 			<div class="mobile-header-actions">
 				<div class="menu-container">
@@ -921,6 +919,7 @@
 	<TaskEditModal
 		show={showEditTaskModal}
 		task={editingTask}
+		projects={projects}
 		onClose={() => showEditTaskModal = false}
 		onSave={handleUpdateTask}
 		onDelete={handleDeleteTask}
@@ -1770,7 +1769,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background-color: #1e40af;
+		background-color: var(--text-secondary);
 		animation: typing 1.2s ease-in-out infinite;
 	}
 
@@ -1787,11 +1786,13 @@
 	}
 
 	@keyframes typing {
-		0%, 60%, 100% {
-			transform: translateY(0);
+		0%, 80%, 100% {
+			transform: scale(1);
+			opacity: 0.5;
 		}
-		30% {
-			transform: translateY(-8px);
+		40% {
+			transform: scale(1.3);
+			opacity: 1;
 		}
 	}
 
@@ -2154,9 +2155,9 @@
 		}
 
 		.mobile-logo {
-			width: 48px;
-			height: 48px;
-			border-radius: 8px;
+			width: 52px;
+			height: 52px;
+			border-radius: var(--radius-sm);
 			transition: all 0.15s ease;
 		}
 
@@ -2178,8 +2179,7 @@
 			min-width: 0;
 		}
 
-		.project-info-mobile h1,
-		.domain-title-mobile {
+		.project-info-mobile h1 {
 			font-size: 1.25rem;
 			font-weight: 700;
 			letter-spacing: -0.02em;

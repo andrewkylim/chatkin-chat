@@ -227,8 +227,8 @@
 	.typing-indicator span {
 		width: 0.5rem;
 		height: 0.5rem;
-		background: var(--text-secondary);
 		border-radius: 50%;
+		background-color: #1e40af;
 		animation: typing 1.4s infinite;
 	}
 
@@ -241,15 +241,11 @@
 	}
 
 	@keyframes typing {
-		0%,
-		60%,
-		100% {
+		0%, 60%, 100% {
 			transform: translateY(0);
-			opacity: 0.7;
 		}
 		30% {
 			transform: translateY(-0.5rem);
-			opacity: 1;
 		}
 	}
 

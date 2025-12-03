@@ -491,7 +491,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
 				</a>
 				<h1>Files</h1>
 				<div class="mobile-header-info">
@@ -596,7 +596,7 @@
 					</div>
 				{:else}
 					<div class="empty-state">
-						<img src="/files.webp" alt="Files" class="empty-icon" />
+						<img src="/files.svg" alt="Files" class="empty-icon" />
 						<h2>No files yet</h2>
 						<p>Upload files in chat and save them to your library</p>
 					</div>
@@ -1075,9 +1075,9 @@
 		}
 
 		.mobile-logo {
-			width: 62px;
-			height: 62px;
-			border-radius: var(--radius-sm);
+			width: 48px;
+			height: 48px;
+			border-radius: 8px;
 			transition: all 0.15s ease;
 		}
 

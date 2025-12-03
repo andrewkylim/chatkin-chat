@@ -69,7 +69,7 @@
 			</div>
 		{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length === 0}
 			<div class="empty-state">
-				<img src="/tasks.svg" alt="Tasks" class="empty-icon" />
+				<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
 				<h2>No tasks yet</h2>
 				<p>Create your first task to get started</p>
 			</div>
@@ -97,8 +97,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if task.domain}
-												<span class="task-project">{task.domain}</span>
+											{#if getProjectName(task.project_id, projects)}
+												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -132,8 +132,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if task.domain}
-												<span class="task-project">{task.domain}</span>
+											{#if getProjectName(task.project_id, projects)}
+												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -167,8 +167,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if task.domain}
-												<span class="task-project">{task.domain}</span>
+											{#if getProjectName(task.project_id, projects)}
+												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
 											{/if}
 										</div>
 										<div class="task-meta">

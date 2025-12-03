@@ -260,7 +260,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background-color: var(--text-secondary);
+		background-color: #1e40af;
 		animation: typing 1.2s ease-in-out infinite;
 	}
 
@@ -277,13 +277,11 @@
 	}
 
 	@keyframes typing {
-		0%, 80%, 100% {
-			transform: scale(1);
-			opacity: 0.5;
+		0%, 60%, 100% {
+			transform: translateY(0);
 		}
-		40% {
-			transform: scale(1.3);
-			opacity: 1;
+		30% {
+			transform: translateY(-8px);
 		}
 	}
 

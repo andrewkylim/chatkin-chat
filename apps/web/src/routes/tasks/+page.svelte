@@ -202,7 +202,7 @@
 				</div>
 			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length === 0}
 				<div class="empty-state">
-					<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
+					<img src="/tasks.svg" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
 				</div>
@@ -368,7 +368,7 @@
 			<UnifiedChatPage
 				scope="tasks"
 				pageTitle="Tasks AI"
-				pageIcon="/tasks.webp"
+				pageIcon="/tasks.svg"
 				pageSubtitle="Your task management assistant"
 				welcomeMessage="✓ Hi! I can help you manage your tasks. What would you like to work on?"
 				onDataChange={loadData}
@@ -382,7 +382,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.webp" alt="Chatkin" class="mobile-logo" />
+					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
 				</a>
 				<h1>Tasks</h1>
 			</div>
@@ -397,7 +397,7 @@
 				</div>
 			{:else if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length === 0}
 				<div class="empty-state">
-					<img src="/tasks.webp" alt="Tasks" class="empty-icon" />
+					<img src="/tasks.svg" alt="Tasks" class="empty-icon" />
 					<h2>No tasks yet</h2>
 					<p>Create your first task to get started</p>
 				</div>
@@ -1066,7 +1066,7 @@
 		width: 6px;
 		height: 6px;
 		border-radius: 50%;
-		background-color: var(--text-secondary);
+		background-color: #1e40af;
 		animation: typing 1.2s ease-in-out infinite;
 	}
 
@@ -1083,13 +1083,11 @@
 	}
 
 	@keyframes typing {
-		0%, 80%, 100% {
-			transform: scale(1);
-			opacity: 0.5;
+		0%, 60%, 100% {
+			transform: translateY(0);
 		}
-		40% {
-			transform: scale(1.3);
-			opacity: 1;
+		30% {
+			transform: translateY(-8px);
 		}
 	}
 
@@ -1508,9 +1506,9 @@
 		}
 
 		.mobile-logo {
-			width: 62px;
-			height: 62px;
-			border-radius: var(--radius-sm);
+			width: 48px;
+			height: 48px;
+			border-radius: 8px;
 			transition: all 0.15s ease;
 		}
 
