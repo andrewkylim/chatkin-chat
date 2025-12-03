@@ -545,16 +545,16 @@
 	.formatted-content :global(h2) {
 		font-size: 1.5rem;
 		font-weight: 700;
-		margin-top: 1rem;
-		margin-bottom: 0.5rem;
+		margin-top: 1.5rem;
+		margin-bottom: 0.6rem;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h3) {
 		font-size: 1.25rem;
 		font-weight: 700;
-		margin-top: 0.75rem;
-		margin-bottom: 0.4rem;
+		margin-top: 1rem;
+		margin-bottom: 0.5rem;
 		color: var(--text-primary);
 	}
 
