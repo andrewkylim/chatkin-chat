@@ -53,7 +53,7 @@
 					<div class="app-content">
 						<h3 class="app-name">1. Take the Assessment</h3>
 						<p class="app-description">
-							Have a conversation about every area of your life - we'll ask the right questions
+							Answer questions about every area of your life - health, relationships, career, and growth
 						</p>
 					</div>
 				</div>
@@ -78,6 +78,18 @@
 						<h3 class="app-name">3. Take Action</h3>
 						<p class="app-description">
 							Work through your plan with AI guidance, tracking progress across all life domains
+						</p>
+					</div>
+				</div>
+
+				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
+					<div class="app-icon">
+						<img src="/notes.svg" alt="Track Progress" />
+					</div>
+					<div class="app-content">
+						<h3 class="app-name">4. Track Your Progress</h3>
+						<p class="app-description">
+							Monitor growth across all domains with regular check-ins and adjustments to your plan
 						</p>
 					</div>
 				</div>
