@@ -38,7 +38,7 @@
 				Sort your life out.
 			</h1>
 			<p class="hero-subtitle">
-				Chatkin captures your ideas, sorts your tasks, structures your projects, and keeps everything moving - all through conversation
+				Talk through your life, and watch everything organize itself. Chatkin turns conversations into action across all areas of your life
 			</p>
 			<div class="hero-cta">
 				<a href="/signup" class="primary-btn">Start For Free</a>
