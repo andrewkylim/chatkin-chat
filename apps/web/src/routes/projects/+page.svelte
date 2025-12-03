@@ -207,18 +207,23 @@
 	}
 
 	.page-header {
-		padding: 32px 48px 24px;
+		padding: 16px 20px;
 		border-bottom: 1px solid var(--border-color);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
 	}
 
 	.header-content {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		width: 100%;
 	}
 
 	.page-header h1 {
-		font-size: 1.875rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		color: var(--text-primary);
 	}

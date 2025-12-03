@@ -176,14 +176,12 @@
 		{:else}
 			{#each messages as message, index (index)}
 				<div class="message {message.role}">
-					<div class="message-bubble">
-						{#if message.isTyping}
-							<div class="typing-indicator">
-								<span></span>
-								<span></span>
-								<span></span>
-							</div>
-						{:else}
+					{#if message.isTyping}
+						<div class="typing-indicator">
+							<div class="color-circle"></div>
+						</div>
+					{:else}
+						<div class="message-bubble">
 							<p>{message.content}</p>
 
 							{#if message.files && message.files.length > 0}
@@ -402,8 +400,8 @@
 									</button>
 								</div>
 							{/if}
-						{/if}
-					</div>
+						</div>
+					{/if}
 				</div>
 			{/each}
 		{/if}
@@ -910,36 +908,38 @@
 	.typing-indicator {
 		display: flex;
 		align-items: center;
-		gap: 5px;
-		padding: 4px;
+		justify-content: flex-start;
+		padding: 0;
 	}
 
-	.typing-indicator span {
-		width: 6px;
-		height: 6px;
+	.color-circle {
+		width: 1.25rem;
+		height: 1.25rem;
 		border-radius: 50%;
-		background-color: #1e40af;
-		animation: typing 1.2s ease-in-out infinite;
+		animation: colorCycle 3s linear infinite;
 	}
 
-	.typing-indicator span:nth-child(1) {
-		animation-delay: 0s;
-	}
-
-	.typing-indicator span:nth-child(2) {
-		animation-delay: 0.15s;
-	}
-
-	.typing-indicator span:nth-child(3) {
-		animation-delay: 0.3s;
-	}
-
-	@keyframes typing {
-		0%, 60%, 100% {
-			transform: translateY(0);
+	@keyframes colorCycle {
+		0% {
+			background-color: #10B981; /* Body - green */
 		}
-		30% {
-			transform: translateY(-8px);
+		16.66% {
+			background-color: #3B82F6; /* Mind - blue */
+		}
+		33.33% {
+			background-color: #8B5CF6; /* Purpose - purple */
+		}
+		50% {
+			background-color: #F59E0B; /* Connection - orange */
+		}
+		66.66% {
+			background-color: #EAB308; /* Growth - yellow */
+		}
+		83.33% {
+			background-color: #EF4444; /* Finance - red */
+		}
+		100% {
+			background-color: #10B981; /* Back to Body */
 		}
 	}
 

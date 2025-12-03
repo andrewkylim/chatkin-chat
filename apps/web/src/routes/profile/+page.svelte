@@ -334,21 +334,26 @@
 
 <style>
 	.page-header {
-		padding: 24px 32px;
+		padding: 16px 20px;
 		border-bottom: 1px solid var(--border-color);
 		background: var(--bg-secondary);
+		height: 64px;
+		display: flex;
+		align-items: center;
+		box-sizing: border-box;
 	}
 
 	.header-content {
 		max-width: 1200px;
 		margin: 0 auto;
+		width: 100%;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 	}
 
 	.page-header h1 {
-		font-size: 1.75rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		color: var(--text-primary);
 	}
