@@ -682,7 +682,7 @@
 		onDelete={handleDeleteTask}
 	/>
 
-	<!-- Floating Action Button with Menu (Mobile Only) -->
+	<!-- Floating Action Buttons (Mobile Only) -->
 	<div class="fab-container">
 		{#if showFabMenu}
 			<div class="fab-menu">
@@ -707,6 +707,12 @@
 				<path d="M12 5v14M5 12h14"/>
 			</svg>
 		</button>
+		<!-- Chat FAB -->
+		<a class="fab fab-chat" href="/tasks/chat" aria-label="Chat with AI">
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+			</svg>
+		</a>
 	</div>
 
 </div>
@@ -1529,11 +1535,12 @@
 
 		@media (max-width: 1023px) {
 			.fab-container {
-				display: block;
+				display: flex;
+				gap: 12px;
 				position: fixed;
 				bottom: 80px;
 				left: 27px;
-				z-index: 50;
+				z-index: 500;
 				margin-bottom: env(safe-area-inset-bottom);
 			}
 
@@ -1551,6 +1558,11 @@
 				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 				transition: transform 0.3s ease;
 				opacity: 0.7;
+				text-decoration: none;
+			}
+
+			.fab-chat {
+				background: #2563eb;
 			}
 
 			.fab:active {
