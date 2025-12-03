@@ -467,15 +467,21 @@
 		if (talkModeActive) {
 			await talkModeService.unlockAudio();
 			startInactivityTimer();
+			// Try both desktop and mobile voice refs
 			if (voiceInputRef) {
 				voiceInputRef.startListening();
+			} else if (mobileChatLayout) {
+				mobileChatLayout.startListening();
 			}
 		} else {
 			stopInactivityTimer();
 			stopAutoListen();
 			talkModeService.stopAudio();
+			// Try both desktop and mobile voice refs
 			if (voiceInputRef) {
 				voiceInputRef.stopListening();
+			} else if (mobileChatLayout && mobileChatLayout.stopListening) {
+				mobileChatLayout.stopListening();
 			}
 		}
 	}

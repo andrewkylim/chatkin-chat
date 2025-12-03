@@ -101,6 +101,12 @@
 		}
 	};
 
+	export const stopListening = () => {
+		if (voiceInputRef) {
+			voiceInputRef.stopListening();
+		}
+	};
+
 	// Auto-scroll when messages change (after ready)
 	$effect(() => {
 		if (messages.length > 0 && messagesReady) {
