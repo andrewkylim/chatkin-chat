@@ -7,6 +7,9 @@
 	// Get version from environment variable set during build
 	const version = dev ? 'dev' : (import.meta.env.VITE_APP_VERSION || 'unknown');
 
+	// Single video background
+	const videoUrl = 'https://pub-76d4674ef944431f921668504bc4c830.r2.dev/12596084_1920_1080_30fps.mp4';
+
 	// Redirect logged-in users to chat
 	onMount(() => {
 		if ($auth.user) {
@@ -25,7 +28,7 @@
 			<div class="nav-actions">
 				<a href="/login" class="secondary-btn">Sign In</a>
 				<a href="/signup" class="primary-btn">
-					<span class="btn-text-desktop">Get Started</span>
+					<span class="btn-text-desktop">Start Now</span>
 					<span class="btn-text-mobile">Sign Up</span>
 				</a>
 			</div>
@@ -35,21 +38,25 @@
 	<main class="hero">
 		<div class="hero-container">
 			<div class="animation-container">
-				<div class="orbit">
-					<div class="ball ball-1"></div>
-					<div class="ball ball-2"></div>
-					<div class="ball ball-3"></div>
-					<div class="ball ball-4"></div>
+				<div class="big-circle">
+					<video
+						class="circle-video"
+						src={videoUrl}
+						autoplay
+						loop
+						muted
+						playsinline
+					></video>
 				</div>
 			</div>
 			<h1 class="hero-title">
 				Sort your life out.
 			</h1>
 			<p class="hero-subtitle">
-				Get a comprehensive assessment and personalized plan covering health, relationships, career, and personal growth
+				Get a personalized plan and AI coach covering health, relationships, career, and personal growth
 			</p>
 			<div class="hero-cta">
-				<a href="/signup" class="primary-btn">Get Started</a>
+				<a href="/signup" class="primary-btn">Start Now</a>
 			</div>
 		</div>
 	</main>
@@ -110,37 +117,7 @@
 	</section>
 
 	<footer class="footer">
-		<div class="footer-container">
-			<div class="footer-content">
-				<div class="footer-section">
-					<div class="footer-logo">
-						<img src="/logo.svg" alt="Chatkin" class="footer-logo-icon" />
-						<span>Chatkin</span>
-					</div>
-					<p class="footer-tagline">Sort your life out.</p>
-				</div>
-
-				<div class="footer-section">
-					<h3>Product</h3>
-					<ul>
-						<li><a href="/signup">Get Started</a></li>
-						<li><a href="/login">Sign In</a></li>
-					</ul>
-				</div>
-
-				<div class="footer-section">
-					<h3>Support</h3>
-					<ul>
-						<li><a href="mailto:support@chatkin.ai">support@chatkin.ai</a></li>
-					</ul>
-				</div>
-			</div>
-
-			<div class="footer-bottom">
-				<p>&copy; 2025 Chatkin. Built with care.</p>
-				<p class="version">v{version}</p>
-			</div>
-		</div>
+		<p>&copy; 2025 Chatkin • v{version}</p>
 	</footer>
 </div>
 
@@ -148,6 +125,8 @@
 	.landing {
 		min-height: 100vh;
 		background: var(--bg-primary);
+		display: flex;
+		flex-direction: column;
 	}
 
 	/* Navigation */
@@ -215,7 +194,10 @@
 
 	/* Hero */
 	.hero {
-		padding: 60px 20px 40px;
+		flex: 1;
+		display: flex;
+		align-items: center;
+		padding: 40px 20px;
 	}
 
 	.hero-container {
@@ -250,52 +232,26 @@
 	.animation-container {
 		display: flex;
 		justify-content: center;
+		align-items: center;
 		margin-bottom: 32px;
 	}
 
-	.orbit {
-		position: relative;
-		width: 100px;
-		height: 100px;
-	}
-
-	.ball {
-		position: absolute;
-		width: 16px;
-		height: 16px;
+	.big-circle {
+		width: 200px;
+		height: 200px;
 		border-radius: 50%;
-		top: 50%;
-		left: 50%;
-		margin: -8px 0 0 -8px;
+		background: transparent;
+		position: relative;
+		overflow: hidden;
 	}
 
-	.ball-1 {
-		background: #3b82f6;
-		animation: orbit 3s linear infinite;
-	}
-
-	.ball-2 {
-		background: #14b8a6;
-		animation: orbit 3s linear infinite 0.75s;
-	}
-
-	.ball-3 {
-		background: #ec4899;
-		animation: orbit 3s linear infinite 1.5s;
-	}
-
-	.ball-4 {
-		background: #f59e0b;
-		animation: orbit 3s linear infinite 2.25s;
-	}
-
-	@keyframes orbit {
-		from {
-			transform: rotate(0deg) translateX(50px) rotate(0deg);
-		}
-		to {
-			transform: rotate(360deg) translateX(50px) rotate(-360deg);
-		}
+	.circle-video {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 
 	/* Features */
@@ -391,90 +347,16 @@
 
 	/* Footer */
 	.footer {
-		padding: 40px 20px 24px;
+		padding: 20px;
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
+		text-align: center;
 	}
 
-	.footer-container {
-		max-width: 1200px;
-		margin: 0 auto;
-	}
-
-	.footer-content {
-		display: grid;
-		grid-template-columns: 2fr 1fr 1fr;
-		gap: 32px;
-		margin-bottom: 32px;
-	}
-
-	.footer-section h3 {
-		font-size: 0.875rem;
-		font-weight: 600;
-		margin-bottom: 16px;
-		color: var(--text-primary);
-	}
-
-	.footer-section ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.footer-section ul li {
-		margin-bottom: 12px;
-	}
-
-	.footer-section a {
-		color: var(--text-secondary);
-		text-decoration: none;
-		font-size: 0.875rem;
-		transition: color 0.2s ease;
-	}
-
-	.footer-section a:hover {
-		color: var(--text-primary);
-	}
-
-	.footer-logo {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 1.25rem;
-		font-weight: 700;
-		color: var(--text-primary);
-		margin-bottom: 12px;
-	}
-
-	.footer-logo-icon {
-		width: 32px;
-		height: 32px;
-		border-radius: 6px;
-	}
-
-	.footer-tagline {
+	.footer p {
 		color: var(--text-secondary);
 		font-size: 0.875rem;
 		margin: 0;
-	}
-
-	.footer-bottom {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding-top: 24px;
-		border-top: 1px solid var(--border-color);
-	}
-
-	.footer-bottom p {
-		color: var(--text-secondary);
-		font-size: 0.875rem;
-		margin: 0;
-	}
-
-	.version {
-		color: var(--text-secondary);
-		font-size: 0.875rem;
 	}
 
 	/* Responsive */
@@ -485,18 +367,6 @@
 
 		.btn-text-mobile {
 			display: inline;
-		}
-
-		.footer-content {
-			grid-template-columns: 1fr;
-			gap: 32px;
-			margin-bottom: 32px;
-		}
-
-		.footer-bottom {
-			flex-direction: column;
-			gap: 8px;
-			text-align: center;
 		}
 	}
 
