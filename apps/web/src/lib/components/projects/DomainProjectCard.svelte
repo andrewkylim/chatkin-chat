@@ -77,9 +77,6 @@
 					<p class="domain-desc">{config.desc}</p>
 				</div>
 			</div>
-			<div class="score-badge">
-				<span class="score-large">{domainScore.toFixed(1)}</span>
-				</div>
 		</div>
 
 		<div class="progress-section">
@@ -203,29 +200,6 @@
 		line-height: 1.4;
 	}
 
-	.score-badge {
-		display: flex;
-		align-items: baseline;
-		gap: 2px;
-		padding: 8px 14px;
-		border-radius: 8px;
-		flex-shrink: 0;
-		font-weight: 700;
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.score-large {
-		font-size: 1.75rem;
-		line-height: 1;
-		letter-spacing: -0.02em;
-	}
-
-	.score-small {
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-	}
-
 	.progress-section {
 		display: flex;
 		align-items: center;
@@ -308,10 +282,6 @@
 
 		.domain-desc {
 			font-size: 0.75rem;
-		}
-
-		.score-large {
-			font-size: 1.5rem;
 		}
 
 		.progress-section {
