@@ -201,6 +201,9 @@
 		color: var(--text-secondary);
 		margin-bottom: 40px;
 		line-height: 1.6;
+		max-width: 600px;
+		margin-left: auto;
+		margin-right: auto;
 	}
 
 	/* Features */
@@ -296,7 +299,7 @@
 
 	/* Footer */
 	.footer {
-		padding: 32px 20px;
+		padding: 20px;
 		background: var(--bg-primary);
 		border-top: 1px solid var(--border-color);
 	}
