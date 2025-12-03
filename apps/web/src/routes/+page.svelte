@@ -38,38 +38,36 @@
 				Sort your life out.
 			</h1>
 			<p class="hero-subtitle">
-				Talk through your life, and watch everything organize itself. Chatkin turns conversations into action across all areas of your life
+				Get a comprehensive assessment and 3-month plan covering health, relationships, career, and personal growth
 			</p>
 		</div>
 
 		<section class="features">
 		<div class="features-container">
-			<h2 class="section-title">Everything you need, one conversation away</h2>
+			<h2 class="section-title">How it works</h2>
 			<div class="features-grid">
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
 						<img src="/chat.svg" alt="Chat" />
 					</div>
 					<div class="app-content">
-						<h3 class="app-name">Chat</h3>
+						<h3 class="app-name">1. Take the Assessment</h3>
 						<p class="app-description">
-							Natural conversations with AI that creates projects, tasks, and notes for you
+							Have a conversation about every area of your life - we'll ask the right questions
 						</p>
 					</div>
-					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
 					<div class="app-icon">
-						<img src="/projects.svg" alt="Projects" />
+						<img src="/projects.svg" alt="Plan" />
 					</div>
 					<div class="app-content">
-						<h3 class="app-name">Projects</h3>
+						<h3 class="app-name">2. Get Your 3-Month Plan</h3>
 						<p class="app-description">
-							Organize work into projects with AI-powered planning and context management
+							Receive a comprehensive plan with projects, tasks, and notes organized by life domain
 						</p>
 					</div>
-					<div class="app-badge badge-active">LIVE</div>
 				</div>
 
 				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
@@ -77,25 +75,11 @@
 						<img src="/tasks.svg" alt="Tasks" />
 					</div>
 					<div class="app-content">
-						<h3 class="app-name">Tasks</h3>
+						<h3 class="app-name">3. Take Action</h3>
 						<p class="app-description">
-							AI-powered task management that breaks down goals into actionable steps
+							Work through your plan with AI guidance, tracking progress across all life domains
 						</p>
 					</div>
-					<div class="app-badge badge-active">LIVE</div>
-				</div>
-
-				<div class="feature-card" role="presentation" on:touchstart={() => {}} on:click={() => {}}>
-					<div class="app-icon">
-						<img src="/notes.svg" alt="Notes" />
-					</div>
-					<div class="app-content">
-						<h3 class="app-name">Notes</h3>
-						<p class="app-description">
-							AI-enhanced note-taking with intelligent organization and search
-						</p>
-					</div>
-					<div class="app-badge badge-active">LIVE</div>
 				</div>
 			</div>
 		</div>
