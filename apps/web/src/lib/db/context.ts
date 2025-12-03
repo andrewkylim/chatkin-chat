@@ -17,6 +17,8 @@ export interface UserProfileSummary {
 	communicationTone: string;
 	focusAreas: string[];
 	hasCompletedQuestionnaire: boolean;
+	domainScore?: number;
+	domainName?: WellnessDomain;
 }
 
 // Database response types
@@ -97,16 +99,17 @@ export async function loadWorkspaceContext(options?: {
 	// Load notes (filtered by domain if in project scope)
 	const notes = await loadNotesSummary(domain);
 
-	// Load user profile (only for global scope, not for domain-specific chats)
-	const userProfile = scope === 'global' ? await loadUserProfile() : undefined;
+	// Load user profile (with domain score if in project scope)
+	const userProfile = await loadUserProfile(domain);
 
 	return { projects, tasks, notes, userProfile };
 }
 
 /**
  * Load user profile for AI context
+ * Optionally include domain-specific assessment score
  */
-async function loadUserProfile(): Promise<UserProfileSummary | undefined> {
+async function loadUserProfile(domain?: WellnessDomain): Promise<UserProfileSummary | undefined> {
 	const { data, error } = await supabase
 		.from('user_profiles')
 		.select('profile_summary, communication_tone, focus_areas, has_completed_questionnaire')
@@ -116,12 +119,27 @@ async function loadUserProfile(): Promise<UserProfileSummary | undefined> {
 		return undefined;
 	}
 
-	return {
+	const profile: UserProfileSummary = {
 		summary: data.profile_summary || '',
 		communicationTone: data.communication_tone || 'encouraging',
 		focusAreas: data.focus_areas || [],
 		hasCompletedQuestionnaire: data.has_completed_questionnaire
 	};
+
+	// If domain specified, load domain score from assessment results
+	if (domain) {
+		const { data: assessmentData } = await supabase
+			.from('assessment_results')
+			.select('domain_scores')
+			.maybeSingle();
+
+		if (assessmentData?.domain_scores && assessmentData.domain_scores[domain]) {
+			profile.domainScore = assessmentData.domain_scores[domain];
+			profile.domainName = domain;
+		}
+	}
+
+	return profile;
 }
 
 /**
@@ -270,11 +288,22 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	// User Profile section (if available)
 	if (context.userProfile && context.userProfile.summary) {
 		formatted += '### User Profile & Psychological Analysis\n\n';
+
+		// If domain-specific, highlight that domain score
+		if (context.userProfile.domainName && context.userProfile.domainScore !== undefined) {
+			formatted += `**${context.userProfile.domainName} Domain Score**: ${context.userProfile.domainScore.toFixed(1)}/10\n\n`;
+		}
+
 		formatted += context.userProfile.summary;
 		formatted += '\n\n';
 		formatted += `**Communication Preference**: ${context.userProfile.communicationTone}\n`;
 		formatted += `**Priority Focus Areas**: ${context.userProfile.focusAreas.join(', ')}\n\n`;
-		formatted += '**Using This Profile**: This analysis informs all your interactions. Reference specific insights when relevant, tailor suggestions to this user\'s unique situation, and maintain awareness of their challenges and goals.\n\n';
+
+		if (context.userProfile.domainName) {
+			formatted += `**Your Role**: You are the ${context.userProfile.domainName} domain expert. Focus on this domain's specific challenges, goals, and opportunities based on the profile above.\n\n`;
+		} else {
+			formatted += '**Using This Profile**: This analysis informs all your interactions. Reference specific insights when relevant, tailor suggestions to this user\'s unique situation, and maintain awareness of their challenges and goals.\n\n';
+		}
 	}
 
 	// Projects section
