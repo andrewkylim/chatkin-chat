@@ -18,6 +18,7 @@ import { handleSendNotification } from './routes/send-notification';
 import { handleGenerateAssessmentReport } from './routes/generate-assessment-report';
 import { handleGenerateOnboarding } from './routes/generate-onboarding';
 import { handleGenerateNotes } from './routes/generate-notes';
+import { handleSummarizeConversation } from './routes/summarize-conversation';
 import { checkTaskReminders } from './cron/task-reminders';
 import { analyzePatterns } from './cron/analyze-patterns';
 import { createNotificationService } from './services/notification-service';
@@ -74,6 +75,10 @@ const handler = {
 
     if (url.pathname === '/api/generate-notes') {
       return handleGenerateNotes(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/summarize-conversation') {
+      return handleSummarizeConversation(request, env, corsHeaders);
     }
 
     if (url.pathname.startsWith('/api/temp-files/')) {

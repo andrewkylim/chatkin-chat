@@ -9,6 +9,8 @@ import { workerService } from '$lib/services/worker';
 import { chatOperationsService } from '$lib/services/chat-operations';
 import { fileOperationsService } from '$lib/services/file-operations';
 import { addMessage, updateConversationMode } from '$lib/db/conversations';
+import { checkAndSummarizeIfNeeded } from '$lib/services/conversation';
+import { supabase } from '$lib/supabase';
 import { handleError } from '$lib/utils/error-handler';
 import { logger } from '$lib/utils/logger';
 import type { Operation, AIQuestion } from '$lib/types/chat';
@@ -153,6 +155,11 @@ export async function saveUserMessage(
 		await addMessage(conversationId, 'user', message, {
 			files: files && files.length > 0 ? files : undefined
 		});
+
+		// Check if we need to summarize (don't await - run in background)
+		getConversationMessageCount(conversationId).then((messageCount) => {
+			checkAndSummarizeIfNeeded(conversationId, messageCount);
+		});
 	} catch (error) {
 		logger.error('Error saving user message', error);
 		// Don't throw - message already displayed in UI
@@ -169,10 +176,28 @@ export async function saveAIMessage(
 ): Promise<void> {
 	try {
 		await addMessage(conversationId, 'assistant', content, metadata);
+
+		// Check if we need to summarize (don't await - run in background)
+		getConversationMessageCount(conversationId).then((messageCount) => {
+			checkAndSummarizeIfNeeded(conversationId, messageCount);
+		});
 	} catch (error) {
 		logger.error('Error saving AI message', error);
 		// Don't throw - message already displayed in UI
 	}
+}
+
+/**
+ * Get current message count for a conversation
+ */
+async function getConversationMessageCount(conversationId: string): Promise<number> {
+	const { data } = await supabase
+		.from('conversations')
+		.select('message_count')
+		.eq('id', conversationId)
+		.single();
+
+	return data?.message_count || 0;
 }
 
 /**

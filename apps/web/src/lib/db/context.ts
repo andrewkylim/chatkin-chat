@@ -4,12 +4,24 @@
  */
 import { supabase } from '$lib/supabase';
 import type { WellnessDomain } from '@chatkin/types';
+import { getAllConversationsWithHistory } from './conversations';
 
 export interface WorkspaceContext {
 	projects: ProjectSummary[];
 	tasks: TaskSummary[];
 	notes: NoteSummary[];
 	userProfile?: UserProfileSummary;
+	crossDomainConversations?: CrossDomainConversation[];
+}
+
+export interface CrossDomainConversation {
+	scope: string;
+	domain: string | null;
+	summary: string | null;
+	recentMessages: Array<{
+		role: string;
+		content: string;
+	}>;
 }
 
 export interface UserProfileSummary {
@@ -79,6 +91,7 @@ export interface NoteSummary {
  * Load full workspace context for AI
  * Includes all projects, tasks, and notes summaries
  * Optionally filter by scope and domain
+ * For global scope, includes cross-domain conversation history
  */
 export async function loadWorkspaceContext(options?: {
 	scope?: 'global' | 'tasks' | 'notes' | 'project';
@@ -102,7 +115,28 @@ export async function loadWorkspaceContext(options?: {
 	// Load user profile (with domain score if in project scope)
 	const userProfile = await loadUserProfile(domain);
 
-	return { projects, tasks, notes, userProfile };
+	// For global scope, load cross-domain conversations
+	let crossDomainConversations: CrossDomainConversation[] | undefined;
+	if (scope === 'global') {
+		try {
+			const conversations = await getAllConversationsWithHistory(20);
+			crossDomainConversations = conversations.map(conv => ({
+				scope: conv.scope,
+				domain: conv.domain,
+				summary: conv.summary,
+				recentMessages: conv.recentMessages.map(msg => ({
+					role: msg.role,
+					content: msg.content
+				}))
+			}));
+		} catch (error) {
+			console.warn('Failed to load cross-domain conversations:', error);
+			// Don't fail the whole context load if conversations fail
+			crossDomainConversations = undefined;
+		}
+	}
+
+	return { projects, tasks, notes, userProfile, crossDomainConversations };
 }
 
 /**
@@ -379,6 +413,36 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 		formatted += '\n';
 	} else {
 		formatted += '### Recent Notes\n(No notes yet)\n\n';
+	}
+
+	// Cross-domain conversations (for global AI only)
+	if (context.crossDomainConversations && context.crossDomainConversations.length > 0) {
+		formatted += '### Cross-Domain Conversation History\n';
+		formatted += '*This section shows your conversations across all domains and scopes. Use this to identify patterns, connections, and provide holistic insights.*\n\n';
+
+		for (const conv of context.crossDomainConversations) {
+			const scopeLabel = conv.domain ? `${conv.domain} Domain` : conv.scope.charAt(0).toUpperCase() + conv.scope.slice(1);
+			formatted += `**${scopeLabel} Chat:**\n`;
+
+			// Include summary if available
+			if (conv.summary) {
+				formatted += `*Summary of earlier conversation:* ${conv.summary}\n\n`;
+			}
+
+			// Include recent messages (last 20)
+			if (conv.recentMessages && conv.recentMessages.length > 0) {
+				formatted += '*Recent messages:*\n';
+				for (const msg of conv.recentMessages.slice(-10)) {
+					const role = msg.role === 'user' ? 'User' : 'AI';
+					// Truncate long messages for context efficiency
+					const content = msg.content.length > 200 ? msg.content.substring(0, 197) + '...' : msg.content;
+					formatted += `- ${role}: ${content}\n`;
+				}
+				formatted += '\n';
+			} else {
+				formatted += '*(No recent messages)*\n\n';
+			}
+		}
 	}
 
 	return formatted;

@@ -185,6 +185,53 @@ export async function getOldMessagesForSummary(conversationId: string, skipLast:
 }
 
 /**
+ * Get all user conversations with summaries and recent messages (for global AI)
+ * Returns conversations from all scopes with their summaries + last N messages
+ * @param recentMessagesPerScope - Number of recent messages to fetch per conversation
+ */
+export async function getAllConversationsWithHistory(
+	recentMessagesPerScope: number = 20
+): Promise<Array<{
+	scope: string;
+	domain: string | null;
+	summary: string | null;
+	recentMessages: Message[];
+}>> {
+	const { data: { user } } = await supabase.auth.getUser();
+	if (!user) throw new Error('Not authenticated');
+
+	// Get all user conversations
+	const { data: conversations, error } = await supabase
+		.from('conversations')
+		.select('id, scope, domain, conversation_summary')
+		.eq('user_id', user.id);
+
+	if (error) throw error;
+	if (!conversations) return [];
+
+	// Load recent messages for each conversation
+	const conversationsWithMessages = await Promise.all(
+		conversations.map(async (conv) => {
+			const { data: messages } = await supabase
+				.from('messages')
+				.select('*')
+				.eq('conversation_id', conv.id)
+				.order('created_at', { ascending: false })
+				.limit(recentMessagesPerScope);
+
+			return {
+				scope: conv.scope,
+				domain: conv.domain,
+				summary: conv.conversation_summary,
+				recentMessages: (messages as Message[])?.reverse() || []
+			};
+		})
+	);
+
+	return conversationsWithMessages;
+}
+
+/**
  * Delete old messages that have been summarized
  * WARNING: Only call this AFTER successfully generating and saving a summary
  * @param conversationId - Conversation ID
