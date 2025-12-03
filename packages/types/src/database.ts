@@ -28,6 +28,7 @@ export interface RecurrencePattern {
 export interface Task {
   id: string;
   project_id: string | null; // NULL = standalone task
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
   user_id: string;
   title: string;
   description: string | null;
@@ -48,6 +49,7 @@ export interface Task {
 export interface Note {
   id: string;
   project_id: string | null; // NULL = standalone note
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
   user_id: string;
   title: string | null;
   created_at: string;
@@ -67,6 +69,7 @@ export interface Conversation {
   id: string;
   user_id: string;
   project_id: string | null; // NULL = not project-scoped
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
   scope: 'global' | 'project' | 'tasks' | 'notes';
   title: string | null;
   mode: 'chat' | 'action'; // Chat mode (Marvin persona, read-only) or Action mode (task-oriented, full CRUD)
@@ -93,6 +96,7 @@ export interface File {
   conversation_id: string | null; // Link to chat conversation
   message_id: string | null; // Link to specific message
   project_id: string | null; // Link to project (NULL = standalone file)
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
   filename: string;
   mime_type: string;
   size_bytes: number;

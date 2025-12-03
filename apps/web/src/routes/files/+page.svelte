@@ -274,7 +274,8 @@
 					note_id: null,
 					conversation_id: null,
 					message_id: null,
-					is_hidden_from_library: false,
+				domain: 'Mind', // Default domain for files uploaded from library
+				is_hidden_from_library: false,
 					title: result.file.title || null,
 					description: result.file.description || null,
 					ai_generated_metadata: !!(result.file.title || result.file.description),
@@ -393,7 +394,8 @@
 					note_id: null,
 					conversation_id: null,
 					message_id: null,
-					is_hidden_from_library: false,
+				domain: 'Mind', // Default domain for files uploaded from library
+				is_hidden_from_library: false,
 					title: result.file.title || null,
 					description: result.file.description || null,
 					ai_generated_metadata: !!(result.file.title || result.file.description),

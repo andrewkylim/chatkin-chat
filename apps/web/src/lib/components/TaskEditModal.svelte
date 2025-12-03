@@ -1,14 +1,15 @@
 <script lang="ts">
-	import type { Task, Project, RecurrencePattern } from '@chatkin/types';
+	import type { Task, WellnessDomain, RecurrencePattern } from '@chatkin/types';
 	import type { Priority } from '$lib/types/chat';
 	import RecurrencePatternPicker from './RecurrencePatternPicker.svelte';
 
 	export let show = false;
 	export let task: Task | null = null;
-	export let projects: Project[] = [];
 	export let onClose: () => void;
 	export let onSave: (updatedTask: Partial<Task>) => void;
 	export let onDelete: () => void;
+
+	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
 
 	let editTaskTitle = '';
 	let editTaskDescription = '';
@@ -16,7 +17,7 @@
 	let editTaskDueDate = '';
 	let editTaskDueTime = '09:00';
 	let isAllDay = true;
-	let editTaskProjectId: string | null = null;
+	let editTaskDomain: WellnessDomain = 'Mind';
 	let isRecurring = false;
 	let recurrencePattern: RecurrencePattern = {
 		frequency: 'daily',
@@ -31,7 +32,7 @@
 		editTaskDueDate = task.due_date || '';
 		editTaskDueTime = task.due_time || '09:00';
 		isAllDay = task.is_all_day ?? true;
-		editTaskProjectId = task.project_id;
+		editTaskDomain = task.domain;
 		isRecurring = task.is_recurring || false;
 		recurrencePattern = task.recurrence_pattern || {
 			frequency: 'daily',
@@ -48,7 +49,7 @@
 			due_date: editTaskDueDate || null,
 			due_time: isAllDay ? null : editTaskDueTime,
 			is_all_day: isAllDay,
-			project_id: editTaskProjectId,
+			domain: editTaskDomain,
 			is_recurring: isRecurring,
 			recurrence_pattern: isRecurring ? recurrencePattern : null,
 			recurrence_end_date: isRecurring && recurrenceEndDate ? recurrenceEndDate : null
@@ -124,11 +125,10 @@
 						{/if}
 					{/if}
 					<div class="form-group">
-						<label for="edit-task-project">Project (optional)</label>
-						<select id="edit-task-project" bind:value={editTaskProjectId}>
-							<option value={null}>No project</option>
-							{#each projects as project}
-								<option value={project.id}>{project.name}</option>
+						<label for="edit-task-domain">Domain</label>
+						<select id="edit-task-domain" bind:value={editTaskDomain}>
+							{#each domains as domain}
+								<option value={domain}>{domain}</option>
 							{/each}
 						</select>
 					</div>

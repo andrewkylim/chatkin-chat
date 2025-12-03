@@ -11,8 +11,8 @@ export async function getTasks(domainOrProjectId?: string) {
 		.order('created_at', { ascending: false });
 
 	if (domainOrProjectId) {
-		// Try domain first (new architecture), fall back to project_id (backward compatibility)
-		query = query.or(`domain.eq.${domainOrProjectId},project_id.eq.${domainOrProjectId}`);
+		// Filter by domain
+		query = query.eq('domain', domainOrProjectId);
 	}
 
 	const { data, error } = await query;

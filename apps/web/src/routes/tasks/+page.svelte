@@ -5,16 +5,17 @@
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import RecurrencePatternPicker from '$lib/components/RecurrencePatternPicker.svelte';
 	import { getTasks, deleteOldCompletedTasks } from '$lib/db/tasks';
-	import { getProjects } from '$lib/db/projects';
 	import { useTasks } from '$lib/logic/useTasks';
-	import type { Task, Project, RecurrencePattern } from '@chatkin/types';
+	import type { Task, WellnessDomain, RecurrencePattern } from '@chatkin/types';
 	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { goto } from '$app/navigation';
 	import { handleError } from '$lib/utils/error-handler';
 
+	// Domain-based task management
+	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
+
 	let tasks: Task[] = [];
-	let projects: Project[] = [];
 	let loading = true;
 	let showNewTaskModal = false;
 	let showFabMenu = false;
@@ -22,7 +23,7 @@
 	let newTaskDescription = '';
 	let newTaskPriority = 'medium';
 	let newTaskDueDate = '';
-	let newTaskProjectId: string | null = null;
+	let newTaskDomain: WellnessDomain = 'Mind';
 	let newTaskIsRecurring = false;
 	let newTaskRecurrencePattern: RecurrencePattern = {
 		frequency: 'daily',
@@ -37,10 +38,9 @@
 	let showEditTaskModal = false;
 	let editingTask: Task | null = null;
 
-	// Get task utilities and actions (reactive to projects changes)
+	// Get task utilities and actions
 	$: ({
 		formatDueDate,
-		getProjectName,
 		categorize,
 		createTask,
 		toggleTask,
@@ -48,7 +48,7 @@
 		deleteTask,
 		loadCompletedPreference,
 		saveCompletedPreference
-	} = useTasks(projects));
+	} = useTasks());
 
 	onMount(async () => {
 		// Set current section and clear notification count
@@ -78,9 +78,9 @@
 	async function loadData() {
 		loading = true;
 		try {
-			[tasks, projects] = await Promise.all([getTasks(), getProjects()]);
+			tasks = await getTasks();
 		} catch (error) {
-			handleError(error, { operation: 'Load tasks and projects', component: 'TasksPage' });
+			handleError(error, { operation: 'Load tasks', component: 'TasksPage' });
 		} finally {
 			loading = false;
 		}
@@ -97,7 +97,8 @@
 				due_date: newTaskDueDate || null,
 				is_all_day: newTaskIsAllDay,
 				due_time: newTaskIsAllDay ? null : newTaskDueTime,
-				project_id: newTaskProjectId,
+				project_id: null,
+				domain: newTaskDomain,
 				status: 'todo',
 				is_recurring: newTaskIsRecurring,
 				recurrence_pattern: newTaskIsRecurring ? newTaskRecurrencePattern : null,
@@ -112,7 +113,7 @@
 			newTaskDueDate = '';
 			newTaskDueTime = '09:00';
 			newTaskIsAllDay = true;
-			newTaskProjectId = null;
+			newTaskDomain = 'Mind';
 			newTaskIsRecurring = false;
 			newTaskRecurrencePattern = {
 				frequency: 'daily',
@@ -229,8 +230,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id)}
-												<span class="task-project">{getProjectName(task.project_id)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -264,8 +265,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id)}
-												<span class="task-project">{getProjectName(task.project_id)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -299,8 +300,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id)}
-												<span class="task-project">{getProjectName(task.project_id)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -346,8 +347,8 @@
 									<div class="task-content completed" on:click={() => openTaskDetail(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id)}
-												<span class="task-project">{getProjectName(task.project_id)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -625,11 +626,10 @@
 					{/if}
 
 					<div class="form-group">
-						<label for="task-project">Project (optional)</label>
-						<select id="task-project" bind:value={newTaskProjectId}>
-							<option value={null}>No project</option>
-							{#each projects as project}
-								<option value={project.id}>{project.name}</option>
+						<label for="task-domain">Domain</label>
+						<select id="task-domain" bind:value={newTaskDomain}>
+							{#each domains as domain}
+								<option value={domain}>{domain}</option>
 							{/each}
 						</select>
 					</div>
@@ -677,7 +677,6 @@
 	<TaskEditModal
 		show={showEditTaskModal}
 		task={editingTask}
-		projects={projects}
 		onClose={() => showEditTaskModal = false}
 		onSave={handleUpdateTask}
 		onDelete={handleDeleteTask}

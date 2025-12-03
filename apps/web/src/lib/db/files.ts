@@ -52,6 +52,21 @@ export async function createFile(file: Omit<FileInsert, 'user_id' | 'project_id'
 	return data as FileType;
 }
 
+/**
+ * Get all files for a specific domain
+ */
+export async function getDomainFiles(domain: string): Promise<FileType[]> {
+	const { data, error } = await supabase
+		.from('files')
+		.select('*')
+		.eq('domain', domain)
+		.eq('is_hidden_from_library', false)
+		.order('created_at', { ascending: false });
+
+	if (error) throw error;
+	return data as FileType[];
+}
+
 export async function deleteFile(id: string, accessToken?: string) {
 	// First, get the file to retrieve r2_key
 	const { data: file, error: fetchError } = await supabase
@@ -190,7 +205,7 @@ export async function bulkDeleteFiles(fileIds: string[], accessToken?: string): 
 }
 
 /**
- * Update file project association
+ * Update file project association (deprecated - use updateFileDomain)
  */
 export async function updateFileProject(
 	fileId: string,
@@ -199,6 +214,21 @@ export async function updateFileProject(
 	const { error } = await supabase
 		.from('files')
 		.update({ project_id: projectId })
+		.eq('id', fileId);
+
+	if (error) throw error;
+}
+
+/**
+ * Update file domain association
+ */
+export async function updateFileDomain(
+	fileId: string,
+	domain: string
+): Promise<void> {
+	const { error } = await supabase
+		.from('files')
+		.update({ domain })
 		.eq('id', fileId);
 
 	if (error) throw error;

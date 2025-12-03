@@ -4,17 +4,15 @@
 	let {
 		domain,
 		domainScore,
-		projectCount,
 		totalTasks,
-		completedTasks,
-		onclick
+		totalNotes,
+		totalFiles
 	}: {
 		domain: WellnessDomain | null;
 		domainScore: number;
-		projectCount: number;
 		totalTasks: number;
-		completedTasks: number;
-		onclick: () => void;
+		totalNotes: number;
+		totalFiles: number;
 	} = $props();
 
 	// Domain metadata configuration with SVG icons
@@ -69,7 +67,7 @@
 	};
 </script>
 
-<button class="domain-card" onclick={onclick}>
+<a href={domain ? `/projects/${domain}/chat` : '#'} class="domain-card">
 	{#if domain && config}
 		<div class="card-top">
 			<div class="left-section">
@@ -94,8 +92,7 @@
 			</div>
 			<div class="score-badge">
 				<span class="score-large">{domainScore.toFixed(1)}</span>
-				<span class="score-small">/10</span>
-			</div>
+				</div>
 		</div>
 
 		<div class="progress-section">
@@ -107,18 +104,18 @@
 
 		<div class="stats-section">
 			<div class="stat">
-				<div class="stat-number">{projectCount}</div>
-				<div class="stat-label">{projectCount === 1 ? 'Project' : 'Projects'}</div>
-			</div>
-			<div class="stat-divider"></div>
-			<div class="stat">
 				<div class="stat-number">{totalTasks}</div>
 				<div class="stat-label">Tasks</div>
 			</div>
 			<div class="stat-divider"></div>
 			<div class="stat">
-				<div class="stat-number">{completedTasks}</div>
-				<div class="stat-label">Completed</div>
+				<div class="stat-number">{totalNotes}</div>
+				<div class="stat-label">Notes</div>
+			</div>
+			<div class="stat-divider"></div>
+			<div class="stat">
+				<div class="stat-number">{totalFiles}</div>
+				<div class="stat-label">Files</div>
 			</div>
 		</div>
 	{:else}
@@ -141,10 +138,7 @@
 				</div>
 				<div class="domain-text">
 					<h3 class="domain-name">Unassigned</h3>
-					<p class="domain-desc">
-						{projectCount} {projectCount === 1 ? 'project' : 'projects'} without a domain
-					</p>
-				</div>
+				<p class="domain-desc">Items without a domain</p>				</div>
 			</div>
 		</div>
 
@@ -155,15 +149,21 @@
 			</div>
 			<div class="stat-divider"></div>
 			<div class="stat">
-				<div class="stat-number">{completedTasks}</div>
-				<div class="stat-label">Completed</div>
+				<div class="stat-number">{totalNotes}</div>
+				<div class="stat-label">Notes</div>
+			</div>
+			<div class="stat-divider"></div>
+			<div class="stat">
+				<div class="stat-number">{totalFiles}</div>
+				<div class="stat-label">Files</div>
 			</div>
 		</div>
 	{/if}
-</button>
+</a>
 
 <style>
 	.domain-card {
+		display: block;
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-color);
 		border-radius: 12px;
@@ -173,6 +173,8 @@
 		text-align: left;
 		width: 100%;
 		overflow: hidden;
+		text-decoration: none;
+		color: inherit;
 	}
 
 	.domain-card:hover {

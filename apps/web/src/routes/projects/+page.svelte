@@ -31,7 +31,6 @@
 	let projectStats: Record<string, ProjectStats> = {};
 	let assessmentResults: AssessmentResults | null = null;
 	let domainGroups: DomainWithProjects[] = [];
-	let expandedDomain: WellnessDomain | null = null;
 	let loading = true;
 
 	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
@@ -150,13 +149,6 @@
 		};
 	}
 
-	function handleDomainClick(domain: WellnessDomain | null) {
-		expandedDomain = domain;
-	}
-
-	function handleBackToAllDomains() {
-		expandedDomain = null;
-	}
 </script>
 
 <AppLayout>
@@ -191,143 +183,17 @@
 					<p>Complete your assessment to get started</p>
 				</div>
 			{:else}
-				{#if expandedDomain === null}
-					<!-- Domain Cards Grid View -->
-					<div class="domains-grid">
-						{#each domainGroups as group (group.domain || 'unassigned')}
-							<DomainProjectCard
-								domain={group.domain}
-								domainScore={group.domainScore}
-								projectCount={group.projects.length}
-								totalTasks={group.totalTasks}
-								completedTasks={group.completedTasks}
-								onclick={() => handleDomainClick(group.domain)}
-							/>
-						{/each}
-					</div>
-				{:else}
-					<!-- Expanded Domain View -->
-					{@const group = domainGroups.find((g) => g.domain === expandedDomain)}
-					{#if group}
-						<div class="expanded-domain-view">
-							<button class="back-button" on:click={handleBackToAllDomains}>
-								<svg
-									width="16"
-									height="16"
-									viewBox="0 0 16 16"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-								>
-									<path d="M10 4L6 8l4 4" />
-								</svg>
-								Back to All Domains
-							</button>
-
-							<div class="domain-header">
-								<div class="domain-header-top">
-									<div class="domain-header-left">
-										{#if group.domain}
-											{@const config = getDomainConfig(group.domain)}
-											<div class="domain-icon-large" style="background-color: {config.color}">
-												<svg
-													width="28"
-													height="28"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="white"
-													stroke-width="2.5"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<path d={config.iconPath} />
-												</svg>
-											</div>
-											<div class="domain-info">
-												<h2>{group.domain}</h2>
-												<p class="domain-desc">{config.desc}</p>
-											</div>
-										{:else}
-											<div class="domain-icon-large unassigned">
-												<svg
-													width="28"
-													height="28"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="white"
-													stroke-width="2.5"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z" />
-												</svg>
-											</div>
-											<div class="domain-info">
-												<h2>Unassigned</h2>
-												<p class="domain-desc">{group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'} without a domain</p>
-											</div>
-										{/if}
-									</div>
-									{#if group.domain}
-										<div class="domain-score-badge">
-											<span class="score-value">{group.domainScore.toFixed(1)}</span>
-											<span class="score-max">/10</span>
-										</div>
-									{/if}
-								</div>
-								{#if group.domain}
-									{@const percentage = Math.round((group.domainScore / 10) * 100)}
-									{@const config = getDomainConfig(group.domain)}
-									<div class="domain-progress-section">
-										<div class="progress-bar">
-											<div class="progress-fill" style="width: {percentage}%; background: {config.color}"></div>
-										</div>
-										<span class="progress-percent">{percentage}%</span>
-									</div>
-								{/if}
-							</div>
-
-							<!-- Domain Content Summary -->
-							{#if group.domain}
-								{@const stats = projectStats[group.domain]}
-								<div class="domain-summary">
-									{#if stats && (stats.totalTasks > 0 || stats.totalNotes > 0 || stats.totalFiles > 0)}
-										<div class="summary-grid">
-											<div class="summary-card">
-												<div class="summary-value">{stats.totalTasks}</div>
-												<div class="summary-label">Tasks</div>
-												{#if stats.totalTasks > 0}
-													<div class="summary-meta">{stats.completedTasks} completed</div>
-												{/if}
-											</div>
-											<div class="summary-card">
-												<div class="summary-value">{stats.totalNotes}</div>
-												<div class="summary-label">Notes</div>
-											</div>
-											<div class="summary-card">
-												<div class="summary-value">{stats.totalFiles}</div>
-												<div class="summary-label">Files</div>
-											</div>
-										</div>
-										<div class="domain-actions">
-											<a href="/tasks" class="action-link">View Tasks →</a>
-											<a href="/notes" class="action-link">View Notes →</a>
-											<a href="/files" class="action-link">View Files →</a>
-										</div>
-									{:else}
-										<div class="empty-domain">
-											<p>No content yet in this domain. Start by creating tasks or notes!</p>
-											<div class="domain-actions">
-												<a href="/tasks" class="action-link primary">Create Task →</a>
-												<a href="/notes" class="action-link">Create Note →</a>
-											</div>
-										</div>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					{/if}
-				{/if}
+				<!-- Domain Cards Grid View -->
+				<div class="domains-grid">
+					{#each domainGroups as group (group.domain || 'unassigned')}
+						<DomainProjectCard
+							domain={group.domain}
+							domainScore={group.domainScore}
+						totalTasks={group.totalTasks}
+						totalNotes={group.totalNotes}
+						totalFiles={group.totalFiles}						/>
+					{/each}
+				</div>
 			{/if}
 		</div>
 	</div>

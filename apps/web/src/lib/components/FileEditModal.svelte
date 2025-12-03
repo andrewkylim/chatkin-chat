@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { File, Project } from '@chatkin/types';
-	import { updateFileMetadata, updateFileProject } from '$lib/db/files';
+	import type { File, WellnessDomain } from '@chatkin/types';
+	import { updateFileMetadata, updateFileDomain } from '$lib/db/files';
 
 	export let file: File;
-	export let projects: Project[];
 
+	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
 	const dispatch = createEventDispatcher();
 
 	let editTitle = file.title || file.filename;
 	let editDescription = file.description || '';
-	let selectedProjectId = file.project_id || '';
+	let selectedDomain: WellnessDomain = file.domain;
 	let saving = false;
 
 	// Format file size
@@ -31,8 +31,8 @@
 				description: editDescription
 			});
 
-			// Update project association
-			await updateFileProject(file.id, selectedProjectId || null);
+			// Update domain association
+			await updateFileDomain(file.id, selectedDomain);
 
 			dispatch('save');
 			dispatch('close');
@@ -87,11 +87,10 @@
 			</div>
 
 			<div class="form-group">
-				<label for="file-project">Project</label>
-				<select id="file-project" bind:value={selectedProjectId}>
-					<option value="">No project (standalone)</option>
-					{#each projects as project}
-						<option value={project.id}>{project.name}</option>
+				<label for="file-domain">Domain</label>
+				<select id="file-domain" bind:value={selectedDomain}>
+					{#each domains as domain}
+						<option value={domain}>{domain}</option>
 					{/each}
 				</select>
 			</div>

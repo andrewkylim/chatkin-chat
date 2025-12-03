@@ -1,12 +1,11 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
-	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
-	import { getProject, getProjects } from '$lib/db/projects';
+	import { getProjects } from '$lib/db/projects';
 	import { getTasks, updateTask, deleteTask, createTask } from '$lib/db/tasks';
 	import { getNotes, createNote } from '$lib/db/notes';
 	import { getFiles, createFile } from '$lib/db/files';
@@ -19,16 +18,14 @@
 	import { getThumbnailUrl } from '$lib/utils/image-cdn';
 	import { supabase } from '$lib/supabase';
 
-	$: projectId = $page.params.id;
+	$: domain = $page.params.id; // Now it's a domain name, not a project ID
 
-	let project: Project | null = null;
 	let tasks: Task[] = [];
 	let notes: Note[] = [];
 	let files: File[] = [];
 	let loading = true;
 	let showMenu = false;
 	let showDeleteConfirm = false;
-	let showEditModal = false;
 	let projects: Project[] = [];
 	let showEditTaskModal = false;
 	let editingTask: Task | null = null;
@@ -109,42 +106,33 @@
 	});
 
 	async function loadData() {
-		if (!projectId) return;
+		if (!domain) return;
 		loading = true;
 		try {
-			[project, tasks, notes, files, projects] = await Promise.all([
-				getProject(projectId),
-				getTasks().then(allTasks => allTasks.filter(t => t.project_id === projectId)),
-				getNotes().then(allNotes => allNotes.filter(n => n.project_id === projectId)),
-				getFiles().then(allFiles => allFiles.filter(f => f.project_id === projectId)),
+			[tasks, notes, files, projects] = await Promise.all([
+				getTasks(domain),
+				getNotes(domain),
+				getFiles(),
 				getProjects()
 			]);
 		} catch (error) {
-			handleError(error, { operation: 'Load project data', component: 'ProjectChatPage' });
+			handleError(error, { operation: 'Load domain data', component: 'DomainChatPage' });
 		} finally {
 			loading = false;
 		}
 	}
 
+	// Domain management functions (disabled - domains are built-in)
 	async function handleDeleteProject() {
-		if (!projectId) return;
-		alert('Project deletion is currently unavailable');
+		alert('Domains cannot be deleted');
 	}
 
 	function startEditProject() {
-		if (!project) return;
-		showMenu = false;
-		showEditModal = true;
-	}
-
-	function handleCloseEditModal() {
-		showEditModal = false;
+		alert('Domain settings are not editable');
 	}
 
 	async function handleProjectUpdated() {
-		if (!projectId) return;
-		// Reload project data
-		project = await getProject(projectId);
+		await loadData();
 	}
 
 	async function handleToggleTask(taskId: string, currentStatus: string) {
@@ -202,7 +190,8 @@
 				description: newTaskDescription,
 				priority: newTaskPriority,
 				status: 'todo',
-				project_id: projectId || null,
+				project_id: null,
+				domain: domain,
 				due_date: newTaskDueDate || null
 			});
 
@@ -224,7 +213,8 @@
 			await createNote({
 				title: newNoteTitle.trim() || 'Untitled',
 				content: newNoteContent,
-				project_id: projectId || null
+				project_id: null,
+				domain: domain
 			});
 
 			// Reset form
@@ -285,7 +275,8 @@
 				note_id: null,
 				conversation_id: null,
 				message_id: null,
-				project_id: projectId,
+				project_id: null,
+				domain: domain,
 				is_hidden_from_library: false,
 				title: result.file.title || null,
 				description: result.file.description || null,
@@ -418,19 +409,15 @@
 			{#if loading}
 				<div class="loading-state">
 					<div class="spinner"></div>
-					<p>Loading project...</p>
+					<p>Loading {domain} domain...</p>
 				</div>
 			{:else}
-				{#if project}
-					<div class="project-title-wrapper">
-						<span class="project-icon-title">{project.color || '📁'}</span>
-						<h1 class="project-title">{project.name}</h1>
-					</div>
-				{/if}
+				<div class="project-title-wrapper">
+					<h1 class="project-title">{domain}</h1>
+				</div>
 
 				{#if tasks.length === 0 && notes.length === 0 && files.length === 0}
 					<div class="empty-state">
-						<div class="project-icon-large">{project?.color || '📁'}</div>
 						<h2>No tasks, notes, or files yet</h2>
 						<p>Create tasks, notes, or upload files to get started</p>
 					</div>
@@ -636,11 +623,11 @@
 		<div class="chat-section">
 			<UnifiedChatPage
 				scope="project"
-				{projectId}
-				pageTitle="Projects AI"
+				projectId={domain}
+				pageTitle="{domain} Domain"
 				pageIcon="/projects.webp"
-				pageSubtitle="Plan and organize your project"
-				welcomeMessage="Hi! I can help you manage tasks and notes for this project. What would you like to work on?"
+				pageSubtitle="Manage your {domain} domain"
+				welcomeMessage="Hi! I can help you manage tasks and notes in your {domain} domain. What would you like to work on?"
 				onDataChange={loadData}
 				isEmbedded={true}
 			/>
@@ -659,10 +646,9 @@
 						<path d="M14 2l-8 8 8 8"/>
 					</svg>
 				</a>
-				{#if project}
-					<div class="project-info-mobile">
-					</div>
-				{/if}
+				<div class="project-info-mobile">
+					<span class="domain-title-mobile">{domain}</span>
+				</div>
 			</div>
 			<div class="mobile-header-actions">
 				<div class="menu-container">
@@ -698,19 +684,15 @@
 			{#if loading}
 				<div class="loading-state">
 					<div class="spinner"></div>
-					<p>Loading project...</p>
+					<p>Loading {domain} domain...</p>
 				</div>
 			{:else}
-				{#if project}
-					<div class="project-title-wrapper mobile">
-						<span class="project-icon-title">{project.color || '📁'}</span>
-						<h1 class="project-title mobile">{project.name}</h1>
-					</div>
-				{/if}
+				<div class="project-title-wrapper mobile">
+					<h1 class="project-title mobile">{domain}</h1>
+				</div>
 
 				{#if tasks.length === 0 && notes.length === 0 && files.length === 0}
 					<div class="empty-state">
-						<div class="project-icon-large">{project?.color || '📁'}</div>
 						<h2>No tasks, notes, or files yet</h2>
 						<p>Create tasks, notes, or upload files to get started</p>
 					</div>
@@ -919,25 +901,17 @@
 	</div>
 
 	<!-- Edit Project Modal -->
-	<EditProjectModal
-		show={showEditModal}
-		project={project}
-		onClose={handleCloseEditModal}
-		onUpdate={handleProjectUpdated}
-	/>
+	<!-- EditProjectModal removed - domains are not editable -->
 
 	<!-- Delete Confirmation Modal -->
 	{#if showDeleteConfirm}
 		<div class="modal-overlay" onclick={() => showDeleteConfirm = false}>
 			<div class="modal" onclick={(e) => e.stopPropagation()}>
-				<h2>Delete Project?</h2>
-				<p>Are you sure you want to delete "{project?.name || 'this project'}"? This will also delete all tasks and notes in this project. This action cannot be undone.</p>
+				<h2>Delete Domain?</h2>
+				<p>Domains cannot be deleted. They are a built-in feature of the system.</p>
 				<div class="modal-actions">
 					<button type="button" class="secondary-btn" onclick={() => showDeleteConfirm = false}>
-						Cancel
-					</button>
-					<button type="button" class="danger-btn" onclick={handleDeleteProject}>
-						Delete Project
+						Close
 					</button>
 				</div>
 			</div>
@@ -947,7 +921,6 @@
 	<TaskEditModal
 		show={showEditTaskModal}
 		task={editingTask}
-		projects={projects}
 		onClose={() => showEditTaskModal = false}
 		onSave={handleUpdateTask}
 		onDelete={handleDeleteTask}
@@ -2207,7 +2180,8 @@
 			min-width: 0;
 		}
 
-		.project-info-mobile h1 {
+		.project-info-mobile h1,
+		.domain-title-mobile {
 			font-size: 1.25rem;
 			font-weight: 700;
 			letter-spacing: -0.02em;

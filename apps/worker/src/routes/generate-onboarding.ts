@@ -128,20 +128,35 @@ export async function handleGenerateOnboarding(
 			}
 		}
 
-		// 3. Create 6 domain primer notes (using domain directly)
-		const notesToCreate = onboardingContent.domainPrimers.map((note) => ({
-			user_id: user.userId,
-			domain: note.domain,
-			title: note.title,
-			content: note.content,
-			is_system_generated: true // Mark as AI-generated
-		}));
+		// 3. Create 6 domain primer notes with note_blocks (using domain directly)
+		for (const note of onboardingContent.domainPrimers) {
+			// Insert note first
+			const { data: createdNote, error: noteError } = await supabaseAdmin
+				.from('notes')
+				.insert({
+					user_id: user.userId,
+					domain: note.domain,
+					title: note.title,
+					is_system_generated: true
+				})
+				.select()
+				.single();
 
-		if (notesToCreate.length > 0) {
-			const { error: notesError } = await supabaseAdmin.from('notes').insert(notesToCreate);
+			if (noteError) {
+				logger.error('Failed to create domain primer note', { error: noteError });
+				continue;
+			}
 
-			if (notesError) {
-				logger.error('Failed to create domain primer notes', { error: notesError });
+			// Then insert note_block with content
+			const { error: blockError } = await supabaseAdmin.from('note_blocks').insert({
+				note_id: createdNote.id,
+				type: 'text',
+				content: { text: note.content },
+				position: 0
+			});
+
+			if (blockError) {
+				logger.error('Failed to create note block', { error: blockError });
 			}
 		}
 
@@ -149,7 +164,7 @@ export async function handleGenerateOnboarding(
 			userId: user.userId,
 			starterTasks: tasksToCreate.length,
 			explorationQuestions: onboardingContent.explorationQuestions.length,
-			domainPrimers: notesToCreate.length
+			domainPrimers: onboardingContent.domainPrimers.length
 		});
 
 		return new Response(
@@ -158,7 +173,7 @@ export async function handleGenerateOnboarding(
 				created: {
 					tasks: tasksToCreate.length,
 					explorationQuestions: onboardingContent.explorationQuestions.length,
-					notes: notesToCreate.length
+					notes: onboardingContent.domainPrimers.length
 				}
 			}),
 			{

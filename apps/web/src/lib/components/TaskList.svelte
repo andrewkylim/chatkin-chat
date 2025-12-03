@@ -1,9 +1,8 @@
 <script lang="ts">
-	import type { Task, Project } from '@chatkin/types';
-	import { formatDueDateTime, getProjectName, isToday, isThisWeek } from '$lib/utils/formatters';
+	import type { Task } from '@chatkin/types';
+	import { formatDueDateTime, isToday, isThisWeek } from '$lib/utils/formatters';
 
 	export let tasks: Task[] = [];
-	export let projects: Project[] = [];
 	export let loading: boolean = false;
 	export let showCompletedTasks: boolean = true;
 	export let showHeader: boolean = true;
@@ -98,8 +97,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id, projects)}
-												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -133,8 +132,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id, projects)}
-												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -168,8 +167,8 @@
 									<div class="task-content" class:completed={task.status === 'completed'} on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 										<div class="task-main">
 											<span class="task-title">{task.title}</span>
-											{#if getProjectName(task.project_id, projects)}
-												<span class="task-project">{getProjectName(task.project_id, projects)}</span>
+											{#if task.domain}
+												<span class="task-project">{task.domain}</span>
 											{/if}
 										</div>
 										<div class="task-meta">
@@ -202,8 +201,8 @@
 								<div class="task-content completed" on:click={() => onTaskClick(task)} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && onTaskClick(task)}>
 									<div class="task-main">
 										<span class="task-title">{task.title}</span>
-										{#if getProjectName(task.project_id, projects)}
-											<span class="task-project">{getProjectName(task.project_id, projects)}</span>
+										{#if task.domain}
+											<span class="task-project">{task.domain}</span>
 										{/if}
 									</div>
 									<div class="task-meta">

@@ -18,6 +18,11 @@ SET domain = p.domain
 FROM projects p
 WHERE n.project_id = p.id AND n.domain IS NULL;
 
+UPDATE files f
+SET domain = p.domain
+FROM projects p
+WHERE f.project_id = p.id AND f.domain IS NULL;
+
 -- Delete orphaned notes/tasks with no project_id (no real users, safe to delete)
 DELETE FROM tasks WHERE project_id IS NULL AND domain IS NULL;
 DELETE FROM notes WHERE project_id IS NULL AND domain IS NULL;

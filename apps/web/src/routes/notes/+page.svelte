@@ -3,29 +3,29 @@
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import { getNotes } from '$lib/db/notes';
-	import { getProjects } from '$lib/db/projects';
 	import { useNotes, type NoteWithBlocks } from '$lib/logic/useNotes';
-	import type { Project } from '@chatkin/types';
+	import type { WellnessDomain } from '@chatkin/types';
 	import { onMount } from 'svelte';
 	import { notificationCounts } from '$lib/stores/notifications';
 	import { goto } from '$app/navigation';
 	import { handleError } from '$lib/utils/error-handler';
 	import { logger } from '$lib/utils/logger';
 
+	// Domain-based note management
+	const domains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
+
 	let notes: NoteWithBlocks[] = [];
-	let projects: Project[] = [];
-	let projectsMap: Record<string, Project> = {};
 	let loading = true;
 	let showNewNoteModal = false;
 	let showFabMenu = false;
 	let newNoteTitle = '';
 	let newNoteContent = '';
-	let newNoteProjectId: string | null = null;
+	let newNoteDomain: WellnessDomain = 'Mind';
 	let deleteNoteId: string | null = null;
 	let editNoteId: string | null = null;
 	let editNoteTitle = '';
 	let editNoteContent = '';
-	let editNoteProjectId: string | null = null;
+	let editNoteDomain: WellnessDomain = 'Mind';
 	let editBlockId = '';
 
 	// Get note utilities and actions
@@ -51,16 +51,7 @@
 	async function loadData() {
 		loading = true;
 		try {
-			[notes, projects] = await Promise.all([
-				getNotes(),
-				getProjects()
-			]);
-
-			// Create a map of project IDs to project objects for easy lookup
-			projectsMap = projects.reduce((acc, p) => {
-				acc[p.id] = p;
-				return acc;
-			}, {} as Record<string, Project>);
+			notes = await getNotes();
 		} catch (error) {
 			logger.error('Error loading data:', error);
 		} finally {
@@ -73,12 +64,13 @@
 			await createNote({
 				title: newNoteTitle.trim() || 'Untitled',
 				content: newNoteContent || undefined,
-				project_id: newNoteProjectId
+				project_id: null,
+				domain: newNoteDomain
 			});
 
 			newNoteTitle = '';
 			newNoteContent = '';
-			newNoteProjectId = null;
+			newNoteDomain = 'Mind';
 			showNewNoteModal = false;
 			await loadData();
 		} catch {
@@ -102,7 +94,7 @@
 	function startEditNote(note: NoteWithBlocks) {
 		editNoteId = note.id;
 		editNoteTitle = note.title || '';
-		editNoteProjectId = note.project_id;
+		editNoteDomain = note.domain;
 		const firstTextBlock = note.note_blocks?.find((b) => b.type === 'text');
 		editNoteContent = (firstTextBlock?.content?.text as string) || '';
 		editBlockId = firstTextBlock?.id || '';
@@ -112,10 +104,11 @@
 		if (!editNoteId || !editNoteTitle.trim()) return;
 
 		try {
-			// Update note title and project
+			// Update note title and domain
 			await updateNote(editNoteId, {
 				title: editNoteTitle,
-				project_id: editNoteProjectId
+				project_id: null,
+				domain: editNoteDomain
 			});
 
 			// Update note block content if it exists
@@ -320,11 +313,10 @@
 						></textarea>
 					</div>
 					<div class="form-group">
-						<label for="note-project">Project (optional)</label>
-						<select id="note-project" bind:value={newNoteProjectId}>
-							<option value={null}>Standalone note</option>
-							{#each projects as project}
-								<option value={project.id}>{project.name}</option>
+						<label for="note-domain">Domain</label>
+						<select id="note-domain" bind:value={newNoteDomain}>
+							{#each domains as domain}
+								<option value={domain}>{domain}</option>
 							{/each}
 						</select>
 					</div>
@@ -369,11 +361,10 @@
 						></textarea>
 					</div>
 					<div class="form-group">
-						<label for="edit-project">Project (optional)</label>
-						<select id="edit-project" bind:value={editNoteProjectId}>
-							<option value={null}>Standalone note</option>
-							{#each projects as project}
-								<option value={project.id}>{project.name}</option>
+						<label for="edit-domain">Domain</label>
+						<select id="edit-domain" bind:value={editNoteDomain}>
+							{#each domains as domain}
+								<option value={domain}>{domain}</option>
 							{/each}
 						</select>
 					</div>

@@ -7,11 +7,11 @@ type MessageInsert = Omit<Message, 'id' | 'created_at'>;
 /**
  * Get or create a conversation for a given scope
  * @param scope - 'global', 'tasks', 'notes', or 'project'
- * @param projectId - Optional project ID for project-scoped conversations
+ * @param domainOrProjectId - Domain name for project-scoped conversations (e.g., 'Body', 'Mind')
  */
 export async function getOrCreateConversation(
 	scope: 'global' | 'tasks' | 'notes' | 'project',
-	projectId?: string
+	domainOrProjectId?: string
 ) {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
@@ -23,10 +23,11 @@ export async function getOrCreateConversation(
 		.eq('user_id', user.id)
 		.eq('scope', scope);
 
-	if (scope === 'project' && projectId) {
-		query = query.eq('project_id', projectId);
+	if (scope === 'project' && domainOrProjectId) {
+		query = query.eq('domain', domainOrProjectId);
 	} else if (scope !== 'project') {
-		query = query.is('project_id', null);
+		// For non-project scopes, we need to match by scope only
+		// Domain is still required in DB, so we'll use 'Mind' as default
 	}
 
 	const { data: existing } = await query.maybeSingle();
@@ -39,7 +40,8 @@ export async function getOrCreateConversation(
 	const newConv: ConversationInsert = {
 		user_id: user.id,
 		scope,
-		project_id: projectId || null,
+		project_id: null,
+		domain: domainOrProjectId || 'Mind', // Use provided domain or default to 'Mind'
 		title: scope === 'global' ? 'General Chat' : scope === 'project' ? 'Project Chat' : `${scope.charAt(0).toUpperCase() + scope.slice(1)} Chat`,
 		mode: 'chat', // Default to chat mode
 		conversation_summary: null,

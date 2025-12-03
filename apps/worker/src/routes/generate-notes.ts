@@ -68,21 +68,35 @@ export async function handleGenerateNotes(
 			results.domain_scores
 		);
 
-		// Create notes in database (using domain directly)
-		const notesToCreate = allNotes.map((note) => ({
-			user_id: user.userId,
-			domain: note.domain,
-			title: note.title,
-			content: note.content,
-			is_system_generated: true
-		}));
+		// Create notes with note_blocks in database (using domain directly)
+		for (const note of allNotes) {
+			// Insert note first
+			const { data: createdNote, error: noteError } = await supabaseAdmin
+				.from('notes')
+				.insert({
+					user_id: user.userId,
+					domain: note.domain,
+					title: note.title,
+					is_system_generated: true
+				})
+				.select()
+				.single();
 
-		if (notesToCreate.length > 0) {
-			const { error: notesError } = await supabaseAdmin.from('notes').insert(notesToCreate);
+			if (noteError) {
+				logger.error('Failed to create note', { error: noteError });
+				continue;
+			}
 
-			if (notesError) {
-				logger.error('Failed to create notes', { error: notesError });
-				throw new WorkerError('Failed to create notes', 500);
+			// Then insert note_block with content
+			const { error: blockError } = await supabaseAdmin.from('note_blocks').insert({
+				note_id: createdNote.id,
+				type: 'text',
+				content: { text: note.content },
+				position: 0
+			});
+
+			if (blockError) {
+				logger.error('Failed to create note block', { error: blockError });
 			}
 		}
 
