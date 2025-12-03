@@ -34,6 +34,31 @@
 	let backUrl = '/notes';
 	let backText = 'Back to Notes';
 
+	function formatMarkdown(text: string): string {
+		if (!text) return '';
+		let html = text;
+
+		// Convert headers (###, ####, #####)
+		html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
+		html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+		html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+		html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+
+		// Convert **bold** text
+		html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+		// Convert bullet points (-, *, •)
+		html = html.replace(/^[-*•] (.+)$/gm, '<li>$1</li>');
+
+		// Wrap consecutive list items in ul tags
+		html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+		// Convert line breaks to <br> for remaining content
+		html = html.replace(/\n/g, '<br>');
+
+		return html;
+	}
+
 	onMount(async () => {
 		await loadNote();
 
@@ -204,16 +229,24 @@
 			{#if note.note_blocks && note.note_blocks.length > 0}
 				{#each note.note_blocks.sort((a: NoteBlock, b: NoteBlock) => a.position - b.position) as block (block.id)}
 					{#if block.type === 'text'}
-						<div
-							bind:this={contentElement}
-							contenteditable="true"
-							on:input={handleContentInput}
-							on:click={handleContentClick}
-							class="text-block editable-content"
-							class:editing={isEditingInline}
-						>
-							{block.content.text || ''}
-						</div>
+						{#if isEditingInline}
+							<div
+								bind:this={contentElement}
+								contenteditable="true"
+								on:input={handleContentInput}
+								on:click={handleContentClick}
+								class="text-block editable-content editing"
+							>
+								{block.content.text || ''}
+							</div>
+						{:else}
+							<div
+								on:click={handleContentClick}
+								class="text-block formatted-content"
+							>
+								{@html formatMarkdown(block.content.text || '')}
+							</div>
+						{/if}
 					{:else if block.type === 'code'}
 						<div class="code-block">
 							<pre><code>{block.content.code || ''}</code></pre>
@@ -450,6 +483,61 @@
 		content: 'Start typing...';
 		color: var(--text-secondary);
 		opacity: 0.5;
+	}
+
+	/* Formatted markdown content styling */
+	.formatted-content {
+		line-height: 1.6;
+		cursor: text;
+	}
+
+	.formatted-content :global(h2) {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-top: 1.5rem;
+		margin-bottom: 0.75rem;
+		color: var(--text-primary);
+	}
+
+	.formatted-content :global(h3) {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin-top: 1.25rem;
+		margin-bottom: 0.5rem;
+		color: var(--text-primary);
+	}
+
+	.formatted-content :global(h4) {
+		font-size: 1.125rem;
+		font-weight: 600;
+		margin-top: 1rem;
+		margin-bottom: 0.5rem;
+		color: var(--text-primary);
+	}
+
+	.formatted-content :global(h5) {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-top: 0.75rem;
+		margin-bottom: 0.5rem;
+		color: var(--text-primary);
+	}
+
+	.formatted-content :global(strong) {
+		font-weight: 700;
+		color: var(--text-primary);
+	}
+
+	.formatted-content :global(ul) {
+		margin-left: 1.5rem;
+		margin-top: 0.75rem;
+		margin-bottom: 0.75rem;
+		list-style-type: disc;
+	}
+
+	.formatted-content :global(li) {
+		margin-bottom: 0.5rem;
+		line-height: 1.6;
 	}
 
 	/* Markdown content styling */
