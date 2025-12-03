@@ -40,14 +40,9 @@
 			<p class="hero-subtitle">
 				Talk through your life, and watch everything organize itself. Chatkin turns conversations into action across all areas of your life
 			</p>
-			<div class="hero-cta">
-				<a href="/signup" class="primary-btn">Start For Free</a>
-				<a href="#how-it-works" class="secondary-btn">See How It Works</a>
-			</div>
 		</div>
-	</main>
 
-	<section id="how-it-works" class="features">
+		<section class="features">
 		<div class="features-container">
 			<h2 class="section-title">Everything you need, one conversation away</h2>
 			<div class="features-grid">
@@ -103,8 +98,13 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 			</div>
+
+			<div class="cta-bottom">
+				<a href="/signup" class="primary-btn">Start For Free</a>
+			</div>
 		</div>
 	</section>
+	</main>
 
 	<footer class="footer">
 		<div class="footer-container">
@@ -207,21 +207,13 @@
 	.hero-subtitle {
 		font-size: 1.125rem;
 		color: var(--text-secondary);
-		margin-bottom: 32px;
+		margin-bottom: 40px;
 		line-height: 1.6;
-	}
-
-	.hero-cta {
-		display: flex;
-		gap: 16px;
-		justify-content: center;
-		flex-wrap: wrap;
 	}
 
 	/* Features */
 	.features {
-		padding: 40px 20px 60px;
-		background: var(--bg-secondary);
+		padding: 0 20px 40px;
 	}
 
 	.features-container {
@@ -310,11 +302,17 @@
 		color: var(--accent-primary);
 	}
 
+	.cta-bottom {
+		display: flex;
+		justify-content: center;
+		margin-top: 48px;
+	}
+
 	/* Footer */
 	.footer {
 		padding: 32px 20px;
 		background: var(--bg-primary);
-		border-top: none;
+		border-top: 1px solid var(--border-color);
 	}
 
 	.footer-container {
