@@ -27,6 +27,7 @@
 	let editNoteContent = '';
 	let editNoteDomain: WellnessDomain = 'Mind';
 	let editBlockId = '';
+	let openMenuNoteId: string | null = null;
 
 	// Get note utilities and actions
 	const {
@@ -124,7 +125,21 @@
 		}
 	}
 
+	function toggleNoteMenu(noteId: string) {
+		openMenuNoteId = openMenuNoteId === noteId ? null : noteId;
+	}
+
+	// Close menu when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (!target.closest('.card-actions')) {
+			openMenuNoteId = null;
+		}
+	}
+
 </script>
+
+<svelte:window on:click={handleClickOutside} />
 
 <AppLayout>
 <div class="notes-page">
@@ -167,8 +182,8 @@
 							<a href="/notes/{note.id}" class="note-link">
 								<div class="note-header">
 									<h3>{truncateTitle(note.title)}</h3>
-									{#if note.project_id && projectsMap[note.project_id]}
-										<span class="note-project">{projectsMap[note.project_id]?.name}</span>
+									{#if note.domain}
+										<span class="note-project">{note.domain}</span>
 									{:else}
 										<span class="note-badge">Standalone</span>
 									{/if}
@@ -249,8 +264,8 @@
 						<a href="/notes/{note.id}" class="note-link">
 							<div class="note-header">
 								<h3>{truncateTitle(note.title)}</h3>
-								{#if note.project_id && projectsMap[note.project_id]}
-									<span class="note-project">{projectsMap[note.project_id]?.name}</span>
+								{#if note.domain}
+									<span class="note-project">{note.domain}</span>
 								{:else}
 									<span class="note-badge">Standalone</span>
 								{/if}
@@ -263,23 +278,32 @@
 						</a>
 						<div class="card-actions">
 							<button
-								class="icon-action-btn"
-								on:click|stopPropagation={() => startEditNote(note)}
-								title="Edit note"
+								class="icon-action-btn menu-btn"
+								on:click|stopPropagation={() => toggleNoteMenu(note.id)}
+								title="More options"
 							>
-								<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M10.5 2l1.5 1.5L5 10.5H3.5V9L10.5 2z"/>
+								<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+									<circle cx="8" cy="3" r="1.5"/>
+									<circle cx="8" cy="8" r="1.5"/>
+									<circle cx="8" cy="13" r="1.5"/>
 								</svg>
 							</button>
-							<button
-								class="icon-action-btn delete-action-btn"
-								on:click|stopPropagation={() => deleteNoteId = note.id}
-								title="Delete note"
-							>
-								<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M11 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3"/>
-								</svg>
-							</button>
+							{#if openMenuNoteId === note.id}
+								<div class="dropdown-menu">
+									<button class="menu-item" on:click|stopPropagation={() => { startEditNote(note); openMenuNoteId = null; }}>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 2l2 2L6 12H4v-2L12 2z"/>
+										</svg>
+										Edit
+									</button>
+									<button class="menu-item delete" on:click|stopPropagation={() => { deleteNoteId = note.id; openMenuNoteId = null; }}>
+										<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+										</svg>
+										Delete
+									</button>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -581,14 +605,56 @@
 		color: var(--accent-primary);
 	}
 
-	.delete-action-btn:hover {
-		background: rgba(239, 68, 68, 0.1);
-		border-color: rgb(239, 68, 68);
+	.icon-action-btn:active {
+		transform: scale(0.95);
+	}
+
+	.dropdown-menu {
+		position: absolute;
+		top: 100%;
+		right: 0;
+		margin-top: 4px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		overflow: hidden;
+		z-index: 100;
+		min-width: 140px;
+	}
+
+	.menu-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 10px 16px;
+		width: 100%;
+		background: none;
+		border: none;
+		color: var(--text-primary);
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.2s ease;
+		text-align: left;
+	}
+
+	.menu-item:hover {
+		background: var(--bg-tertiary);
+	}
+
+	.menu-item svg {
+		width: 16px;
+		height: 16px;
+		flex-shrink: 0;
+	}
+
+	.menu-item.delete {
 		color: rgb(239, 68, 68);
 	}
 
-	.icon-action-btn:active {
-		transform: scale(0.95);
+	.menu-item.delete:hover {
+		background: rgba(239, 68, 68, 0.1);
 	}
 
 	.note-header {

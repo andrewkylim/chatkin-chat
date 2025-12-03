@@ -425,8 +425,8 @@
 								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
 										<span class="task-title">{task.title}</span>
-										{#if getProjectName(task.project_id)}
-											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{#if task.domain}
+											<span class="task-project">{task.domain}</span>
 										{/if}
 									</div>
 									<div class="task-meta">
@@ -460,8 +460,8 @@
 								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
 										<span class="task-title">{task.title}</span>
-										{#if getProjectName(task.project_id)}
-											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{#if task.domain}
+											<span class="task-project">{task.domain}</span>
 										{/if}
 									</div>
 									<div class="task-meta">
@@ -495,8 +495,8 @@
 								<div class="task-content" class:completed={task.status === 'completed'} on:click={() => openTaskDetail(task)}>
 									<div class="task-main">
 										<span class="task-title">{task.title}</span>
-										{#if getProjectName(task.project_id)}
-											<span class="task-project">{getProjectName(task.project_id)}</span>
+										{#if task.domain}
+											<span class="task-project">{task.domain}</span>
 										{/if}
 									</div>
 									<div class="task-meta">
