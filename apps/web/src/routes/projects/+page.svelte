@@ -698,10 +698,9 @@
 	}
 
 	.empty-icon {
-		width: 200px;
-		height: auto;
-		margin-bottom: 24px;
-		opacity: 0.8;
+		width: 100px;
+		height: 100px;
+		margin-bottom: 12px;
 	}
 
 	.empty-state h2 {
