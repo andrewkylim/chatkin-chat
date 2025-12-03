@@ -184,38 +184,27 @@
 			);
 
 			// Play TTS if Talk Mode active and we have content (not actions/questions)
-			logger.debug('TTS trigger check', {
-				talkModeActive,
-				hasContent: !!response.content,
-				hasOperations: !!response.operations,
-				hasQuestions: !!response.questions,
-				shouldPlayTTS: talkModeActive && response.content && !response.operations && !response.questions
-			});
-
 			if (talkModeActive && response.content && !response.operations && !response.questions) {
 				// Ensure message is fully visible before speaking
 				await tick();
 				await scrollToBottom();
 
-				logger.debug('Starting TTS playback', { contentLength: response.content.length });
 				isPlayingAudio = true;
 				try {
 					await talkModeService.playTTS(response.content, {
 						onComplete: () => {
-							logger.debug('TTS onComplete callback fired');
 							isPlayingAudio = false;
 							triggerAutoListen();
 						}
 					});
 				} catch (error) {
 					isPlayingAudio = false;
-					logger.error('TTS playback failed in UnifiedChatContent', error);
+					logger.error('TTS playback failed', error);
 					// Still trigger auto-listen even if TTS fails
 					triggerAutoListen();
 				}
 			} else if (talkModeActive) {
 				// If no TTS (actions/questions), still trigger auto-listen
-				logger.debug('Skipping TTS, triggering auto-listen directly');
 				triggerAutoListen();
 			}
 		} catch (err) {

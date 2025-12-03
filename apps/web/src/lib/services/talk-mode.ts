@@ -37,7 +37,6 @@ export class TalkModeService {
 				// Start playing to unlock and keep the element "warm"
 				await this.ttsAudioElement.play();
 				this.audioUnlocked = true;
-				logger.debug('Audio playback unlocked and kept warm with looping silent audio');
 			}
 		} catch (error) {
 			// Silently fail - audio unlock not needed on desktop browsers
@@ -54,31 +53,17 @@ export class TalkModeService {
 	 */
 	async playTTS(text: string, options?: TTSOptions): Promise<void> {
 		try {
-			logger.debug('playTTS called', {
-				text: text.substring(0, 50),
-				audioUnlocked: this.audioUnlocked,
-				hasTtsElement: !!this.ttsAudioElement
-			});
-
 			// Use pre-created audio element for iOS, or create new one as fallback
 			let audio: HTMLAudioElement;
 			if (this.ttsAudioElement) {
 				audio = this.ttsAudioElement;
-				logger.debug('Using warm pre-created audio element for TTS', {
-					loop: audio.loop,
-					volume: audio.volume,
-					paused: audio.paused,
-					currentSrc: audio.src.substring(0, 50)
-				});
 			} else {
 				// Fallback: create new audio element (for desktop or if unlockAudio wasn't called)
 				audio = new Audio();
-				logger.debug('Creating new audio element for TTS');
 			}
 			this.currentAudio = audio;
 
 			// Call TTS API endpoint
-			logger.debug('Fetching TTS audio from API');
 			const response = await fetch('/api/tts', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -86,70 +71,44 @@ export class TalkModeService {
 			});
 
 			if (!response.ok) {
-				logger.error('TTS API request failed', { status: response.status });
 				throw new Error('TTS request failed');
 			}
 
 			const audioBlob = await response.blob();
-			logger.debug('Received audio blob', { size: audioBlob.size, type: audioBlob.type });
 
 			if (audioBlob.size === 0) {
 				throw new Error('Received empty audio blob');
 			}
 
 			const audioUrl = URL.createObjectURL(audioBlob);
-			logger.debug('Created object URL');
 
 			// For iOS: Stop looping, set new source, then restart playback
 			if (this.ttsAudioElement) {
 				audio.loop = false;
 				audio.volume = 1.0;
-				logger.debug('Stopped looping, setting new source');
 			}
 
 			audio.src = audioUrl;
-			logger.debug('Set new TTS source', {
-				hasAudio: !!audio,
-				hasSrc: !!audio.src,
-				readyState: audio.readyState,
-				paused: audio.paused
-			});
 
 			// For iOS warm element: Explicitly call play() after changing src
 			if (this.ttsAudioElement && audio.paused) {
-				logger.debug('Audio paused after src change, calling play()');
-				try {
-					await audio.play();
-					logger.debug('Resumed playback after src change');
-				} catch (playError) {
-					logger.error('Failed to resume playback', playError);
-					throw playError;
-				}
+				await audio.play();
 			}
 
 			// Wait for audio to finish
 			await new Promise<void>((resolve, reject) => {
 				audio.onended = () => {
-					logger.debug('Audio playback ended normally');
 					URL.revokeObjectURL(audioUrl);
 					this.currentAudio = null;
 					resolve();
 				};
-				audio.onerror = (e) => {
-					logger.error('Audio playback error event', {
-						error: e,
-						currentSrc: audio.src.substring(0, 50),
-						readyState: audio.readyState,
-						networkState: audio.networkState,
-						paused: audio.paused
-					});
+				audio.onerror = () => {
 					URL.revokeObjectURL(audioUrl);
 					this.currentAudio = null;
 					reject(new Error('Audio playback error'));
 				};
 			});
 
-			logger.debug('TTS playback completed successfully');
 			options?.onComplete?.();
 		} catch (error) {
 			logger.error('Failed to play TTS audio', error);
