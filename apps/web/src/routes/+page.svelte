@@ -100,9 +100,33 @@
 
 	<footer class="footer">
 		<div class="footer-container">
-			<p class="text-muted">&copy; 2025 Chatkin. Built with care.</p>
-			<div class="footer-right">
-				<a href="mailto:support@chatkin.ai?subject=yo%20can%20you%20fix%20this%20please" class="support-link">support@chatkin.ai</a>
+			<div class="footer-content">
+				<div class="footer-section">
+					<div class="footer-logo">
+						<img src="/logo.svg" alt="Chatkin" class="footer-logo-icon" />
+						<span>Chatkin</span>
+					</div>
+					<p class="footer-tagline">Sort your life out.</p>
+				</div>
+
+				<div class="footer-section">
+					<h3>Product</h3>
+					<ul>
+						<li><a href="/signup">Get Started</a></li>
+						<li><a href="/login">Sign In</a></li>
+					</ul>
+				</div>
+
+				<div class="footer-section">
+					<h3>Support</h3>
+					<ul>
+						<li><a href="mailto:support@chatkin.ai">support@chatkin.ai</a></li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="footer-bottom">
+				<p>&copy; 2025 Chatkin. Built with care.</p>
 				<p class="version">v{version}</p>
 			</div>
 		</div>
@@ -299,46 +323,90 @@
 
 	/* Footer */
 	.footer {
-		padding: 20px;
-		background: var(--bg-primary);
+		padding: 60px 20px 32px;
+		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
 	}
 
 	.footer-container {
 		max-width: 1200px;
 		margin: 0 auto;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0 20px;
 	}
 
-	.footer-right {
-		display: flex;
-		align-items: center;
-		gap: 16px;
+	.footer-content {
+		display: grid;
+		grid-template-columns: 2fr 1fr 1fr;
+		gap: 48px;
+		margin-bottom: 48px;
 	}
 
-	.footer .text-muted {
-		color: var(--text-secondary);
+	.footer-section h3 {
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 16px;
+		color: var(--text-primary);
+	}
+
+	.footer-section ul {
+		list-style: none;
+		padding: 0;
 		margin: 0;
 	}
 
-	.support-link {
-		color: var(--accent-primary);
-		text-decoration: none;
-		transition: opacity 0.2s ease;
+	.footer-section ul li {
+		margin-bottom: 12px;
 	}
 
-	.support-link:hover {
-		opacity: 0.8;
-		text-decoration: underline;
+	.footer-section a {
+		color: var(--text-secondary);
+		text-decoration: none;
+		font-size: 0.875rem;
+		transition: color 0.2s ease;
+	}
+
+	.footer-section a:hover {
+		color: var(--text-primary);
+	}
+
+	.footer-logo {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin-bottom: 12px;
+	}
+
+	.footer-logo-icon {
+		width: 32px;
+		height: 32px;
+		border-radius: 6px;
+	}
+
+	.footer-tagline {
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		margin: 0;
+	}
+
+	.footer-bottom {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-top: 24px;
+		border-top: 1px solid var(--border-color);
+	}
+
+	.footer-bottom p {
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		margin: 0;
 	}
 
 	.version {
 		color: var(--text-secondary);
 		font-size: 0.875rem;
-		margin: 0;
 	}
 
 	/* Responsive */
@@ -351,15 +419,16 @@
 			display: inline;
 		}
 
-		.footer-container {
+		.footer-content {
+			grid-template-columns: 1fr;
+			gap: 32px;
+			margin-bottom: 32px;
+		}
+
+		.footer-bottom {
 			flex-direction: column;
 			gap: 8px;
 			text-align: center;
-		}
-
-		.footer-right {
-			flex-direction: column;
-			gap: 8px;
 		}
 	}
 
