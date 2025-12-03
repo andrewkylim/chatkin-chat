@@ -82,98 +82,79 @@
 
 	.bar {
 		width: 0.5rem;
-		background: var(--accent-primary);
 		border-radius: 0.5rem;
 		transform-origin: center;
+		transition: height 0.3s ease, background 0.3s ease;
 	}
 
-	/* Set default heights for all bars */
-	.bar:nth-child(1),
-	.bar:nth-child(5) {
-		height: 1.5rem;
-	}
-
-	.bar:nth-child(2),
-	.bar:nth-child(4) {
-		height: 2rem;
-	}
-
-	.bar:nth-child(3) {
-		height: 2.5rem;
-	}
-
-	/* Idle state - flat colored bars */
+	/* Idle state - colored bars with gentle pulse */
 	.wave.idle .bar {
-		background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-		animation: none !important;
-		height: 0.375rem !important;
+		background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+		animation: idle-pulse 2s ease-in-out infinite;
 	}
 
-	/* Listening state - orange animated bars */
+	.wave.idle .bar:nth-child(1) { height: 1.5rem; animation-delay: 0s; }
+	.wave.idle .bar:nth-child(2) { height: 1.75rem; animation-delay: 0.1s; }
+	.wave.idle .bar:nth-child(3) { height: 2rem; animation-delay: 0.2s; }
+	.wave.idle .bar:nth-child(4) { height: 1.75rem; animation-delay: 0.3s; }
+	.wave.idle .bar:nth-child(5) { height: 1.5rem; animation-delay: 0.4s; }
+
+	/* Listening state - orange bars with active pulse */
 	.wave.listening .bar {
 		background: linear-gradient(180deg, var(--accent-primary), var(--accent-hover));
-		animation: wave 1.2s ease-in-out infinite;
+		animation: listening-pulse 1.2s ease-in-out infinite;
 	}
 
-	.wave.listening .bar:nth-child(1) {
-		animation-delay: 0s;
-	}
+	.wave.listening .bar:nth-child(1) { height: 2rem; animation-delay: 0s; }
+	.wave.listening .bar:nth-child(2) { height: 2.5rem; animation-delay: 0.1s; }
+	.wave.listening .bar:nth-child(3) { height: 3rem; animation-delay: 0.2s; }
+	.wave.listening .bar:nth-child(4) { height: 2.5rem; animation-delay: 0.1s; }
+	.wave.listening .bar:nth-child(5) { height: 2rem; animation-delay: 0s; }
 
-	.wave.listening .bar:nth-child(2) {
-		animation-delay: 0.1s;
-	}
-
-	.wave.listening .bar:nth-child(3) {
-		animation-delay: 0.2s;
-	}
-
-	.wave.listening .bar:nth-child(4) {
-		animation-delay: 0.3s;
-	}
-
-	.wave.listening .bar:nth-child(5) {
-		animation-delay: 0.4s;
-	}
-
-	/* Speaking state - green animated bars */
+	/* Speaking state - green bars with dynamic pulse */
 	.wave.speaking .bar {
 		background: linear-gradient(180deg, #4caf50, #81c784);
-		animation: wave 1.2s ease-in-out infinite;
+		animation: speaking-pulse 0.5s ease-in-out infinite;
 	}
 
-	.wave.speaking .bar:nth-child(1) {
-		animation-delay: 0s;
-	}
+	.wave.speaking .bar:nth-child(1) { height: 2.25rem; animation-delay: 0s; }
+	.wave.speaking .bar:nth-child(2) { height: 2.75rem; animation-delay: 0.08s; }
+	.wave.speaking .bar:nth-child(3) { height: 3.25rem; animation-delay: 0.16s; }
+	.wave.speaking .bar:nth-child(4) { height: 2.75rem; animation-delay: 0.08s; }
+	.wave.speaking .bar:nth-child(5) { height: 2.25rem; animation-delay: 0s; }
 
-	.wave.speaking .bar:nth-child(2) {
-		animation-delay: 0.1s;
-	}
-
-	.wave.speaking .bar:nth-child(3) {
-		animation-delay: 0.2s;
-	}
-
-	.wave.speaking .bar:nth-child(4) {
-		animation-delay: 0.3s;
-	}
-
-	.wave.speaking .bar:nth-child(5) {
-		animation-delay: 0.4s;
-	}
-
-	@keyframes wave {
-		0%,
-		100% {
-			transform: scaleY(0.5);
+	@keyframes idle-pulse {
+		0%, 100% {
+			transform: scaleY(1);
+			opacity: 0.8;
 		}
 		50% {
-			transform: scaleY(1.5);
+			transform: scaleY(1.1);
+			opacity: 1;
+		}
+	}
+
+	@keyframes listening-pulse {
+		0%, 100% {
+			transform: scaleY(1);
+		}
+		50% {
+			transform: scaleY(1.3);
+		}
+	}
+
+	@keyframes speaking-pulse {
+		0%, 100% {
+			transform: scaleY(1);
+		}
+		50% {
+			transform: scaleY(1.4);
 		}
 	}
 
 	.status-text {
 		margin: 0;
-		color: white;
+		color: rgba(0, 0, 0, 0.8);
 		font-size: 1rem;
 		font-weight: 500;
 		text-align: center;
@@ -221,7 +202,7 @@
 		}
 
 		.wave {
-			height: 4.5rem;
+			height: 4rem;
 			gap: 0.5rem;
 		}
 
@@ -229,40 +210,23 @@
 			width: 0.4rem;
 		}
 
-		/* Mobile idle state - same size as active states */
 		.wave.idle .bar:nth-child(1),
-		.wave.idle .bar:nth-child(5) {
-			height: 1.25rem;
-		}
-
+		.wave.idle .bar:nth-child(5) { height: 1.25rem; }
 		.wave.idle .bar:nth-child(2),
-		.wave.idle .bar:nth-child(4) {
-			height: 1.75rem;
-		}
+		.wave.idle .bar:nth-child(4) { height: 1.5rem; }
+		.wave.idle .bar:nth-child(3) { height: 1.75rem; }
 
-		.wave.idle .bar:nth-child(3) {
-			height: 2.25rem;
-		}
-
-		/* Mobile listening/speaking states */
 		.wave.listening .bar:nth-child(1),
-		.wave.speaking .bar:nth-child(1),
-		.wave.listening .bar:nth-child(5),
-		.wave.speaking .bar:nth-child(5) {
-			height: 1.25rem;
-		}
-
+		.wave.listening .bar:nth-child(5) { height: 1.75rem; }
 		.wave.listening .bar:nth-child(2),
-		.wave.speaking .bar:nth-child(2),
-		.wave.listening .bar:nth-child(4),
-		.wave.speaking .bar:nth-child(4) {
-			height: 1.75rem;
-		}
+		.wave.listening .bar:nth-child(4) { height: 2rem; }
+		.wave.listening .bar:nth-child(3) { height: 2.5rem; }
 
-		.wave.listening .bar:nth-child(3),
-		.wave.speaking .bar:nth-child(3) {
-			height: 2.25rem;
-		}
+		.wave.speaking .bar:nth-child(1),
+		.wave.speaking .bar:nth-child(5) { height: 1.9rem; }
+		.wave.speaking .bar:nth-child(2),
+		.wave.speaking .bar:nth-child(4) { height: 2.25rem; }
+		.wave.speaking .bar:nth-child(3) { height: 2.75rem; }
 
 		.status-text {
 			font-size: 0.9375rem;
