@@ -54,7 +54,8 @@
 		isPlayingAudio: _isPlayingAudio = false,
 		toggleTalkMode = undefined,
 		aiMode = 'chat',
-		toggleAiMode = undefined
+		toggleAiMode = undefined,
+		onListeningChange = undefined
 	}: {
 		messages: Message[];
 		inputMessage: string;
@@ -77,6 +78,7 @@
 		toggleTalkMode?: () => Promise<void>;
 		aiMode?: 'chat' | 'action';
 		toggleAiMode?: () => void;
+		onListeningChange?: (listening: boolean) => void;
 	} = $props();
 
 	let messagesContainer: HTMLDivElement;
@@ -91,6 +93,13 @@
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
 		}
 	}
+
+	// Expose voiceInputRef methods
+	export const startListening = () => {
+		if (voiceInputRef) {
+			voiceInputRef.startListening();
+		}
+	};
 
 	// Auto-scroll when messages change (after ready)
 	$effect(() => {
@@ -538,6 +547,7 @@
 					inputMessage = transcript;
 					await onSubmit();
 				}}
+				onRecordingChange={onListeningChange}
 			/>
 		</div>
 		<button type="submit" class="send-btn" disabled={isStreaming || (!inputMessage.trim() && uploadedFiles.length === 0) || uploading} aria-label="Send message">

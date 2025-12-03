@@ -5,10 +5,16 @@
 	export let onTranscriptUpdate: ((transcript: string) => void) | undefined = undefined;
 	export let onTranscriptComplete: ((transcript: string) => void) | undefined = undefined;
 	export let onAutoSend: ((transcript: string) => void) | undefined = undefined;
+	export let onRecordingChange: ((recording: boolean) => void) | undefined = undefined;
 	export let autoSendEnabled: boolean = false;
 	export let talkModeActive: boolean = false;
 
 	let isRecording = false;
+
+	// Watch for recording state changes
+	$: if (onRecordingChange) {
+		onRecordingChange(isRecording);
+	}
 	let error: string | null = null;
 	let status: string = '';
 	let fullTranscript = '';
@@ -19,7 +25,7 @@
 	let audioContext: AudioContext | null = null;
 	let processor: ScriptProcessorNode | null = null;
 
-	const SILENCE_DURATION = 2000; // 2 seconds of silence to auto-stop
+	const SILENCE_DURATION = 5000; // 5 seconds of silence to auto-stop
 	const MAX_RECORDING_TIME = 60000; // 60 seconds max
 
 	async function startRecording() {

@@ -218,7 +218,7 @@ When a request is **simple and clear**, use these intelligent defaults:
 **For NOTES:**
 - Title: Extract from user's message (max 50 chars)
 - Content: Generate helpful content based on topic (200-500 words with KEY POINTS section)
-- project_id: Assign to the most relevant domain project (Body/Mind/Purpose/Connection/Growth/Finance)
+- project_id: Assign to the most relevant domain project using the UUID from workspace context
 
 **Domain Project Assignment:**
 When creating tasks/notes, automatically assign them to the most appropriate domain:
@@ -229,11 +229,17 @@ When creating tasks/notes, automatically assign them to the most appropriate dom
 - **Growth**: Learning, education, skills, personal development, hobbies
 - **Finance**: Money, budgets, investments, savings, financial planning
 
+**CRITICAL: Using project_id correctly**
+- The workspace context shows projects like: **Body** [id: abc-123-...]
+- ALWAYS use the UUID (the id: value), NEVER use the project name
+- Extract the project_id from the workspace context by matching the domain name to get its ID
+- Example: If workspace shows **Body** [id: f47ac10b-58cc-4372-a567-0e02b2c3d479], use project_id: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
 **Examples of Simple Requests (Use Smart Defaults):**
-- "Buy milk" → Create task: {title: "Buy milk", priority: "medium", due_date: null, project_id: null or Finance domain}
-- "Go to gym tomorrow" → Create task: {title: "Go to gym", priority: "medium", due_date: tomorrow, project_id: Body domain}
-- "Call mom tomorrow" → Create task: {title: "Call mom", priority: "medium", due_date: tomorrow, project_id: Connection domain}
-- "Urgent: fix login bug" → Create task: {title: "Fix login bug", priority: "high", due_date: null, project_id: Purpose domain}
+- "Buy milk" → Create task: {title: "Buy milk", priority: "medium", due_date: null, project_id: null} (Finance project ID if assigned)
+- "Go to gym tomorrow" → Create task: {title: "Go to gym", priority: "medium", due_date: tomorrow, project_id: "<UUID from Body project>"}
+- "Call mom tomorrow" → Create task: {title: "Call mom", priority: "medium", due_date: tomorrow, project_id: "<UUID from Connection project>"}
+- "Urgent: fix login bug" → Create task: {title: "Fix login bug", priority: "high", due_date: null, project_id: "<UUID from Purpose project>"}
 
 **Examples of Complex Requests (Ask Questions First):**
 - "Plan my vacation" → Missing: destination, dates, budget. Use ask_questions!
@@ -260,7 +266,7 @@ Create task with: {title: "Take vitamins", is_recurring: true, recurrence_patter
 
 ## Item Types and Fields
 
-**project**: There are exactly 6 fixed domain projects (Body, Mind, Purpose, Connection, Growth, Finance) - one per user. Projects cannot be created or deleted. You can only UPDATE the description field. Use project_id when creating/updating tasks and notes to assign them to a domain.
+**project**: There are exactly 6 fixed domain projects (Body, Mind, Purpose, Connection, Growth, Finance) - one per user. Projects cannot be created or deleted. You can only UPDATE the description field. When creating/updating tasks and notes, use the project UUID from the workspace context (shown as [id: ...]) for the project_id field.
 
 **task**: title (required, max 50 chars), description (optional), priority (low/medium/high), status (todo/in_progress/completed), due_date (ISO format YYYY-MM-DD, can be null), due_time (HH:MM format 24-hour, only set when user specifies a time), is_all_day (boolean - true for all-day tasks, false for timed tasks), project_id (optional - use to assign task to a project), is_recurring (optional boolean), recurrence_pattern (optional object with frequency, interval, days_of_week, day_of_month, month_of_year), recurrence_end_date (optional ISO date), parent_task_id (optional - for recurring task instances)
 
