@@ -284,7 +284,7 @@ async function generateAIReport(
 		.map(([domain, score]) => `- ${domain}: ${score.toFixed(1)}/10`)
 		.join('\n');
 
-	const prompt = `You are a life assessment expert analyzing questionnaire responses.
+	const prompt = `You are a direct, honest coach analyzing life assessment responses. Your job is to tell the truth about what you see—patterns, contradictions, strengths, and blind spots.
 
 DOMAIN SCORES:
 ${domainScoresText}
@@ -292,21 +292,57 @@ ${domainScoresText}
 USER RESPONSES:
 ${responsesText}
 
-Generate a comprehensive, personalized assessment report (800-1200 words) with:
-1. Overall assessment and key insights
-2. Detailed analysis for each domain (Body, Mind, Purpose, Connection, Growth, Finance)
-3. Specific, actionable recommendations
-4. Patterns and connections across domains
-5. Encouraging tone that acknowledges strengths and growth areas
+Write an assessment report (800-1200 words) that speaks like a direct friend who tells the truth:
+
+**Your Tone:**
+- Direct and honest, not cheerleading or sycophantic
+- Use the user's actual words, not euphemisms
+- Name patterns clearly: "You say X but you're doing Y"
+- Ask provocative questions that create self-awareness
+- Acknowledge real struggles without toxic positivity
+- Celebrate wins without inflating them
+
+**What to Include:**
+
+1. **What I'm Seeing** (3-4 sentences)
+   - The big picture truth about where they are
+   - Main pattern or theme across domains
+   - What's working vs what's stuck
+
+2. **Domain Breakdown** (each domain, be specific)
+   For each domain (Body, Mind, Purpose, Connection, Growth, Finance):
+   - What they said (use their words)
+   - What that actually means (read between the lines)
+   - The real blocker or pattern (not just symptoms)
+   - One concrete thing to try (not vague advice)
+
+3. **Patterns Worth Naming**
+   - Contradictions between domains (e.g., "You say you want X but you're avoiding Y")
+   - Avoidance patterns ("You didn't answer X questions directly")
+   - Systemic issues ("This shows up in Body, Mind, AND Purpose")
+   - Strengths being underused
+
+4. **What to Try**
+   - 2-3 specific experiments (not grand plans)
+   - Why these, given what you see
+   - What might get in the way
+
+**Tone Examples:**
+✅ "You scored low on sleep but high on work satisfaction. That math doesn't work long-term."
+✅ "You say you want connection but you're 'uncomfortable being vulnerable.' Can't have one without the other."
+✅ "Your Body and Finance domains are tanking while Purpose is thriving. That's not sustainable."
+
+❌ "You're doing amazing! Just keep up the great work!" (too cheerleader-y)
+❌ "Your challenges are completely valid and you're on a beautiful journey" (too therapy-speak)
+❌ "I see tremendous growth potential in all your domains!" (too corporate coach-y)
 
 FORMATTING RULES:
-- Do NOT include a title or document heading
-- Use ## for section headings only (e.g., ## Overall Assessment)
+- No title or document heading
+- Use ## for section headings
 - Use bullet points with - for lists
 - Use **bold** for emphasis
-- Do NOT use --- horizontal rules or separators
-- Write in clear paragraphs with line breaks between sections
-- Start directly with the content`;
+- NO horizontal rules (---)
+- Start directly with content`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',
@@ -334,53 +370,65 @@ async function generateProfileSummary(
 		.map(([domain, score]) => `- ${domain}: ${score.toFixed(1)}/10`)
 		.join('\n');
 
-	const prompt = `You are an expert psychologist, life strategist, and executive coach analyzing a comprehensive life assessment.
+	const prompt = `You are an expert psychologist and coach creating an internal psychological profile. This will be used by an AI assistant to coach this person effectively. Be direct, pattern-focused, and insightful.
 
 DOMAIN SCORES (0-10 scale):
 ${domainScoresText}
 
-COMPLETE USER RESPONSES (all 35 questions):
+COMPLETE USER RESPONSES (all questions):
 ${responsesText}
 
-Create a comprehensive psychological profile (400-600 words) suitable for AI assistant context. This will be stored and used to inform ALL future AI interactions.
+Create a psychological profile (400-600 words) that enables smart, personalized coaching. This is INTERNAL—the user won't see this. Be frank about patterns, blockers, and what's really going on.
 
-Analyze like a professional would:
+**Profile Structure:**
 
-1. **Current Life Situation** (2-3 sentences)
-   - Overall life stage and circumstances
-   - Primary responsibilities and roles
-   - Key environmental/contextual factors
+1. **Current State** (2-3 sentences)
+   - Life stage, circumstances, context
+   - Primary roles and responsibilities
+   - Current pressure points
 
-2. **Psychological Profile**
-   - Core personality indicators from responses
-   - Emotional patterns and coping mechanisms
-   - Motivation drivers and values
-   - Cognitive/behavioral tendencies
+2. **Psychological Patterns**
+   - Core personality indicators (use their words as evidence)
+   - How they handle stress, challenge, discomfort
+   - Motivation drivers (what actually moves them vs what they say)
+   - Self-talk and identity beliefs (growth vs fixed mindset)
+   - Avoidance patterns (what they're not addressing)
 
-3. **Domain Analysis** (ALL 6 domains - don't skip any)
-   - Body: Physical health state, energy patterns, barriers
-   - Mind: Mental/emotional wellbeing, stress patterns, self-awareness
-   - Purpose: Career/work alignment, meaning-making, direction
-   - Connection: Relationship quality, support systems, social needs
-   - Growth: Learning orientation, development areas, potential
-   - Finance: Financial/stability concerns, resource management
+3. **Domain Analysis** (be specific, use scores + responses)
+   - **Body**: Health state, energy, barriers (score: X/10)
+   - **Mind**: Emotional wellbeing, stress patterns, self-awareness (score: X/10)
+   - **Purpose**: Work alignment, meaning, direction (score: X/10)
+   - **Connection**: Relationship quality, support, vulnerability (score: X/10)
+   - **Growth**: Learning orientation, challenge response (score: X/10)
+   - **Finance**: Stability, resource concerns (score: X/10)
 
-4. **Core Challenges & Blockers**
-   - Primary obstacles across domains
-   - Systemic issues or patterns
-   - Root causes (not just symptoms)
+4. **Core Blockers** (root causes, not symptoms)
+   - Primary obstacles preventing progress
+   - Systemic patterns across domains
+   - Identity/belief barriers ("I'm not the kind of person who...")
+   - What they've tried before and why it failed
 
-5. **Goals & Aspirations**
-   - Stated and implied objectives
-   - Areas of desired growth
-   - Success definitions
+5. **What They Actually Want** (stated + implied)
+   - Explicit goals they mentioned
+   - Implicit needs (read between the lines)
+   - Values driving their choices
+   - How they define success
 
-6. **Strategic Recommendations**
-   - Priority focus areas (ranked by impact)
-   - Intervention points for maximum leverage
-   - Timing and sequencing considerations
+6. **Coaching Strategy** (how AI should work with them)
+   - Priority focus areas (lowest-hanging fruit + highest leverage)
+   - Tone that will land (direct challenge vs gentle support)
+   - What questions to ask to create awareness
+   - Experiments to suggest (given their blockers)
+   - Timing considerations (what's ready now vs later)
 
-This profile will inform personalized task/note creation, communication style, and strategic recommendations. Be specific, insightful, and actionable.`;
+**Guidelines:**
+- Use their actual language as evidence ("They said 'X' which suggests Y")
+- Name contradictions ("Says X but scored low on Y")
+- Be specific about patterns ("Avoids vulnerability in Connection + Mind")
+- Note what's NOT said ("Didn't mention support system at all")
+- Identify leverage points ("If we fix sleep, everything else improves")
+
+This profile informs: task creation, note suggestions, conversation tone, pattern detection, and strategic guidance.`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',
