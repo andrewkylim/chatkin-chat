@@ -757,7 +757,9 @@
 			align-items: center;
 			padding: 16px 20px;
 			border-bottom: 1px solid var(--border-color);
-			background: var(--bg-primary);
+			background: var(--bg-secondary);
+			height: 64px;
+			box-sizing: border-box;
 		}
 
 		.mobile-header-left {
@@ -769,18 +771,28 @@
 		.mobile-logo-button {
 			display: flex;
 			align-items: center;
+			background: none;
+			border: none;
+			padding: 0;
+			cursor: pointer;
 		}
 
 		.mobile-logo {
 			width: 48px;
 			height: 48px;
 			border-radius: 8px;
+			transition: all 0.15s ease;
+		}
+
+		.mobile-logo-button:active .mobile-logo {
+			transform: translateY(4px) scale(0.95);
 		}
 
 		.mobile-header h1 {
-			font-size: 1.25rem;
-			font-weight: 600;
-			color: var(--text-primary);
+			font-size: 1.5rem;
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			margin: 0;
 		}
 
 		.page-content {

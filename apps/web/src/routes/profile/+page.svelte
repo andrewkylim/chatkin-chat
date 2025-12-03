@@ -619,23 +619,30 @@
 		}
 
 		.mobile-logo-button {
-			width: 36px;
-			height: 36px;
 			display: flex;
 			align-items: center;
-			justify-content: center;
+			background: none;
+			border: none;
+			padding: 0;
+			cursor: pointer;
 		}
 
 		.mobile-logo {
 			width: 48px;
 			height: 48px;
 			border-radius: 8px;
+			transition: all 0.15s ease;
+		}
+
+		.mobile-logo-button:active .mobile-logo {
+			transform: translateY(4px) scale(0.95);
 		}
 
 		.mobile-header h1 {
-			font-size: 1.25rem;
+			font-size: 1.5rem;
 			font-weight: 700;
-			color: var(--text-primary);
+			letter-spacing: -0.02em;
+			margin: 0;
 		}
 
 		.profile-container {
