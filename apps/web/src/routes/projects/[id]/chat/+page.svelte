@@ -1138,7 +1138,7 @@
 					</svg>
 					<span>Add File</span>
 				</button>
-				<a class="fab-menu-item" href={`/projects/${projectId}/chat/mobile`}>
+				<a class="fab-menu-item" href={`/projects/${domain}/chat/mobile`}>
 					<svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
 						<path d="M10 2l1.5 3.5L15 7l-3.5 1.5L10 12l-1.5-3.5L5 7l3.5-1.5L10 2z"/>
 						<path d="M5 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
@@ -2248,7 +2248,7 @@
 			position: fixed;
 			bottom: 80px;
 			left: 27px;
-			z-index: 50;
+			z-index: 500;
 			margin-bottom: env(safe-area-inset-bottom);
 		}
 
