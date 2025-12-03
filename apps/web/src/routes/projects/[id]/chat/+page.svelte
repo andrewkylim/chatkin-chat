@@ -24,22 +24,22 @@
 	const domainAIConfig: Record<string, { title: string; subtitle: string; welcome: string }> = {
 		Body: {
 			title: 'Body AI',
-			subtitle: 'Your personal health and fitness coach',
+			subtitle: 'Your health and fitness coach',
 			welcome: "Hi! I'm your Body AI coach. I can help you manage your health, fitness, nutrition, and physical wellness. What would you like to work on?"
 		},
 		Mind: {
 			title: 'Mind AI',
-			subtitle: 'Your mental health and mindfulness guide',
+			subtitle: 'Your mental health guide',
 			welcome: "Hi! I'm your Mind AI guide. I can help you with mental health, stress management, mindfulness, and emotional wellbeing. What's on your mind?"
 		},
 		Purpose: {
 			title: 'Purpose AI',
-			subtitle: 'Your career and life purpose advisor',
+			subtitle: 'Your career and purpose advisor',
 			welcome: "Hi! I'm your Purpose AI advisor. I can help you with career goals, life purpose, professional development, and meaningful work. What would you like to explore?"
 		},
 		Connection: {
 			title: 'Connection AI',
-			subtitle: 'Your relationships and social wellness coach',
+			subtitle: 'Your relationships coach',
 			welcome: "Hi! I'm your Connection AI coach. I can help you with relationships, social connections, communication, and building meaningful bonds. What would you like to discuss?"
 		},
 		Growth: {
@@ -49,7 +49,7 @@
 		},
 		Finance: {
 			title: 'Finance AI',
-			subtitle: 'Your financial planning and money management advisor',
+			subtitle: 'Your financial planning advisor',
 			welcome: "Hi! I'm your Finance AI advisor. I can help you with budgeting, financial planning, investments, and money management. What financial goals are you working on?"
 		}
 	};
