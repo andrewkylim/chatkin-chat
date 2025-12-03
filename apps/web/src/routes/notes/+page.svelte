@@ -181,7 +181,7 @@
 						<div class="note-card" class:standalone={!note.project_id}>
 							<a href="/notes/{note.id}" class="note-link">
 								<div class="note-header">
-									<h3>{truncateTitle(note.title)}</h3>
+									<h3>{truncateTitle(note.title, 100)}</h3>
 									{#if note.domain}
 										<span class="note-project">{note.domain}</span>
 									{:else}
@@ -263,7 +263,7 @@
 					<div class="note-card" class:standalone={!note.project_id}>
 						<a href="/notes/{note.id}" class="note-link">
 							<div class="note-header">
-								<h3>{truncateTitle(note.title)}</h3>
+								<h3>{truncateTitle(note.title, 100)}</h3>
 								{#if note.domain}
 									<span class="note-project">{note.domain}</span>
 								{:else}
@@ -668,6 +668,9 @@
 		font-weight: 600;
 		margin: 0;
 		letter-spacing: -0.01em;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.note-project {
