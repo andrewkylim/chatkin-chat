@@ -350,7 +350,17 @@ FORMATTING RULES:
 		messages: [{ role: 'user', content: prompt }]
 	});
 
-	return message.content[0].text;
+	let report = message.content[0].text;
+
+	// Ensure consistent spacing before "Try this:" and bold action items
+	// Add line break before "Try this:" if it's not already there
+	report = report.replace(/([^\n])\nTry this:/g, '$1\n\nTry this:');
+
+	// Add line break before bold text that starts a sentence (action items)
+	// but only if it's not already preceded by a line break
+	report = report.replace(/([^\n])\n(\*\*[A-Z][^*]+\*\*)/g, '$1\n\n$2');
+
+	return report;
 }
 
 async function generateProfileSummary(
