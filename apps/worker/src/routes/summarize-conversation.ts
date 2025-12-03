@@ -90,7 +90,8 @@ Keep the summary concise but comprehensive (300-500 words).`;
 			messages: [{ role: 'user', content: prompt }]
 		});
 
-		const summary = response.content[0].text;
+		const firstBlock = response.content[0];
+		const summary = firstBlock.type === 'text' ? firstBlock.text : '';
 
 		logger.info('Conversation summarized successfully', {
 			userId: user.userId,
