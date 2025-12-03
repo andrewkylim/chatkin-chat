@@ -44,26 +44,6 @@
 				<a href="/signup" class="primary-btn">Start For Free</a>
 				<a href="#how-it-works" class="secondary-btn">See How It Works</a>
 			</div>
-
-			<div class="hero-demo">
-				<div class="chat-preview">
-					<div class="message ai">
-						<div class="message-bubble">
-							<p>👋 Hi! What would you like to work on today?</p>
-						</div>
-					</div>
-					<div class="message user">
-						<div class="message-bubble">
-							<p>I want to get fit and build a consistent workout routine</p>
-						</div>
-					</div>
-					<div class="message ai">
-						<div class="message-bubble">
-							<p>I've created a fitness project with 8 workout tasks, nutrition notes, and a weekly plan. Let's get started! 💪</p>
-						</div>
-					</div>
-				</div>
-			</div>
 		</div>
 	</main>
 
@@ -208,7 +188,7 @@
 
 	/* Hero */
 	.hero {
-		padding: 80px 20px 60px;
+		padding: 60px 20px 40px;
 	}
 
 	.hero-container {
@@ -235,65 +215,12 @@
 		display: flex;
 		gap: 16px;
 		justify-content: center;
-		margin-bottom: 60px;
 		flex-wrap: wrap;
-	}
-
-	.hero-demo {
-		max-width: 600px;
-		margin: 0 auto;
-	}
-
-	.chat-preview {
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 12px;
-		padding: 24px;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	.message {
-		display: flex;
-	}
-
-	.message.user {
-		justify-content: flex-end;
-	}
-
-	.message.ai {
-		justify-content: flex-start;
-	}
-
-	.message-bubble {
-		max-width: 85%;
-		padding: 12px 16px;
-		border-radius: 12px;
-		font-size: 0.9375rem;
-		line-height: 1.5;
-	}
-
-	.message-bubble p {
-		margin: 0;
-	}
-
-	.message.user .message-bubble {
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		text-align: left;
-	}
-
-	.message.ai .message-bubble {
-		background: var(--bg-primary);
-		border: 1px solid var(--border-color);
-		text-align: left;
-		max-width: 95%;
 	}
 
 	/* Features */
 	.features {
-		padding: 80px 20px;
+		padding: 40px 20px 60px;
 		background: var(--bg-secondary);
 	}
 
@@ -304,7 +231,7 @@
 
 	.section-title {
 		text-align: center;
-		margin-bottom: 60px;
+		margin-bottom: 40px;
 		font-size: 2rem;
 	}
 
