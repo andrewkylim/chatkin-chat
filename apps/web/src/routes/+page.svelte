@@ -98,10 +98,6 @@
 					<div class="app-badge badge-active">LIVE</div>
 				</div>
 			</div>
-
-			<div class="cta-bottom">
-				<a href="/signup" class="primary-btn">Start For Free</a>
-			</div>
 		</div>
 	</section>
 	</main>
@@ -300,12 +296,6 @@
 	.badge-soon {
 		background: rgba(199, 124, 92, 0.1);
 		color: var(--accent-primary);
-	}
-
-	.cta-bottom {
-		display: flex;
-		justify-content: center;
-		margin-top: 48px;
 	}
 
 	/* Footer */
