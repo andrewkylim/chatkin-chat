@@ -348,12 +348,15 @@ Write an assessment report (800-1200 words) that speaks like a direct friend who
    - Main pattern or theme across domains
    - What's working vs what's stuck
 
-2. **Domain Breakdown** (each domain, be specific)
-   For each domain (Body, Mind, Purpose, Connection, Growth, Finance):
-   - What they said (use their words)
-   - What that actually means (read between the lines)
-   - The real blocker or pattern (not just symptoms)
-   - One concrete thing to try (not vague advice)
+2. **Domain Breakdown**
+
+   For each domain (Body, Mind, Purpose, Connection, Growth, Finance), format like this:
+
+   **DomainName (X.X/10)** [One paragraph covering: what they said, what that actually means, the real blocker, and one concrete thing to try]
+
+   [Blank line between each domain]
+
+   Make each domain a separate paragraph with proper spacing. Do NOT run domains together into one block of text.
 
 3. **Patterns Worth Naming**
    - Contradictions between domains (e.g., "You say you want X but you're avoiding Y")
@@ -390,6 +393,13 @@ FORMATTING RULES:
 	});
 
 	let report = message.content[0].text;
+
+	// Ensure consistent spacing between domain breakdowns
+	// Add double line break before domain names with scores like **Body (4.3/10)**
+	report = report.replace(/([^\n])\n(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
+
+	// Also handle case where domains are run together without any line break
+	report = report.replace(/(\.)(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
 
 	// Ensure consistent spacing before "Try this:" and bold action items
 	// Add line break before "Try this:" if it's not already there
