@@ -47,14 +47,25 @@
 		// Convert **bold** text
 		html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
+		// Convert numbered lists (1., 2., 3., etc)
+		html = html.replace(/^(\d+)\.\s+(.+)$/gm, '<li>$2</li>');
+
 		// Convert bullet points (-, *, •)
-		html = html.replace(/^[-*•] (.+)$/gm, '<li>$1</li>');
+		html = html.replace(/^[-*•]\s+(.+)$/gm, '<li>$1</li>');
 
 		// Wrap consecutive list items in ul tags
-		html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+		html = html.replace(/(<li>.*?<\/li>\n?)+/gs, '<ul>$&</ul>');
 
-		// Convert line breaks to <br> for remaining content
+		// Convert double line breaks to paragraph breaks
+		html = html.replace(/\n\n+/g, '</p><p>');
+
+		// Convert single line breaks to <br>
 		html = html.replace(/\n/g, '<br>');
+
+		// Wrap in paragraph tags if not already wrapped
+		if (!html.startsWith('<')) {
+			html = '<p>' + html + '</p>';
+		}
 
 		return html;
 	}
@@ -229,24 +240,9 @@
 			{#if note.note_blocks && note.note_blocks.length > 0}
 				{#each note.note_blocks.sort((a: NoteBlock, b: NoteBlock) => a.position - b.position) as block (block.id)}
 					{#if block.type === 'text'}
-						{#if isEditingInline}
-							<div
-								bind:this={contentElement}
-								contenteditable="true"
-								on:input={handleContentInput}
-								on:click={handleContentClick}
-								class="text-block editable-content editing"
-							>
-								{block.content.text || ''}
-							</div>
-						{:else}
-							<div
-								on:click={handleContentClick}
-								class="text-block formatted-content"
-							>
-								{@html formatMarkdown(block.content.text || '')}
-							</div>
-						{/if}
+						<div class="text-block formatted-content">
+							{@html formatMarkdown(block.content.text || '')}
+						</div>
 					{:else if block.type === 'code'}
 						<div class="code-block">
 							<pre><code>{block.content.code || ''}</code></pre>
@@ -488,38 +484,41 @@
 	/* Formatted markdown content styling */
 	.formatted-content {
 		line-height: 1.6;
-		cursor: text;
+	}
+
+	.formatted-content :global(p) {
+		margin: 0.5rem 0;
 	}
 
 	.formatted-content :global(h2) {
 		font-size: 1.5rem;
 		font-weight: 700;
-		margin-top: 1.5rem;
-		margin-bottom: 0.75rem;
+		margin-top: 1rem;
+		margin-bottom: 0.5rem;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h3) {
 		font-size: 1.25rem;
 		font-weight: 700;
-		margin-top: 1.25rem;
-		margin-bottom: 0.5rem;
+		margin-top: 0.75rem;
+		margin-bottom: 0.4rem;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h4) {
 		font-size: 1.125rem;
 		font-weight: 600;
-		margin-top: 1rem;
-		margin-bottom: 0.5rem;
+		margin-top: 0.5rem;
+		margin-bottom: 0.3rem;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h5) {
 		font-size: 1rem;
 		font-weight: 600;
-		margin-top: 0.75rem;
-		margin-bottom: 0.5rem;
+		margin-top: 0.5rem;
+		margin-bottom: 0.3rem;
 		color: var(--text-primary);
 	}
 
@@ -530,14 +529,14 @@
 
 	.formatted-content :global(ul) {
 		margin-left: 1.5rem;
-		margin-top: 0.75rem;
-		margin-bottom: 0.75rem;
+		margin-top: 0.25rem;
+		margin-bottom: 0.5rem;
 		list-style-type: disc;
 	}
 
 	.formatted-content :global(li) {
-		margin-bottom: 0.5rem;
-		line-height: 1.6;
+		margin-bottom: 0.25rem;
+		line-height: 1.5;
 	}
 
 	/* Markdown content styling */
