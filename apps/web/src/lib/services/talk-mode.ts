@@ -77,8 +77,8 @@ export class TalkModeService {
 			const audioUrl = URL.createObjectURL(audioBlob);
 
 			audio.src = audioUrl;
-			audio.load();
 
+			// On iOS, we must call play() immediately without load() in between
 			logger.debug('Attempting to play TTS audio');
 			await audio.play();
 			logger.debug('TTS audio playback started successfully');
