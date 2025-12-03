@@ -12,6 +12,7 @@ import { logger } from '../utils/logger';
 import { requireAuth } from '../middleware/auth';
 import { createAIOrchestrator } from '../services/ai-orchestrator';
 import { createMessageFormatter } from '../services/message-formatter';
+import { createSupabaseAdmin } from '../utils/supabase-admin';
 
 export async function handleAIChat(
   request: Request,
@@ -49,8 +50,17 @@ export async function handleAIChat(
       files: files?.map(f => ({ name: f.name, type: f.type, url: f.url }))
     });
 
-    // Build system prompt based on scope and mode
-    const systemPrompt = buildSystemPrompt(context, workspaceContext, mode);
+    // Build base system prompt
+    let systemPrompt = buildSystemPrompt(context, workspaceContext, mode);
+
+    // Load unsurfaced coach observations (if in chat mode and early in conversation)
+    if (mode === 'chat' && conversationHistory && conversationHistory.length <= 4) {
+      const supabase = createSupabaseAdmin(env);
+      const observationsContext = await loadObservationsContext(supabase, user.userId);
+      if (observationsContext) {
+        systemPrompt += '\n\n' + observationsContext;
+      }
+    }
 
     // Get tool definitions based on mode
     const tools = getToolsForMode(mode);
@@ -99,4 +109,54 @@ export async function handleAIChat(
   } catch (error) {
     return handleError(error, 'AI chat request failed', corsHeaders);
   }
+}
+
+/**
+ * Load unsurfaced coach observations and format for AI context
+ */
+async function loadObservationsContext(
+  supabase: any,
+  userId: string
+): Promise<string | null> {
+  const { data: observations, error } = await supabase
+    .from('coach_observations')
+    .select('id, observation_type, content, data_summary, priority')
+    .eq('user_id', userId)
+    .is('surfaced_at', null)
+    .eq('dismissed', false)
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(3); // Max 3 observations at a time
+
+  if (error || !observations || observations.length === 0) {
+    return null;
+  }
+
+  // Format observations for AI context
+  const observationsText = observations
+    .map(
+      (obs, i) => `
+${i + 1}. [${obs.observation_type}] ${obs.content}
+   Data: ${JSON.stringify(obs.data_summary)}
+   Priority: ${obs.priority}`
+    )
+    .join('\n');
+
+  return `
+## Coach Observations Available
+
+You have ${observations.length} pattern observation${observations.length > 1 ? 's' : ''} you can surface during this conversation:
+
+${observationsText}
+
+**How to use these:**
+- Choose the MOST relevant one based on what the user is talking about
+- Surface it naturally in your opening or when contextually appropriate:
+  - "I've been watching your patterns. Want to hear what I'm seeing?"
+  - "Can I name something I noticed before we get into today?"
+  - "Something shifted this week. Want to talk about it?"
+- Don't dump all observations at once
+- Pick one, explore it, then mark it as surfaced (observation will be auto-marked after this conversation)
+
+These observations come from daily pattern analysis of their tasks, domains, and behavior.`;
 }

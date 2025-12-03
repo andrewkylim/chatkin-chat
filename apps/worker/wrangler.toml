@@ -35,7 +35,7 @@ routes = [
 ]
 
 [triggers]
-crons = ["0 * * * *"]  # Run every hour
+crons = ["0 2 * * *"]  # Run daily at 2am UTC (pattern analysis, notifications)
 
 [vars]
 PUBLIC_WORKER_URL = "https://chatkin.ai"

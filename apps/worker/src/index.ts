@@ -19,6 +19,10 @@ import { handleGenerateAssessmentReport } from './routes/generate-assessment-rep
 import { handleGenerateOnboarding } from './routes/generate-onboarding';
 import { handleGenerateNotes } from './routes/generate-notes';
 import { checkTaskReminders } from './cron/task-reminders';
+import { analyzePatterns } from './cron/analyze-patterns';
+import { createNotificationService } from './services/notification-service';
+import { createSupabaseAdmin } from './utils/supabase-admin';
+import { logger } from './utils/logger';
 
 export { Env };
 
@@ -99,8 +103,32 @@ const handler = {
   },
 
   async scheduled(_controller: globalThis.ScheduledController, env: Env, ctx: globalThis.ExecutionContext): Promise<void> {
-    // Run task reminder checks
-    ctx.waitUntil(checkTaskReminders(env));
+    logger.info('Running scheduled jobs...');
+
+    // Run pattern analysis (detect stuck tasks, domain shutdowns, wins, etc.)
+    ctx.waitUntil(
+      analyzePatterns(env).catch((error) => {
+        logger.error('Pattern analysis failed in scheduled job', { error });
+      })
+    );
+
+    // Run notification dispatch (task reminders, observations, check-ins)
+    const supabase = createSupabaseAdmin(env);
+    const notificationService = createNotificationService(supabase);
+    ctx.waitUntil(
+      notificationService.sendNotifications().catch((error) => {
+        logger.error('Notification dispatch failed in scheduled job', { error });
+      })
+    );
+
+    // Legacy task reminders (can be removed once notification service is fully rolled out)
+    ctx.waitUntil(
+      checkTaskReminders(env).catch((error) => {
+        logger.error('Task reminders failed in scheduled job', { error });
+      })
+    );
+
+    logger.info('Scheduled jobs dispatched');
   },
 };
 
