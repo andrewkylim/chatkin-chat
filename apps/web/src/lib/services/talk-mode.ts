@@ -51,11 +51,21 @@ export class TalkModeService {
 	 */
 	async playTTS(text: string, options?: TTSOptions): Promise<void> {
 		try {
+			logger.debug('playTTS called', {
+				text: text.substring(0, 50),
+				audioUnlocked: this.audioUnlocked,
+				hasTtsElement: !!this.ttsAudioElement
+			});
+
 			// Use pre-created audio element for iOS
 			let audio: HTMLAudioElement;
 			if (this.ttsAudioElement) {
 				audio = this.ttsAudioElement;
-				logger.debug('Using pre-created audio element for TTS');
+				// Reset the audio element for iOS - crucial for reuse
+				audio.pause();
+				audio.currentTime = 0;
+				audio.src = '';
+				logger.debug('Using pre-created audio element for TTS (reset)');
 			} else {
 				audio = new Audio();
 				logger.debug('Creating new audio element for TTS');
@@ -63,6 +73,7 @@ export class TalkModeService {
 			this.currentAudio = audio;
 
 			// Call TTS API endpoint
+			logger.debug('Fetching TTS audio from API');
 			const response = await fetch('/api/tts', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -70,28 +81,51 @@ export class TalkModeService {
 			});
 
 			if (!response.ok) {
+				logger.error('TTS API request failed', { status: response.status });
 				throw new Error('TTS request failed');
 			}
 
 			const audioBlob = await response.blob();
+			logger.debug('Received audio blob', { size: audioBlob.size, type: audioBlob.type });
+
+			if (audioBlob.size === 0) {
+				throw new Error('Received empty audio blob');
+			}
+
 			const audioUrl = URL.createObjectURL(audioBlob);
+			logger.debug('Created object URL', { url: audioUrl });
 
 			audio.src = audioUrl;
 
 			// On iOS, we must call play() immediately without load() in between
 			logger.debug('Attempting to play TTS audio');
-			await audio.play();
-			logger.debug('TTS audio playback started successfully');
+			try {
+				await audio.play();
+				logger.debug('TTS audio.play() promise resolved successfully');
+			} catch (playError) {
+				logger.error('audio.play() failed', playError);
+				URL.revokeObjectURL(audioUrl);
+				this.currentAudio = null;
+				throw playError;
+			}
 
 			// Wait for audio to finish
-			await new Promise<void>((resolve) => {
+			await new Promise<void>((resolve, reject) => {
 				audio.onended = () => {
+					logger.debug('Audio playback ended normally');
 					URL.revokeObjectURL(audioUrl);
 					this.currentAudio = null;
 					resolve();
 				};
+				audio.onerror = (e) => {
+					logger.error('Audio playback error event', e);
+					URL.revokeObjectURL(audioUrl);
+					this.currentAudio = null;
+					reject(new Error('Audio playback error'));
+				};
 			});
 
+			logger.debug('TTS playback completed successfully');
 			options?.onComplete?.();
 		} catch (error) {
 			logger.error('Failed to play TTS audio', error);
