@@ -43,7 +43,7 @@
 	}
 
 	// Calculate estimated time remaining
-	const avgSecondsPerQuestion = 25; // 10-15 min / 35 questions ≈ 25s/question
+	const avgSecondsPerQuestion = 13; // 10 min / 47 questions ≈ 13s/question
 	const questionsRemaining = totalQuestions - existingResponseCount;
 	const estimatedMinutes = Math.ceil((questionsRemaining * avgSecondsPerQuestion) / 60);
 
@@ -62,27 +62,6 @@
 </script>
 
 <div class="intro-page">
-	<!-- Header (homepage style) -->
-	<nav class="nav">
-		<div class="nav-container">
-			<a href="/" class="logo">
-				<img src="/logo.webp" alt="Chatkin" class="logo-icon" />
-				<span>Chatkin</span>
-			</a>
-			<div class="nav-actions">
-				{#if existingResponseCount > 0}
-					<button class="reset-btn" onclick={async () => {
-						if (confirm('Start assessment from the beginning? This will clear all your existing responses.')) {
-							await onReset();
-						}
-					}}>
-						Start Over
-					</button>
-				{/if}
-			</div>
-		</div>
-	</nav>
-
 	<div class="intro-container">
 		<!-- Progress notification (if returning with partial completion) -->
 		{#if showProgressNotification}
@@ -110,7 +89,7 @@
 						<circle cx="12" cy="12" r="10"/>
 						<polyline points="12 6 12 12 16 14"/>
 					</svg>
-					<span>10-15 minutes</span>
+					<span>10 minutes</span>
 				</div>
 				<div class="info-item">
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

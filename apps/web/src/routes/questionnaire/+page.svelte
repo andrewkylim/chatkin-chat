@@ -36,10 +36,29 @@
 	);
 
 	onMount(async () => {
-		if (!$auth.user) {
-			goto('/login');
-			return;
+		// Wait for auth to finish loading
+		if ($auth.loading) {
+			const unsubscribe = auth.subscribe((state) => {
+				if (!state.loading) {
+					unsubscribe();
+					if (!state.user) {
+						goto('/login');
+					} else {
+						loadQuestionnaire();
+					}
+				}
+			});
+		} else {
+			if (!$auth.user) {
+				goto('/login');
+				return;
+			}
+			await loadQuestionnaire();
 		}
+	});
+
+	async function loadQuestionnaire() {
+		if (!$auth.user) return;
 
 		// Check if user wants to skip intro
 		const skipIntro = localStorage.getItem('skip_questionnaire_intro');
@@ -47,27 +66,51 @@
 			showIntro = false;
 		}
 
-		// Check if this is a retake (user has existing results)
-		const { data: existingResults } = await supabase
-			.from('assessment_results')
-			.select('id')
+		// Check if user has completed the assessment (not just partial responses)
+		const { data: profile } = await supabase
+			.from('user_profiles')
+			.select('has_completed_questionnaire')
 			.eq('user_id', $auth.user.id)
 			.maybeSingle();
 
-		canExit = existingResults !== null;
+		const hasCompletedBefore = profile?.has_completed_questionnaire === true;
 
 		// Show retake warning if user has completed assessment before
-		if (existingResults) {
+		if (hasCompletedBefore) {
+			canExit = true;
 			showRetakeWarning = true;
 			return; // Don't load questions yet, wait for user decision
 		}
 
+		// User hasn't completed before, load questions and check for partial progress
 		await loadQuestions();
 		await loadExistingResponses();
 
 		// Count existing responses for progress tracking
 		existingResponseCount = responses.size;
-	});
+
+		// Allow exit if user has any existing responses (partial progress)
+		canExit = existingResponseCount > 0;
+
+		// Jump to first unanswered question if returning with partial progress
+		if (existingResponseCount > 0) {
+			// Find the first question that hasn't been answered
+			const firstUnansweredIndex = questions.findIndex(q => !responses.has(q.id));
+			if (firstUnansweredIndex !== -1) {
+				currentQuestionIndex = firstUnansweredIndex;
+			}
+			showIntro = false;
+		}
+
+		console.log('[Questionnaire] Loaded responses:', {
+			existingResponseCount,
+			canExit,
+			showIntro,
+			loading,
+			submitting,
+			currentQuestionIndex
+		});
+	}
 
 	async function loadQuestions() {
 		try {
@@ -114,6 +157,8 @@
 
 	async function saveResponse(questionId: string, value: string) {
 		if (!$auth.user) return;
+
+		console.log('[Questionnaire] Saving response:', { questionId, value });
 
 		try {
 			saving = true;
@@ -166,7 +211,14 @@
 					response_value: isOpenEnded ? null : responseValue,
 					response_text: isOpenEnded ? responseValue : null,
 					updated_at: new Date().toISOString()
-				}, { onConflict: 'user_id,question_id' }) as unknown as Promise<any>;
+				}, { onConflict: 'user_id,question_id' })
+					.then(({ error }) => {
+						if (error) {
+							console.error('[Questionnaire] Error saving response:', error);
+						} else {
+							console.log('[Questionnaire] Response saved:', { questionId: currentQuestion.id, value: responseValue });
+						}
+					}) as unknown as Promise<any>;
 
 				pendingSaves.push(savePromise);
 			}
@@ -195,32 +247,41 @@
 	}
 
 	async function handleExit() {
-		const confirmed = confirm(
-			'Exit assessment?\n\n' +
-			'Your progress has been saved. You can return anytime to continue where you left off.\n\n' +
-			'Your previous results will remain visible until you complete the new assessment.'
-		);
-
-		if (!confirmed) return;
-
 		if (!$auth.user) return;
 
-		try {
-			// Restore has_completed_questionnaire flag
-			const { error } = await supabase
-				.from('user_profiles')
-				.update({
-					has_completed_questionnaire: true,
-					updated_at: new Date().toISOString()
-				})
-				.eq('user_id', $auth.user.id);
+		// Check if this is a first-time user or a retake
+		const { data: profile } = await supabase
+			.from('user_profiles')
+			.select('has_completed_questionnaire')
+			.eq('user_id', $auth.user.id)
+			.maybeSingle();
 
-			if (error) throw error;
+		const hasCompletedBefore = profile?.has_completed_questionnaire === true;
 
+		if (hasCompletedBefore) {
+			// Retaking - can exit and come back later
+			const confirmed = confirm(
+				'Exit assessment?\n\n' +
+				'Your progress has been saved. You can return anytime to continue where you left off.'
+			);
+
+			if (!confirmed) return;
+
+			// Go back to profile (old results still visible)
 			goto('/profile');
-		} catch (err) {
-			console.error('Error exiting questionnaire:', err);
-			alert('Failed to exit. Please try again.');
+		} else {
+			// First-time user - must complete assessment
+			const confirmed = confirm(
+				'Exit assessment?\n\n' +
+				'You must complete the assessment to access Chatkin.\n\n' +
+				'Do you want to log out?'
+			);
+
+			if (!confirmed) return;
+
+			// Log out
+			await supabase.auth.signOut();
+			goto('/login');
 		}
 	}
 
@@ -481,18 +542,6 @@
 			totalQuestions={questions.length}
 		/>
 	{:else}
-		<!-- Exit button header (only if retaking) -->
-		{#if canExit && !loading && !submitting}
-			<div class="questionnaire-header">
-				<button class="exit-button" onclick={handleExit}>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M18 6L6 18M6 6l12 12"/>
-					</svg>
-					Exit Assessment
-				</button>
-			</div>
-		{/if}
-
 		{#if loading}
 			<div class="loading-container">
 				<div class="spinner"></div>
@@ -539,14 +588,23 @@
 				{#if saving}
 					<p class="saving-indicator">Saving...</p>
 				{/if}
+			</div>
 
-				<!-- Estimated time remaining -->
-				{#if currentQuestionIndex < questions.length - 1}
-					<p class="time-estimate">
-						About {Math.ceil(((questions.length - currentQuestionIndex - 1) * 25) / 60)}
-						{Math.ceil(((questions.length - currentQuestionIndex - 1) * 25) / 60) === 1 ? 'minute' : 'minutes'} remaining
-					</p>
-				{/if}
+			<!-- Footer with time estimate and exit link -->
+			<div class="questionnaire-footer">
+				<div class="footer-left">
+					{#if currentQuestionIndex < questions.length - 1}
+						<span class="time-estimate">
+							About {Math.ceil(((questions.length - currentQuestionIndex - 1) * 13) / 60)}
+							{Math.ceil(((questions.length - currentQuestionIndex - 1) * 13) / 60) === 1 ? 'minute' : 'minutes'} remaining
+						</span>
+					{/if}
+				</div>
+				<div class="footer-right">
+					{#if !submitting}
+						<button class="exit-link" onclick={handleExit}>Exit Assessment</button>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	{/if}
@@ -750,11 +808,38 @@
 		height: 18px;
 	}
 
+	.questionnaire-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 16px auto 0;
+		max-width: 500px;
+	}
+
+	.footer-left,
+	.footer-right {
+		display: flex;
+		align-items: center;
+	}
+
 	.time-estimate {
-		text-align: center;
 		font-size: 0.875rem;
 		color: var(--text-muted);
-		margin-top: 16px;
+	}
+
+	.exit-link {
+		background: none;
+		border: none;
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+		cursor: pointer;
+		text-decoration: underline;
+		padding: 0;
+		transition: color 0.2s ease;
+	}
+
+	.exit-link:hover {
+		color: var(--text-primary);
 	}
 
 	.loading-container,

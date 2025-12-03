@@ -51,12 +51,12 @@
 
 			if (fetchError) {
 				if (fetchError.code === 'PGRST116') {
-					// No results found
-					error = 'No assessment results found. Please complete the questionnaire first.';
+					// No results found - redirect to questionnaire
+					goto('/questionnaire');
+					return;
 				} else {
 					throw fetchError;
 				}
-				return;
 			}
 
 			results = data;

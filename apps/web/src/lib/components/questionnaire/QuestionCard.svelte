@@ -252,6 +252,10 @@
 						</button>
 					</div>
 
+					{#if canGoBack && !showCustomInput}
+						<button type="button" class="back-button" onclick={onBack}> ← Back </button>
+					{/if}
+
 					{#if showCustomInput}
 						<textarea
 							bind:value={textValue}
