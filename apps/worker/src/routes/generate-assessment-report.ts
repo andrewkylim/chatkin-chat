@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
+import { EmailService } from '../services/email';
 import { handleGenerateOnboarding } from './generate-onboarding';
 import { handleGenerateNotes } from './generate-notes';
 
@@ -141,18 +142,24 @@ export async function handleGenerateAssessmentReport(
 		// Generate onboarding content (projects + tasks) - fast
 		logger.info('Starting onboarding content generation', { userId: user.userId });
 
+		let tasksCreated = 0;
+		let notesCreated = 0;
+
 		try {
 			const onboardingResponse = await handleGenerateOnboarding(request, env, corsHeaders);
 
 			if (onboardingResponse.ok) {
 				const result = (await onboardingResponse.json()) as {
 					success: boolean;
-					created?: { projects: number; tasks: number; notes: number };
+					created?: { tasks: number; notes: number };
 				};
 				logger.info('Onboarding content generated successfully', {
 					userId: user.userId,
 					created: result.created
 				});
+
+				tasksCreated = result.created?.tasks || 0;
+				notesCreated = result.created?.notes || 0;
 
 				// Now trigger notes generation in background
 				logger.info('Starting notes generation', { userId: user.userId });
@@ -197,6 +204,32 @@ export async function handleGenerateAssessmentReport(
 				error: err
 			});
 			// Don't throw - profile was created successfully
+		}
+
+		// Send email notification that profile is ready
+		if (user.email) {
+			try {
+				const emailService = new EmailService(env);
+
+				const profileUrl = `${env.PUBLIC_WORKER_URL}/profile`;
+				const emailHtml = emailService.profileReadyEmail(tasksCreated, notesCreated, profileUrl);
+
+				await emailService.sendEmail({
+					to: user.email,
+					subject: '✨ Your Profile is Ready!',
+					html: emailHtml
+				});
+
+				logger.info('Profile ready email sent', { userId: user.userId, email: user.email });
+			} catch (emailErr) {
+				logger.error('Failed to send profile ready email', {
+					userId: user.userId,
+					error: emailErr
+				});
+				// Don't throw - profile was created successfully
+			}
+		} else {
+			logger.warn('No email address for user, skipping profile ready email', { userId: user.userId });
 		}
 
 		return new Response(

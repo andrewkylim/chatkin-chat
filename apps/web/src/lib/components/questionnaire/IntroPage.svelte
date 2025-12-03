@@ -15,7 +15,6 @@
 
 	// State
 	let theme: 'light' | 'dark' = $state('light');
-	let dontShowAgain = $state(false);
 
 	// Load saved preferences on mount
 	onMount(() => {
@@ -34,11 +33,8 @@
 		}
 	}
 
-	// Begin handler - save skip preference
+	// Begin handler
 	function handleBegin() {
-		if (dontShowAgain) {
-			localStorage.setItem('skip_questionnaire_intro', 'true');
-		}
 		onBegin();
 	}
 
@@ -49,16 +45,6 @@
 
 	// Only show progress notification if there are incomplete questions
 	const showProgressNotification = existingResponseCount > 0 && existingResponseCount < totalQuestions;
-
-	// Domain data
-	const domains = [
-		{ name: 'Body', desc: 'Physical health, energy, and wellbeing', color: 'var(--domain-body)' },
-		{ name: 'Mind', desc: 'Mental and emotional health', color: 'var(--domain-mind)' },
-		{ name: 'Purpose', desc: 'Work, meaning, and fulfillment', color: 'var(--domain-purpose)' },
-		{ name: 'Connection', desc: 'Relationships and community', color: 'var(--domain-connection)' },
-		{ name: 'Growth', desc: 'Learning and personal development', color: 'var(--domain-growth)' },
-		{ name: 'Finance', desc: 'Financial and resource stability', color: 'var(--domain-finance)' }
-	];
 </script>
 
 <div class="intro-page">
@@ -156,27 +142,6 @@
 					</button>
 				</div>
 			</div>
-
-			<!-- Domain cards -->
-			<div class="domains-section">
-				<div class="domains-grid">
-					{#each domains as domain}
-						<div class="domain-card">
-							<div class="domain-header-row">
-								<div class="domain-circle" style="background-color: {domain.color}"></div>
-								<h3>{domain.name}</h3>
-							</div>
-							<p>{domain.desc}</p>
-						</div>
-					{/each}
-				</div>
-			</div>
-
-			<!-- Skip intro checkbox -->
-			<label class="checkbox-label">
-				<input type="checkbox" bind:checked={dontShowAgain} />
-				<span>Don't show this again</span>
-			</label>
 
 			<!-- Begin button -->
 			<button class="begin-button" onclick={handleBegin}>
@@ -308,7 +273,7 @@
 	.intro-container {
 		max-width: 800px;
 		margin: 0 auto;
-		padding: 100px 20px 40px 20px; /* Add top padding for fixed header */
+		padding: 20px 20px 40px 20px; /* Add top padding for fixed header */
 	}
 
 	/* Progress notification */
@@ -456,76 +421,6 @@
 		line-height: 1.3;
 	}
 
-	/* Domains section */
-	.domains-section {
-		margin: 32px 0;
-	}
-
-	.domains-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-		gap: 16px;
-	}
-
-	.domain-card {
-		padding: 16px 20px;
-		background: var(--bg-primary);
-		border-radius: var(--radius-md);
-		border: 1px solid var(--border-color);
-		transition: all 0.2s ease;
-	}
-
-	.domain-card:hover {
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-		transform: translateY(-1px);
-	}
-
-	.domain-header-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-bottom: 8px;
-	}
-
-	.domain-circle {
-		width: 12px;
-		height: 12px;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.domain-card h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		margin: 0;
-		color: var(--text-primary);
-	}
-
-	.domain-card p {
-		font-size: 0.875rem;
-		color: var(--text-secondary);
-		margin: 0;
-		line-height: 1.5;
-	}
-
-	/* Checkbox */
-	.checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		justify-content: center;
-		margin: 24px 0 16px 0;
-		font-size: 0.9375rem;
-		color: var(--text-secondary);
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.checkbox-label input[type="checkbox"] {
-		width: 18px;
-		height: 18px;
-		cursor: pointer;
-	}
 
 	/* Begin button */
 	.begin-button {
@@ -584,9 +479,6 @@
 			grid-template-columns: 1fr;
 		}
 
-		.domains-grid {
-			grid-template-columns: 1fr;
-		}
 
 		.progress-notification {
 			flex-direction: column;

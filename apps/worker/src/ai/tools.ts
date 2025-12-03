@@ -6,7 +6,7 @@ export function getTools() {
   return [
     {
       name: 'ask_questions',
-      description: 'REQUIRED FIRST STEP for all create operations. When a user asks to create a task/note, you MUST call this tool immediately - do NOT respond with text. This tool shows a modal with multiple choice questions. Only after receiving answers should you use propose_operations.',
+      description: 'Ask clarifying questions when critical information is missing. Only use for ambiguous requests (e.g., "Plan vacation" - needs when/where). For simple requests, just use propose_operations directly.',
       input_schema: {
         type: 'object' as const,
         properties: {
@@ -34,7 +34,7 @@ export function getTools() {
     },
     {
       name: 'propose_operations',
-      description: 'Propose create/update/delete operations to user for confirmation. Use this ONLY AFTER you have gathered complete information via ask_questions tool. This is Step 2 in the creation workflow - information gathering (ask_questions) comes first.',
+      description: 'Propose create/update/delete operations for tasks and notes. Use this for simple requests immediately, or after asking clarifying questions for complex requests. User will review before confirming.',
       input_schema: {
         type: 'object' as const,
         properties: {
@@ -90,9 +90,10 @@ export function getTools() {
           filters: {
             type: 'object' as const,
             properties: {
-              project_id: {
+              domain: {
                 type: 'string' as const,
-                description: 'Filter by project ID'
+                enum: ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'],
+                description: 'Filter by domain (Body, Mind, Purpose, Connection, Growth, Finance)'
               },
               status: {
                 type: 'string' as const,
@@ -125,9 +126,10 @@ export function getTools() {
                 type: 'string' as const,
                 description: 'Search in title and content'
               },
-              project_id: {
+              domain: {
                 type: 'string' as const,
-                description: 'Filter by project'
+                enum: ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'],
+                description: 'Filter by domain (Body, Mind, Purpose, Connection, Growth, Finance)'
               }
             }
           },
@@ -164,9 +166,10 @@ export function getTools() {
           filters: {
             type: 'object' as const,
             properties: {
-              project_id: {
+              domain: {
                 type: 'string' as const,
-                description: 'Filter by project'
+                enum: ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'],
+                description: 'Filter by domain (Body, Mind, Purpose, Connection, Growth, Finance)'
               },
               conversation_id: {
                 type: 'string' as const,

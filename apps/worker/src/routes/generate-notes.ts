@@ -57,24 +57,6 @@ export async function handleGenerateNotes(
 			throw new WorkerError('Assessment results not found', 404);
 		}
 
-		// Fetch user's 6 domain projects
-		const { data: projects, error: projectsError } = await supabaseAdmin
-			.from('projects')
-			.select('id, domain')
-			.eq('user_id', user.userId)
-			.order('created_at', { ascending: true });
-
-		if (projectsError || !projects || projects.length === 0) {
-			logger.error('Failed to fetch projects', { error: projectsError });
-			throw new WorkerError('No projects found for user', 404);
-		}
-
-		// Create domain -> project_id mapping
-		const domainMap = new Map<string, string>();
-		for (const project of projects) {
-			domainMap.set(project.domain, project.id);
-		}
-
 		// Generate all notes in one call (faster for 6 domains)
 		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
 
@@ -86,45 +68,21 @@ export async function handleGenerateNotes(
 			results.domain_scores
 		);
 
-		// Create notes in database with note_blocks
-		for (const note of allNotes) {
-			const projectId = domainMap.get(note.domain);
-			if (!projectId) {
-				logger.warn('Project not found for note', { domain: note.domain });
-				continue;
-			}
+		// Create notes in database (using domain directly)
+		const notesToCreate = allNotes.map((note) => ({
+			user_id: user.userId,
+			domain: note.domain,
+			title: note.title,
+			content: note.content,
+			is_system_generated: true
+		}));
 
-			// Create note entry
-			const { data: createdNote, error: noteError } = await supabaseAdmin
-				.from('notes')
-				.insert({
-					user_id: user.userId,
-					project_id: projectId,
-					title: note.title
-				})
-				.select('id')
-				.single();
+		if (notesToCreate.length > 0) {
+			const { error: notesError } = await supabaseAdmin.from('notes').insert(notesToCreate);
 
-			if (noteError) {
-				logger.error('Failed to create note', { error: noteError, note });
-				continue;
-			}
-
-			// Create note_block with content
-			if (createdNote) {
-				const { error: blockError } = await supabaseAdmin
-					.from('note_blocks')
-					.insert({
-						note_id: createdNote.id,
-						type: 'text',
-						content: { text: note.content },
-						position: 0
-					});
-
-				if (blockError) {
-					logger.error('Failed to create note block', { error: blockError, noteId: createdNote.id });
-					// Don't throw - note was created successfully
-				}
+			if (notesError) {
+				logger.error('Failed to create notes', { error: notesError });
+				throw new WorkerError('Failed to create notes', 500);
 			}
 		}
 

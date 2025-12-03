@@ -135,7 +135,7 @@ async function loadObservationsContext(
   // Format observations for AI context
   const observationsText = observations
     .map(
-      (obs, i) => `
+      (obs: any, i: number) => `
 ${i + 1}. [${obs.observation_type}] ${obs.content}
    Data: ${JSON.stringify(obs.data_summary)}
    Priority: ${obs.priority}`

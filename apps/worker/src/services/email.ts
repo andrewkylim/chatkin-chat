@@ -193,4 +193,71 @@ export class EmailService {
       </html>
     `;
 	}
+
+	profileReadyEmail(tasksCreated: number, notesCreated: number, actionUrl: string): string {
+		return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: #ffffff; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #C77C5C 0%, #A86645 100%); color: white; padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center; }
+            .logo { width: 48px; height: 48px; margin: 0 auto 16px; }
+            .header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 600; }
+            .header p { margin: 0; font-size: 16px; opacity: 0.95; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none; }
+            .stats-container { display: flex; gap: 16px; margin: 24px 0; justify-content: center; flex-wrap: wrap; }
+            .stat-box { background: white; padding: 20px 24px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-width: 120px; }
+            .stat-number { font-size: 32px; font-weight: 700; color: #C77C5C; margin: 0 0 4px 0; }
+            .stat-label { font-size: 14px; color: #6b7280; margin: 0; font-weight: 500; }
+            .highlight-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 20px; margin: 24px 0; border-radius: 8px; }
+            .button { display: inline-block; background: #C77C5C; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; margin-top: 24px; font-weight: 600; font-size: 16px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(199, 124, 92, 0.3); }
+            .button:hover { background: #A86645; box-shadow: 0 6px 16px rgba(199, 124, 92, 0.4); }
+            .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <img src="https://chatkin.ai/logo.webp" alt="Chatkin" class="logo" />
+              <h1>✨ Your Profile is Ready!</h1>
+              <p>We've analyzed your assessment and created your personalized life plan</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin: 0 0 20px 0;">Great news! We've finished analyzing your assessment responses and your personalized profile is ready to explore.</p>
+
+              <div class="stats-container">
+                <div class="stat-box">
+                  <p class="stat-number">${tasksCreated}</p>
+                  <p class="stat-label">Tasks Created</p>
+                </div>
+                <div class="stat-box">
+                  <p class="stat-number">${notesCreated}</p>
+                  <p class="stat-label">Domain Notes</p>
+                </div>
+              </div>
+
+              <div class="highlight-box">
+                <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #92400e;">
+                  <strong>What's inside:</strong><br/>
+                  Your comprehensive assessment report with insights across all 6 life domains (Body, Mind, Purpose, Connection, Growth, Finance), plus personalized tasks and detailed notes to help you take action.
+                </p>
+              </div>
+
+              <p style="font-size: 15px; color: #6b7280; margin: 24px 0 0 0;">Ready to get started?</p>
+              <center>
+                <a href="${actionUrl}" class="button">View Your Profile →</a>
+              </center>
+            </div>
+            <div class="footer">
+              <p style="margin-top: 12px; color: #9ca3af; font-size: 12px;">© ${new Date().getFullYear()} Chatkin. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+	}
 }
