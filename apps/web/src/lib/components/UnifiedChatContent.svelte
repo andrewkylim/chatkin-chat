@@ -105,7 +105,16 @@
 
 	async function sendMessage(message?: string) {
 		const userMessage = message || inputMessage.trim();
-		if (!userMessage || isStreaming || !conversation) return;
+		if (!userMessage || !conversation) {
+			return;
+		}
+
+		// If already streaming, stop it first
+		if (isStreaming) {
+			isStreaming = false;
+			// Remove typing indicator if present
+			messages = messages.filter(m => !m.isTyping);
+		}
 
 		const filesToSend = [...uploadedFiles];
 		inputMessage = '';

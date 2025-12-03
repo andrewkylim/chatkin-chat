@@ -186,8 +186,8 @@
 	.stop-btn {
 		margin-top: 0.5rem;
 		padding: 0.5rem 1rem;
-		background: rgba(0, 0, 0, 0.2);
-		border: 1.5px solid rgba(0, 0, 0, 0.4);
+		background: transparent;
+		border: 1.5px solid rgba(0, 0, 0, 0.5);
 		border-radius: 0.5rem;
 		color: rgba(0, 0, 0, 0.8);
 		font-size: 0.8125rem;
@@ -197,13 +197,13 @@
 	}
 
 	.stop-btn:hover {
-		background: rgba(0, 0, 0, 0.3);
-		border-color: rgba(0, 0, 0, 0.6);
+		background: rgba(0, 0, 0, 0.1);
+		border-color: rgba(0, 0, 0, 0.7);
 		color: rgba(0, 0, 0, 0.95);
 	}
 
 	.stop-btn:active {
-		background: rgba(0, 0, 0, 0.35);
+		background: rgba(0, 0, 0, 0.15);
 	}
 
 	/* Mobile adjustments */

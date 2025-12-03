@@ -35,13 +35,13 @@
 	}
 
 	async function handleAutoSend(transcript: string) {
-		// Set flag BEFORE sending message so TTS knows to auto-listen
-		if (talkModeActive) {
-			onStartAutoListen();
-		}
 		inputMessage = transcript;
 		onSendMessage();
 		onResetActivityTimer();
+		// Set flag AFTER sending message so TTS can trigger auto-listen
+		if (talkModeActive) {
+			onStartAutoListen();
+		}
 	}
 </script>
 

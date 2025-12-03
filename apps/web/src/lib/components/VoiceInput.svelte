@@ -186,6 +186,10 @@
 			} else if (onTranscriptComplete) {
 				onTranscriptComplete(fullTranscript);  // Manual mode
 			}
+		} else {
+			if (onTranscriptUpdate) {
+				onTranscriptUpdate('');
+			}
 		}
 
 		fullTranscript = '';
