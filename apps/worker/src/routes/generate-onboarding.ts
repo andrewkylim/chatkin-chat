@@ -18,7 +18,6 @@ interface OnboardingContent {
 		priority: 'low' | 'medium' | 'high';
 		status: 'todo';
 	}>;
-	explorationQuestions: string[]; // 0-6 questions stored in user_profiles
 	domainPrimers: Array<{
 		domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
 		title: string;
@@ -67,33 +66,13 @@ export async function handleGenerateOnboarding(
 			throw new WorkerError('Assessment results not found', 404);
 		}
 
-		// Fetch responses for context
-		const { data: responses, error: responsesError } = await supabaseAdmin
-			.from('assessment_responses')
-			.select(
-				`
-				response_value,
-				response_text,
-				assessment_questions (
-					question_text,
-					domain
-				)
-			`
-			)
-			.eq('user_id', user.userId);
 
-		if (responsesError) {
-			logger.error('Failed to fetch responses', { error: responsesError });
-			throw new WorkerError('Failed to fetch questionnaire responses', 500);
-		}
-
-		// Generate onboarding content (starter tasks + exploration questions + domain primers)
+		// Generate onboarding content (starter tasks + domain primers)
 		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
 		const onboardingContent = await generateOnboardingContent(
 			client,
 			profile.profile_summary,
 			results.domain_scores,
-			responses || []
 		);
 
 		// 1. Create 3-5 starter tasks (using domain directly)
@@ -114,21 +93,7 @@ export async function handleGenerateOnboarding(
 			}
 		}
 
-		// 2. Store exploration questions in user_profiles
-		if (onboardingContent.explorationQuestions.length > 0) {
-			const { error: questionsError } = await supabaseAdmin
-				.from('user_profiles')
-				.update({
-					exploration_questions: onboardingContent.explorationQuestions
-				})
-				.eq('user_id', user.userId);
-
-			if (questionsError) {
-				logger.error('Failed to store exploration questions', { error: questionsError });
-			}
-		}
-
-		// 3. Create 6 domain primer notes with note_blocks (using domain directly)
+		// 2. Create 6 domain primer notes with note_blocks (using domain directly)
 		for (const note of onboardingContent.domainPrimers) {
 			// Insert note first
 			const { data: createdNote, error: noteError } = await supabaseAdmin
@@ -163,7 +128,6 @@ export async function handleGenerateOnboarding(
 		logger.info('Onboarding content generated successfully', {
 			userId: user.userId,
 			starterTasks: tasksToCreate.length,
-			explorationQuestions: onboardingContent.explorationQuestions.length,
 			domainPrimers: onboardingContent.domainPrimers.length
 		});
 
@@ -172,7 +136,6 @@ export async function handleGenerateOnboarding(
 				success: true,
 				created: {
 					tasks: tasksToCreate.length,
-					explorationQuestions: onboardingContent.explorationQuestions.length,
 					notes: onboardingContent.domainPrimers.length
 				}
 			}),
@@ -189,22 +152,20 @@ async function generateOnboardingContent(
 	client: any,
 	profileSummary: string,
 	domainScores: any,
-	responses: any[]
 ): Promise<OnboardingContent> {
 	const domainScoresText = Object.entries(domainScores)
 		.map(([domain, score]) => `- ${domain}: ${score}/10`)
 		.join('\n');
 
-	// Generate all 3 components in parallel for speed
-	logger.info('Generating onboarding content (tasks + questions + primers)...');
+	// Generate starter tasks and domain primers in parallel for speed
+	logger.info('Generating onboarding content (tasks + primers)...');
 
-	const [starterTasks, explorationQuestions, domainPrimers] = await Promise.all([
+	const [starterTasks, domainPrimers] = await Promise.all([
 		generateStarterTasks(client, profileSummary, domainScoresText, domainScores),
-		generateExplorationQuestions(client, profileSummary, domainScoresText, responses),
 		generateDomainPrimers(client, profileSummary, domainScoresText)
 	]);
 
-	return { starterTasks, explorationQuestions, domainPrimers };
+	return { starterTasks, domainPrimers };
 }
 
 async function generateStarterTasks(
@@ -266,69 +227,6 @@ CRITICAL: Use EXACT domain names. Create 20-30 tasks total. Weight toward lower-
 	if (!jsonMatch) {
 		logger.error('Failed to parse starter tasks', { responseText: responseText.substring(0, 500) });
 		throw new WorkerError('Failed to parse starter tasks', 500);
-	}
-
-	return JSON.parse(jsonMatch[0]);
-}
-
-async function generateExplorationQuestions(
-	client: any,
-	profileSummary: string,
-	domainScoresText: string,
-	responses: any[]
-): Promise<string[]> {
-	const responsesText = responses
-		.slice(0, 15)
-		.map((r: any) => {
-			const answer = r.response_value || r.response_text || 'No response';
-			return `Q: ${r.assessment_questions?.question_text}\nA: ${answer}`;
-		})
-		.join('\n\n');
-
-	const prompt = `You are creating 0-6 exploration questions for AI coaching. These are NOT tasks—they're conversation starters the AI will use contextually during coaching.
-
-PROFILE SUMMARY:
-${profileSummary.substring(0, 800)}
-
-DOMAIN SCORES:
-${domainScoresText}
-
-SAMPLE RESPONSES:
-${responsesText.substring(0, 1000)}
-
-Create 0-6 exploration questions that:
-1. **Address gaps or avoidance patterns** (what they didn't fully answer)
-2. **Create self-awareness** (help them see blind spots)
-3. **Connect to their struggles** (use profile insights)
-4. **Are open-ended** (no yes/no questions)
-5. **Feel conversational** (not clinical or formal)
-
-Examples of GOOD exploration questions:
-- "What kind of movement actually feels good to you?"
-- "What are you avoiding thinking about right now?"
-- "When was the last time you felt genuinely connected to someone?"
-- "What would having energy look like in your day-to-day?"
-
-Examples of BAD exploration questions:
-- "Do you exercise regularly?" (yes/no, too generic)
-- "How can we improve your health?" (too vague, corporate-y)
-
-Return ONLY JSON array of strings (0-6 questions):
-["Question 1", "Question 2", ...]
-
-If no gaps or patterns warrant exploration questions, return empty array: []`;
-
-	const message = await client.messages.create({
-		model: 'claude-3-5-haiku-20241022',
-		max_tokens: 1000,
-		messages: [{ role: 'user', content: prompt }]
-	});
-
-	const responseText = message.content[0].text.trim();
-	const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-	if (!jsonMatch) {
-		logger.warn('Failed to parse exploration questions, returning empty array');
-		return [];
 	}
 
 	return JSON.parse(jsonMatch[0]);

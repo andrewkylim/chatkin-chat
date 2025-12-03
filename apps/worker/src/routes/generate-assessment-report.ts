@@ -92,12 +92,6 @@ export async function handleGenerateAssessmentReport(
 			domainScores
 		);
 
-		// Determine communication tone
-		const avgScore =
-			Object.values(domainScores).reduce((sum, score) => sum + score, 0) /
-			Object.keys(domainScores).length;
-		const tone = avgScore < 5 ? 'supportive' : avgScore < 7 ? 'encouraging' : 'motivational';
-
 		// Identify focus areas (lowest 3 scoring domains)
 		const focusAreas = Object.entries(domainScores)
 			.sort(([, a], [, b]) => a - b)
@@ -125,7 +119,6 @@ export async function handleGenerateAssessmentReport(
 			{
 				user_id: user.userId,
 				profile_summary: profileSummary,
-				communication_tone: tone,
 				focus_areas: focusAreas,
 				last_profile_update: new Date().toISOString(),
 				updated_at: new Date().toISOString()
@@ -241,7 +234,6 @@ export async function handleGenerateAssessmentReport(
 			JSON.stringify({
 				success: true,
 				domain_scores: domainScores,
-				communication_tone: tone,
 				focus_areas: focusAreas,
 				processing_in_background: !!ctx
 			}),

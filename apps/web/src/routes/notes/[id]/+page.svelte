@@ -30,72 +30,71 @@
 	let titleElement: HTMLElement;
 	let contentElement: HTMLElement;
 
-	// Determine back navigation based on referrer or default to /notes
-	let backUrl = '/notes';
-	let backText = 'Back to Notes';
-
+	// Markdown formatting function - light styling
 	function formatMarkdown(text: string): string {
 		if (!text) return '';
 
-		// Split into lines for processing
 		const lines = text.split('\n');
-		const processed: string[] = [];
+		const result: string[] = [];
 		let inList = false;
 
 		for (let i = 0; i < lines.length; i++) {
-			let line = lines[i];
+			const line = lines[i];
+			const trimmed = line.trim();
 
-			// Skip empty lines
-			if (line.trim() === '') {
+			// Empty line
+			if (trimmed === '') {
 				if (inList) {
-					processed.push('</ul>');
+					result.push('</ul>');
 					inList = false;
 				}
+				result.push('<div class="spacer"></div>');
 				continue;
 			}
 
 			// Headers
-			if (line.match(/^##### /)) {
-				if (inList) { processed.push('</ul>'); inList = false; }
-				processed.push(`<h5>${line.replace(/^##### /, '')}</h5>`);
-			} else if (line.match(/^#### /)) {
-				if (inList) { processed.push('</ul>'); inList = false; }
-				processed.push(`<h4>${line.replace(/^#### /, '')}</h4>`);
-			} else if (line.match(/^### /)) {
-				if (inList) { processed.push('</ul>'); inList = false; }
-				processed.push(`<h3>${line.replace(/^### /, '')}</h3>`);
-			} else if (line.match(/^## /)) {
-				if (inList) { processed.push('</ul>'); inList = false; }
-				processed.push(`<h2>${line.replace(/^## /, '')}</h2>`);
+			if (trimmed.match(/^##### /)) {
+				if (inList) { result.push('</ul>'); inList = false; }
+				result.push(`<h5>${trimmed.replace(/^##### /, '')}</h5>`);
+			} else if (trimmed.match(/^#### /)) {
+				if (inList) { result.push('</ul>'); inList = false; }
+				result.push(`<h4>${trimmed.replace(/^#### /, '')}</h4>`);
+			} else if (trimmed.match(/^### /)) {
+				if (inList) { result.push('</ul>'); inList = false; }
+				result.push(`<h3>${trimmed.replace(/^### /, '')}</h3>`);
+			} else if (trimmed.match(/^## /)) {
+				if (inList) { result.push('</ul>'); inList = false; }
+				result.push(`<h2>${trimmed.replace(/^## /, '')}</h2>`);
 			}
-			// Numbered lists
-			else if (line.match(/^\d+\.\s/)) {
-				if (!inList) { processed.push('<ul>'); inList = true; }
-				const content = line.replace(/^\d+\.\s+/, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-				processed.push(`<li>${content}</li>`);
+			// List items
+			else if (trimmed.match(/^[-*] /)) {
+				if (!inList) { result.push('<ul>'); inList = true; }
+				const content = trimmed.replace(/^[-*] /, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+				result.push(`<li>${content}</li>`);
+			} else if (trimmed.match(/^\d+\. /)) {
+				if (!inList) { result.push('<ul>'); inList = true; }
+				const content = trimmed.replace(/^\d+\. /, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+				result.push(`<li>${content}</li>`);
 			}
-			// Bullet lists
-			else if (line.match(/^[-*•]\s/)) {
-				if (!inList) { processed.push('<ul>'); inList = true; }
-				const content = line.replace(/^[-*•]\s+/, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-				processed.push(`<li>${content}</li>`);
-			}
-			// Regular text
+			// Regular text with bold
 			else {
-				if (inList) { processed.push('</ul>'); inList = false; }
-				// Convert **bold** text
-				line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-				processed.push(`<p>${line}</p>`);
+				if (inList) { result.push('</ul>'); inList = false; }
+				const content = trimmed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+				result.push(`<p>${content}</p>`);
 			}
 		}
 
 		// Close any open list
 		if (inList) {
-			processed.push('</ul>');
+			result.push('</ul>');
 		}
 
-		return processed.join('');
+		return result.join('\n');
 	}
+
+	// Determine back navigation based on referrer or default to /notes
+	let backUrl = '/notes';
+	let backText = 'Back to Notes';
 
 	onMount(async () => {
 		await loadNote();
@@ -221,6 +220,17 @@
 
 	function handleContentClick() {
 		isEditingInline = true;
+		// Focus after a brief delay to ensure contenteditable is active
+		setTimeout(() => {
+			if (contentElement) {
+				contentElement.focus();
+			}
+		}, 10);
+	}
+
+	function handleContentBlur() {
+		isEditingInline = false;
+		// Save happens via autosave on input
 	}
 </script>
 
@@ -272,7 +282,7 @@
 								bind:this={contentElement}
 								contenteditable="true"
 								on:input={handleContentInput}
-								on:blur={() => isEditingInline = false}
+								on:blur={handleContentBlur}
 								class="text-block editable-content editing"
 							>
 								{block.content.text || ''}
@@ -525,52 +535,46 @@
 		opacity: 0.5;
 	}
 
-	/* Formatted markdown content styling */
+	/* Formatted content - light markdown styling */
 	.formatted-content {
 		line-height: 1.6;
 		cursor: pointer;
 		padding: 0.5rem;
 		border-radius: var(--radius-md);
 		transition: background 0.2s ease;
+		min-height: 100px;
 	}
 
 	.formatted-content:hover {
 		background: var(--bg-tertiary);
 	}
 
-	.formatted-content :global(p) {
-		margin: 0.4rem 0;
-	}
-
+	/* Light header styling - just bold, similar size */
 	.formatted-content :global(h2) {
-		font-size: 1.5rem;
 		font-weight: 700;
-		margin-top: 1.5rem;
-		margin-bottom: 0.6rem;
+		font-size: 1.05em;
+		margin: 0.5rem 0;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h3) {
-		font-size: 1.25rem;
 		font-weight: 700;
-		margin-top: 1rem;
-		margin-bottom: 0.5rem;
+		font-size: 1.05em;
+		margin: 0.5rem 0;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h4) {
-		font-size: 1.125rem;
-		font-weight: 600;
-		margin-top: 0.5rem;
-		margin-bottom: 0.3rem;
+		font-weight: 700;
+		font-size: 1em;
+		margin: 0.4rem 0;
 		color: var(--text-primary);
 	}
 
 	.formatted-content :global(h5) {
-		font-size: 1rem;
-		font-weight: 600;
-		margin-top: 0.5rem;
-		margin-bottom: 0.3rem;
+		font-weight: 700;
+		font-size: 1em;
+		margin: 0.4rem 0;
 		color: var(--text-primary);
 	}
 
@@ -579,16 +583,33 @@
 		color: var(--text-primary);
 	}
 
+	.formatted-content :global(p) {
+		margin: 0.25rem 0;
+		line-height: 1.6;
+	}
+
 	.formatted-content :global(ul) {
-		margin-left: 1.5rem;
-		margin-top: 0.25rem;
-		margin-bottom: 0.5rem;
+		margin: 0.25rem 0 0.75rem 1.5rem;
+		padding: 0;
 		list-style-type: disc;
 	}
 
 	.formatted-content :global(li) {
-		margin-bottom: 0.25rem;
+		margin: 0.2rem 0;
 		line-height: 1.5;
+	}
+
+	.formatted-content :global(.spacer) {
+		height: 0.5rem;
+	}
+
+	/* Add space between list and following elements */
+	.formatted-content :global(ul + p),
+	.formatted-content :global(ul + h2),
+	.formatted-content :global(ul + h3),
+	.formatted-content :global(ul + h4),
+	.formatted-content :global(ul + h5) {
+		margin-top: 0.75rem;
 	}
 
 	/* Markdown content styling */
@@ -860,10 +881,17 @@
 
 		.note-content {
 			padding: 1.5rem;
+			padding-bottom: 1rem;
 		}
 
 		.note-content h1 {
 			font-size: 1.5rem;
+			padding-left: 0;
+			padding-right: 0;
+		}
+
+		.formatted-content {
+			padding: 0;
 		}
 	}
 </style>

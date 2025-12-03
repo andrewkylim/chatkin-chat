@@ -26,7 +26,6 @@ export interface CrossDomainConversation {
 
 export interface UserProfileSummary {
 	summary: string;
-	communicationTone: string;
 	focusAreas: string[];
 	hasCompletedQuestionnaire: boolean;
 	domainScore?: number;
@@ -53,9 +52,11 @@ interface TaskWithProjectResponse {
 interface NoteWithProjectResponse {
 	id: string;
 	title: string | null;
+	content: string | null;
 	updated_at: string;
 	domain: WellnessDomain;
 	project_id: string | null;
+	is_system_generated: boolean;
 	projects: { name: string } | null;
 }
 
@@ -82,9 +83,11 @@ export interface TaskSummary {
 export interface NoteSummary {
 	id: string;
 	title: string | null;
+	content: string | null;
 	domain: WellnessDomain;
 	project_name: string | null;
 	updated_at: string;
+	is_system_generated: boolean;
 }
 
 /**
@@ -146,7 +149,7 @@ export async function loadWorkspaceContext(options?: {
 async function loadUserProfile(domain?: WellnessDomain): Promise<UserProfileSummary | undefined> {
 	const { data, error } = await supabase
 		.from('user_profiles')
-		.select('profile_summary, communication_tone, focus_areas, has_completed_questionnaire')
+		.select('profile_summary, focus_areas, has_completed_questionnaire')
 		.maybeSingle();
 
 	if (error || !data || !data.has_completed_questionnaire) {
@@ -155,7 +158,6 @@ async function loadUserProfile(domain?: WellnessDomain): Promise<UserProfileSumm
 
 	const profile: UserProfileSummary = {
 		summary: data.profile_summary || '',
-		communicationTone: data.communication_tone || 'encouraging',
 		focusAreas: data.focus_areas || [],
 		hasCompletedQuestionnaire: data.has_completed_questionnaire
 	};
@@ -279,25 +281,33 @@ async function loadTasksSummary(domain?: WellnessDomain): Promise<TaskSummary[]>
 /**
  * Load notes summary with project names and domains
  * Optionally filter to a specific domain
+ * Loads: system-generated notes + recently updated user notes (last 7 days)
  */
 async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]> {
+	const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
 	let query = supabase
 		.from('notes')
 		.select(`
 			id,
 			title,
+			content,
 			updated_at,
 			domain,
 			project_id,
+			is_system_generated,
 			projects (name)
 		`)
 		.order('updated_at', { ascending: false })
-		.limit(50); // Limit to avoid overwhelming the AI
+		.limit(15); // Reduced limit to prevent context overflow with content
 
 	// Filter to specific domain if provided
 	if (domain) {
 		query = query.eq('domain', domain);
 	}
+
+	// Filter to system notes OR recently updated user notes
+	query = query.or(`is_system_generated.eq.true,updated_at.gte.${sevenDaysAgo}`);
 
 	const { data: notes, error } = await query;
 
@@ -307,9 +317,11 @@ async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]>
 	return (notes as unknown as NoteWithProjectResponse[]).map(note => ({
 		id: note.id,
 		title: note.title,
+		content: note.content,
 		domain: note.domain,
 		project_name: note.projects?.name || null,
-		updated_at: note.updated_at
+		updated_at: note.updated_at,
+		is_system_generated: note.is_system_generated || false
 	}));
 }
 
@@ -323,18 +335,26 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	if (context.userProfile && context.userProfile.summary) {
 		formatted += '### User Profile & Psychological Analysis\n\n';
 
-		// If domain-specific, highlight that domain score
+		// If domain-specific, highlight that domain score with interpretation
 		if (context.userProfile.domainName && context.userProfile.domainScore !== undefined) {
 			formatted += `**${context.userProfile.domainName} Domain Score**: ${context.userProfile.domainScore.toFixed(1)}/10\n\n`;
+			formatted += `This user scored ${context.userProfile.domainScore.toFixed(1)}/10 in ${context.userProfile.domainName}, indicating `;
+
+			if (context.userProfile.domainScore < 5) {
+				formatted += `significant challenges in this area that need attention.\n\n`;
+			} else if (context.userProfile.domainScore < 7) {
+				formatted += `room for improvement and growth opportunities.\n\n`;
+			} else {
+				formatted += `relative strength, though continued support is valuable.\n\n`;
+			}
 		}
 
 		formatted += context.userProfile.summary;
 		formatted += '\n\n';
-		formatted += `**Communication Preference**: ${context.userProfile.communicationTone}\n`;
 		formatted += `**Priority Focus Areas**: ${context.userProfile.focusAreas.join(', ')}\n\n`;
 
 		if (context.userProfile.domainName) {
-			formatted += `**Your Role**: You are the ${context.userProfile.domainName} domain expert. Focus on this domain's specific challenges, goals, and opportunities based on the profile above.\n\n`;
+			formatted += `**Your Role**: You are the ${context.userProfile.domainName} domain expert. Focus on this domain's specific challenges, goals, and opportunities based on the profile above. Pay attention to the domain score—it shows where the user needs support.\n\n`;
 		} else {
 			formatted += '**Using This Profile**: This analysis informs all your interactions. Reference specific insights when relevant, tailor suggestions to this user\'s unique situation, and maintain awareness of their challenges and goals.\n\n';
 		}
@@ -402,15 +422,33 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	// Notes section
 	if (context.notes.length > 0) {
 		formatted += '### Recent Notes\n';
+		formatted += '*These notes contain frameworks, strategies, and resources. Reference them in conversations.*\n\n';
+
 		for (const note of context.notes.slice(0, 15)) {
-			formatted += `- ${note.title || 'Untitled'} [id: ${note.id}]`;
-			formatted += ` [Domain: ${note.domain}]`;
+			formatted += `**${note.title || 'Untitled'}** [id: ${note.id}] [Domain: ${note.domain}]`;
 			if (note.project_name) {
 				formatted += ` [Project: ${note.project_name}]`;
 			}
+			if (note.is_system_generated) {
+				formatted += ' [System-Generated]';
+			}
 			formatted += '\n';
+
+			// Include note content for AI to reference
+			if (note.content) {
+				// For system-generated notes: include full content (frameworks/strategies)
+				// For user notes: include first 300 chars to keep context manageable
+				const content = note.is_system_generated
+					? note.content
+					: note.content.length > 300
+						? note.content.substring(0, 297) + '...'
+						: note.content;
+
+				formatted += content + '\n\n';
+			} else {
+				formatted += '*(No content)*\n\n';
+			}
 		}
-		formatted += '\n';
 	} else {
 		formatted += '### Recent Notes\n(No notes yet)\n\n';
 	}
