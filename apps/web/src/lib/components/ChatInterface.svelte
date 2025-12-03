@@ -13,8 +13,7 @@
 		AIQuestion,
 		Operation,
 		TaskData,
-		NoteData,
-		ProjectData
+		NoteData
 	} from '$lib/types/chat';
 	import { logger } from '$lib/utils/logger';
 	import { handleError } from '$lib/utils/error-handler';

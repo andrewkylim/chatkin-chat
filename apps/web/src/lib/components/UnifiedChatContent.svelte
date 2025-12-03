@@ -63,7 +63,6 @@
 	let lastActivityTime = Date.now();
 	let inactivityTimer: number | undefined;
 	let autoListenTimeout: number | undefined;
-	let waitingForAutoListen = false;
 	let voiceInputRef: any;
 	let conversation: Conversation | null = null;
 	let workspaceContextString = '';
@@ -208,7 +207,8 @@
 				// If no TTS (actions/questions), still trigger auto-listen
 				triggerAutoListen();
 			}
-		} catch (error) {
+		} catch (err) {
+			logger.error('Error sending message', err);
 			messages = messages.map((msg, idx) =>
 				idx === aiMessageIndex
 					? {
@@ -486,19 +486,16 @@
 			return;
 		}
 
-		// Always clear existing timeout and reset flag to prevent "already waiting" issues
+		// Always clear existing timeout to prevent "already waiting" issues
 		if (autoListenTimeout) {
 			clearTimeout(autoListenTimeout);
 			autoListenTimeout = undefined;
 		}
-		waitingForAutoListen = false;
 
 		logger.debug('Triggering auto-listen in 500ms');
-		waitingForAutoListen = true;
 		autoListenTimeout = window.setTimeout(() => {
 			if (!talkModeActive) {
 				logger.debug('Auto-listen cancelled - talk mode inactive');
-				waitingForAutoListen = false;
 				return;
 			}
 
@@ -512,7 +509,6 @@
 			} else {
 				logger.debug('Auto-listen cancelled - no voice ref available');
 			}
-			waitingForAutoListen = false;
 		}, 500);
 	}
 
@@ -521,7 +517,6 @@
 			clearTimeout(autoListenTimeout);
 			autoListenTimeout = undefined;
 		}
-		waitingForAutoListen = false;
 	}
 
 	function resetActivityTimer() {
@@ -712,7 +707,7 @@
 			onToggleMode={toggleMode}
 			onResetActivityTimer={resetActivityTimer}
 			onStartAutoListen={() => {
-				waitingForAutoListen = true;
+				// Placeholder for future auto-listen tracking
 			}}
 			onListeningChange={(listening) => {
 				isListening = listening;

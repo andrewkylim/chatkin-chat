@@ -41,18 +41,18 @@
 </script>
 
 <div class="inline-questions">
-	{#each questions as question, qIndex}
-		{@const isProjectQuestion = question.question.toLowerCase().includes('project') ||
-		                            question.question.toLowerCase().includes('domain')}
+	{#each questions as q, qIndex}
+		{@const isProjectQuestion = q.question.toLowerCase().includes('project') ||
+		                            q.question.toLowerCase().includes('domain')}
 		<div class="question-block">
-			<label class="question-label" for={`q${messageIndex}_${qIndex}`}>{question.question}</label>
+			<label class="question-label" for={`q${messageIndex}_${qIndex}`}>{q.question}</label>
 			<select
 				id={`q${messageIndex}_${qIndex}`}
 				class="question-select"
-				onchange={(e) => handleSelectChange(qIndex, question.question, e.currentTarget.value)}
+				onchange={(e) => handleSelectChange(qIndex, q.question, e.currentTarget.value)}
 			>
 				<option value="">Select an option...</option>
-				{#each (question.options || []).filter((opt) => opt.toLowerCase() !== 'other') as option}
+				{#each (q.options || []).filter((opt) => opt.toLowerCase() !== 'other') as option}
 					<option value={option}>{option}</option>
 				{/each}
 				{#if !isProjectQuestion}
@@ -65,7 +65,7 @@
 					type="text"
 					class="other-input"
 					placeholder="Please specify..."
-					oninput={(e) => handleOtherInput(question.question, e.currentTarget.value)}
+					oninput={(e) => handleOtherInput(q.question, e.currentTarget.value)}
 				/>
 			{/if}
 		</div>

@@ -5,7 +5,6 @@
 	import TaskEditModal from '$lib/components/TaskEditModal.svelte';
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { getProject, getProjects } from '$lib/db/projects';
 	import { getTasks, updateTask, deleteTask, createTask } from '$lib/db/tasks';
