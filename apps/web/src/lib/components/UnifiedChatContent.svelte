@@ -625,8 +625,11 @@
 			};
 		});
 
-		// Load workspace context
-		const workspaceContext = await loadWorkspaceContext();
+		// Load workspace context (filtered by scope and domain if in project scope)
+		const workspaceContext = await loadWorkspaceContext({
+			scope,
+			domain: scope === 'project' && projectId ? (projectId as any) : undefined
+		});
 		workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
 
 		// Ready for display

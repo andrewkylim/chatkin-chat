@@ -76,22 +76,29 @@ export interface NoteSummary {
 /**
  * Load full workspace context for AI
  * Includes all projects, tasks, and notes summaries
+ * Optionally filter by scope and domain
  */
-export async function loadWorkspaceContext(): Promise<WorkspaceContext> {
+export async function loadWorkspaceContext(options?: {
+	scope?: 'global' | 'tasks' | 'notes' | 'project';
+	domain?: WellnessDomain;
+}): Promise<WorkspaceContext> {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
 
-	// Load all projects with stats
-	const projects = await loadProjectsSummary();
+	const scope = options?.scope || 'global';
+	const domain = options?.domain;
 
-	// Load all tasks with project names
-	const tasks = await loadTasksSummary();
+	// Load all projects with stats (or filter to specific domain if in project scope)
+	const projects = await loadProjectsSummary(domain);
 
-	// Load all notes with project names
-	const notes = await loadNotesSummary();
+	// Load tasks (filtered by domain if in project scope)
+	const tasks = await loadTasksSummary(domain);
 
-	// Load user profile
-	const userProfile = await loadUserProfile();
+	// Load notes (filtered by domain if in project scope)
+	const notes = await loadNotesSummary(domain);
+
+	// Load user profile (only for global scope, not for domain-specific chats)
+	const userProfile = scope === 'global' ? await loadUserProfile() : undefined;
 
 	return { projects, tasks, notes, userProfile };
 }
@@ -119,12 +126,20 @@ async function loadUserProfile(): Promise<UserProfileSummary | undefined> {
 
 /**
  * Load projects summary with task/note counts
+ * Optionally filter to a specific domain
  */
-async function loadProjectsSummary(): Promise<ProjectSummary[]> {
-	const { data: projects, error: projectsError } = await supabase
+async function loadProjectsSummary(domain?: WellnessDomain): Promise<ProjectSummary[]> {
+	let query = supabase
 		.from('projects')
 		.select('id, name, description')
-		.order('updated_at', { ascending: false });
+		.order('updated_at', { ascending: false});
+
+	// Filter to specific domain if provided (domain is stored as project name)
+	if (domain) {
+		query = query.eq('name', domain);
+	}
+
+	const { data: projects, error: projectsError } = await query;
 
 	if (projectsError) throw projectsError;
 	if (!projects) return [];
@@ -170,9 +185,10 @@ async function loadProjectsSummary(): Promise<ProjectSummary[]> {
 
 /**
  * Load tasks summary with project names and domains
+ * Optionally filter to a specific domain
  */
-async function loadTasksSummary(): Promise<TaskSummary[]> {
-	const { data: tasks, error } = await supabase
+async function loadTasksSummary(domain?: WellnessDomain): Promise<TaskSummary[]> {
+	let query = supabase
 		.from('tasks')
 		.select(`
 			id,
@@ -186,6 +202,13 @@ async function loadTasksSummary(): Promise<TaskSummary[]> {
 		`)
 		.order('created_at', { ascending: false })
 		.limit(100); // Limit to avoid overwhelming the AI
+
+	// Filter to specific domain if provided
+	if (domain) {
+		query = query.eq('domain', domain);
+	}
+
+	const { data: tasks, error } = await query;
 
 	if (error) throw error;
 	if (!tasks) return [];
@@ -203,9 +226,10 @@ async function loadTasksSummary(): Promise<TaskSummary[]> {
 
 /**
  * Load notes summary with project names and domains
+ * Optionally filter to a specific domain
  */
-async function loadNotesSummary(): Promise<NoteSummary[]> {
-	const { data: notes, error } = await supabase
+async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]> {
+	let query = supabase
 		.from('notes')
 		.select(`
 			id,
@@ -217,6 +241,13 @@ async function loadNotesSummary(): Promise<NoteSummary[]> {
 		`)
 		.order('updated_at', { ascending: false })
 		.limit(50); // Limit to avoid overwhelming the AI
+
+	// Filter to specific domain if provided
+	if (domain) {
+		query = query.eq('domain', domain);
+	}
+
+	const { data: notes, error } = await query;
 
 	if (error) throw error;
 	if (!notes) return [];
