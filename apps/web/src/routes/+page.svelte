@@ -38,7 +38,7 @@
 				Sort your life out.
 			</h1>
 			<p class="hero-subtitle">
-				Get a comprehensive assessment and 3-month plan covering health, relationships, career, and personal growth
+				Get a comprehensive assessment and 1-month plan covering health, relationships, career, and personal growth
 			</p>
 		</div>
 
@@ -63,7 +63,7 @@
 						<img src="/projects.svg" alt="Plan" />
 					</div>
 					<div class="app-content">
-						<h3 class="app-name">2. Get Your 3-Month Plan</h3>
+						<h3 class="app-name">2. Get Your 1-Month Plan</h3>
 						<p class="app-description">
 							Receive a comprehensive plan with projects, tasks, and notes organized by life domain
 						</p>
