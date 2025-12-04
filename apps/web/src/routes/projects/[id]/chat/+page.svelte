@@ -5,11 +5,10 @@
 	import UnifiedChatPage from '$lib/components/UnifiedChatPage.svelte';
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
-	import { getProjects } from '$lib/db/projects';
 	import { getTasks, updateTask, deleteTask, createTask } from '$lib/db/tasks';
 	import { getNotes, createNote } from '$lib/db/notes';
 	import { getFiles, createFile } from '$lib/db/files';
-	import type { Project, Task, Note, File } from '@chatkin/types';
+	import type { Task, Note, File } from '@chatkin/types';
 	import { PUBLIC_WORKER_URL } from '$env/static/public';
 	import { useProjectTasks } from '$lib/logic/useProjectTasks';
 	import { useProjectNotes } from '$lib/logic/useProjectNotes';
@@ -66,7 +65,6 @@
 	let loading = true;
 	let showMenu = false;
 	let showDeleteConfirm = false;
-	let projects: Project[] = [];
 	let showEditTaskModal = false;
 	let editingTask: Task | null = null;
 	let showCompletedTasks = false;
@@ -149,11 +147,10 @@
 		if (!domain) return;
 		loading = true;
 		try {
-			[tasks, notes, files, projects] = await Promise.all([
+			[tasks, notes, files] = await Promise.all([
 				getTasks(domain),
 				getNotes(domain),
-				getFiles(),
-				getProjects()
+				getFiles()
 			]);
 		} catch (error) {
 			handleError(error, { operation: 'Load domain data', component: 'DomainChatPage' });
@@ -163,7 +160,7 @@
 	}
 
 	// Domain management functions (disabled - domains are built-in)
-	async function handleDeleteProject() {
+	async function _handleDeleteProject() {
 		alert('Domains cannot be deleted');
 	}
 
@@ -171,7 +168,7 @@
 		alert('Domain settings are not editable');
 	}
 
-	async function handleProjectUpdated() {
+	async function _handleProjectUpdated() {
 		await loadData();
 	}
 

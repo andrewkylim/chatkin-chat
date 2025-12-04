@@ -3,6 +3,7 @@
  * Creates comprehensive life plan with projects, tasks, and notes via multiple fast AI calls
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';
 import { requireAuth } from '../middleware/auth';

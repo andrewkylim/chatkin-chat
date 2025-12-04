@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags */
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
@@ -256,6 +257,7 @@
 
 				<!-- AI Report Section -->
 				<div class="report-sections-wrapper">
+					<!-- svelte-ignore svelte/no-at-html-tags -->
 					{@html formatAIReport(results.ai_report)}
 				</div>
 

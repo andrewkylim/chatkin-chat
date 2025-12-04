@@ -2,6 +2,7 @@
  * Tests for image-processor service
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   fetchImageAsBase64,
@@ -9,8 +10,7 @@ import {
   arrayBufferToBase64,
   fileToBase64,
   validateImageMediaType,
-  fetchImagesFromUrls,
-  type ImageMediaType
+  fetchImagesFromUrls
 } from '../../src/services/image-processor';
 import type { R2Bucket } from '@cloudflare/workers-types';
 

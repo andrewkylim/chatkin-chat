@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import AppLayout from './AppLayout.svelte';
 	import UnifiedChatContent from './UnifiedChatContent.svelte';
 

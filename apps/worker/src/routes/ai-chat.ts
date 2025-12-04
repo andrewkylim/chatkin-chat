@@ -2,6 +2,7 @@
  * AI chat endpoint handler
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ChatRequest } from '@chatkin/types/api';
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';

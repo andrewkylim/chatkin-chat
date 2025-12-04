@@ -62,12 +62,14 @@
 		uploadedFiles: Array<{ name: string; url: string; type: string; size: number; temporary?: boolean; addedToLibrary?: boolean; saving?: boolean }>;
 		isStreaming: boolean;
 		messagesReady: boolean;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		session: any;
 		onSubmit: () => void;
 		onQuestionSubmit?: (messageIndex: number, answers: Record<string, string>) => void;
 		onQuestionCancel?: (messageIndex: number) => void;
 		onOperationConfirm?: (messageIndex: number) => void;
 		onOperationCancel?: (messageIndex: number) => void;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		onSaveFileToLibrary?: (file: any, index: number) => Promise<void>;
 		updateMessageMetadata?: (messageId: string, metadata: Record<string, unknown>) => Promise<void>;
 		title?: string;
@@ -82,6 +84,7 @@
 	} = $props();
 
 	let messagesContainer: HTMLDivElement;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let voiceInputRef: any;
 	let uploading = $state(false);
 	let uploadProgress = $state(0);

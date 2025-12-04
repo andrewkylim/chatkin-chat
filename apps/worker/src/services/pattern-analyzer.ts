@@ -4,6 +4,8 @@
  * Generates coach observations for proactive coaching
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger';
 

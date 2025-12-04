@@ -3,6 +3,7 @@
  * Focus on parallel tool execution and error handling
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createAIOrchestrator, AIOrchestrator, type OrchestratorConfig, type OrchestratorContext } from '../../src/services/ai-orchestrator';
 import type { Anthropic } from '@anthropic-ai/sdk';

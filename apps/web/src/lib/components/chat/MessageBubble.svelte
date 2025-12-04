@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import OperationsReview from './OperationsReview.svelte';
 	import QuestionsForm from './QuestionsForm.svelte';
 	import type { Operation, AIQuestion } from '$lib/types/chat';

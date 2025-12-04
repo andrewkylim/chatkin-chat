@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabase';
@@ -23,7 +24,7 @@
 	let previousDomain = $state<string | null>(null);
 	let pendingSaves: Promise<any>[] = [];
 	let showIntro = $state(true); // Show intro by default
-	let canExit = $state(false);  // Can user exit mid-assessment?
+	let _canExit = $state(false);  // Can user exit mid-assessment?
 	let existingResponseCount = $state(0); // Track progress for resume notification
 	let showRetakeWarning = $state(false); // Show retake warning modal
 	let deletingContent = $state(false); // Deleting content state
@@ -77,7 +78,7 @@
 
 		// Show retake warning if user has completed assessment before
 		if (hasCompletedBefore) {
-			canExit = true;
+			_canExit = true;
 			showRetakeWarning = true;
 			return; // Don't load questions yet, wait for user decision
 		}
@@ -90,7 +91,7 @@
 		existingResponseCount = responses.size;
 
 		// Allow exit if user has any existing responses (partial progress)
-		canExit = existingResponseCount > 0;
+		_canExit = existingResponseCount > 0;
 
 		// Jump to first unanswered question if returning with partial progress
 		if (existingResponseCount > 0) {
@@ -101,15 +102,6 @@
 			}
 			showIntro = false;
 		}
-
-		console.log('[Questionnaire] Loaded responses:', {
-			existingResponseCount,
-			canExit,
-			showIntro,
-			loading,
-			submitting,
-			currentQuestionIndex
-		});
 	}
 
 	async function loadQuestions() {
@@ -157,8 +149,6 @@
 
 	async function saveResponse(questionId: string, value: string) {
 		if (!$auth.user) return;
-
-		console.log('[Questionnaire] Saving response:', { questionId, value });
 
 		try {
 			saving = true;
@@ -215,8 +205,6 @@
 					.then(({ error }) => {
 						if (error) {
 							console.error('[Questionnaire] Error saving response:', error);
-						} else {
-							console.log('[Questionnaire] Response saved:', { questionId: currentQuestion.id, value: responseValue });
 						}
 					}) as unknown as Promise<any>;
 

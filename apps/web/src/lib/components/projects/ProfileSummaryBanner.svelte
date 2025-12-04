@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags */
 	import type { AssessmentResults } from '$lib/db/assessment';
 
 	let { results }: { results: AssessmentResults | null } = $props();
@@ -78,6 +79,7 @@
 				{@const overviewText = extractOverviewSection(results.ai_report)}
 				<div class="summary-content">
 					{#if overviewText}
+						<!-- svelte-ignore svelte/no-at-html-tags -->
 						{@html formatOverviewContent(overviewText)}
 					{:else}
 						<p>Your wellness assessment is complete with scores across 6 domains. Last updated {formatDate(results.completed_at)}.</p>

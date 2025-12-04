@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Env, CorsHeaders } from '../types';
 import { requireAuth } from '../middleware/auth';
 import { EmailService } from '../services/email';

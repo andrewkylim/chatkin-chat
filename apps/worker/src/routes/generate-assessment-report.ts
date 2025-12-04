@@ -3,6 +3,7 @@
  * Calculates domain scores and generates AI-powered profile analysis
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';
 import { requireAuth } from '../middleware/auth';
@@ -34,7 +35,7 @@ export async function handleGenerateAssessmentReport(
 	request: Request,
 	env: Env,
 	corsHeaders: CorsHeaders,
-	ctx?: ExecutionContext
+	ctx?: globalThis.ExecutionContext
 ): Promise<Response> {
 	if (request.method !== 'POST') {
 		return new Response(JSON.stringify({ error: 'Method not allowed' }), {

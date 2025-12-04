@@ -29,7 +29,7 @@ export { Env };
 
 // Main handler
 const handler = {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: globalThis.ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Get CORS headers

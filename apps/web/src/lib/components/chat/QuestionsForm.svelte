@@ -30,7 +30,7 @@
 			return;
 		}
 		// Check for empty "Other" responses
-		for (const [question, answer] of Object.entries(answers)) {
+		for (const [_question, answer] of Object.entries(answers)) {
 			if (!answer || answer.trim() === '') {
 				alert('Please provide an answer for all questions');
 				return;

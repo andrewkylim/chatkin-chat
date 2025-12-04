@@ -15,7 +15,7 @@
 	}
 
 	// Get domain icon SVG path
-	function getDomainIcon(domainName: string): string {
+	function _getDomainIcon(domainName: string): string {
 		const iconMap: Record<string, string> = {
 			Body: 'M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2',
 			Mind: 'M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4',

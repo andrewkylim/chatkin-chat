@@ -39,14 +39,14 @@
 		<div class="hero-container">
 			<div class="animation-container">
 				<div class="big-circle">
-					<video
-						class="circle-video"
-						src={videoUrl}
-						autoplay
-						loop
-						muted
-						playsinline
-					></video>
+				<video
+					class="circle-video"
+					src={videoUrl}
+					autoplay
+					loop
+					muted
+					playsinline
+				></video>
 				</div>
 			</div>
 			<h1 class="hero-title">

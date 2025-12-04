@@ -84,7 +84,7 @@
 
 			prefsStatus = 'Saved';
 			setTimeout(() => (prefsStatus = ''), 2000);
-		} catch (_error) {
+		} catch {
 			prefsStatus = 'Error saving preferences';
 		} finally {
 			savingPrefs = false;
@@ -117,7 +117,7 @@
 
 			prefsStatus = 'Saved';
 			setTimeout(() => (prefsStatus = ''), 2000);
-		} catch (_error) {
+		} catch {
 			prefsStatus = 'Error saving preferences';
 		} finally {
 			savingPrefs = false;
@@ -150,7 +150,7 @@
 
 			prefsStatus = 'Saved';
 			setTimeout(() => (prefsStatus = ''), 2000);
-		} catch (_error) {
+		} catch {
 			prefsStatus = 'Error saving preferences';
 		} finally {
 			savingPrefs = false;

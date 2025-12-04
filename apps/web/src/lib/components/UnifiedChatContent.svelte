@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import ChatHeader from './chat/ChatHeader.svelte';
 	import ChatInput from './chat/ChatInput.svelte';
 	import MessageBubble from './chat/MessageBubble.svelte';

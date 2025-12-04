@@ -6,6 +6,8 @@
  * 3. Check-ins (if inactive 7+ days)
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger';
 

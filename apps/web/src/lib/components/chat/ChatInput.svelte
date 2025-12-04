@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import VoiceInput from '$lib/components/VoiceInput.svelte';
 

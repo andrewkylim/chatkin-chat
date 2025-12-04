@@ -1,9 +1,8 @@
 <script lang="ts">
 	import AppLayout from '$lib/components/AppLayout.svelte';
-	import EditProjectModal from '$lib/components/EditProjectModal.svelte';
 	import MobileUserMenu from '$lib/components/MobileUserMenu.svelte';
 	import DomainProjectCard from '$lib/components/projects/DomainProjectCard.svelte';
-	import { getProjects, getProjectStats } from '$lib/db/projects';
+	import { getProjectStats } from '$lib/db/projects';
 	import { getAssessmentResults } from '$lib/db/assessment';
 	import type { AssessmentResults } from '$lib/db/assessment';
 	import { onMount } from 'svelte';
@@ -86,7 +85,7 @@
 		return groups;
 	}
 
-	function getDomainColor(domain: WellnessDomain | null): string {
+	function _getDomainColor(domain: WellnessDomain | null): string {
 		const colorMap: Record<WellnessDomain, string> = {
 			Body: 'var(--domain-body)',
 			Mind: 'var(--domain-mind)',
@@ -98,7 +97,7 @@
 		return domain ? colorMap[domain] : 'rgba(199, 124, 92, 0.2)';
 	}
 
-	function getDomainConfig(domain: WellnessDomain): { color: string; iconPath: string; desc: string } {
+	function _getDomainConfig(domain: WellnessDomain): { color: string; iconPath: string; desc: string } {
 		const icons: Record<string, string> = {
 			'dumbbell': 'M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2',
 			'brain': 'M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4',

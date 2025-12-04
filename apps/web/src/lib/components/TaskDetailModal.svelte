@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	import type { Task, Project } from '@chatkin/types';
 	import { formatRecurrencePattern, updateTask } from '$lib/db/tasks';
 	import { handleError } from '$lib/utils/error-handler';

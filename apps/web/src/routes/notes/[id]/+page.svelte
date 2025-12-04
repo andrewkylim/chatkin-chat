@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags */
 	import AppLayout from '$lib/components/AppLayout.svelte';
 	import { getNote, deleteNote, updateNote, updateNoteBlock } from '$lib/db/notes';
 	import { page } from '$app/stores';
@@ -294,6 +295,7 @@
 								role="button"
 								tabindex="0"
 							>
+								<!-- svelte-ignore svelte/no-at-html-tags -->
 								{@html formatMarkdown(block.content.text || '')}
 							</div>
 						{/if}

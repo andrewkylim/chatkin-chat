@@ -2,6 +2,7 @@
  * Tests for message-formatter service
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createMessageFormatter,
@@ -281,7 +282,7 @@ describe('MessageFormatter', () => {
         conversationHistory: history
       };
 
-      const result = await formatter.formatMessages(params);
+      const _result = await formatter.formatMessages(params);
 
       // AI greeting should be skipped, but let's test with non-initial AI message
       const history2: ChatMessage[] = [

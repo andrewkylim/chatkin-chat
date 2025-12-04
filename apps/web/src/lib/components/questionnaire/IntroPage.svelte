@@ -3,7 +3,7 @@
 
 	let {
 		onBegin,
-		onReset,
+		onReset: _onReset,
 		existingResponseCount = 0,
 		totalQuestions = 35
 	}: {

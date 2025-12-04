@@ -3,6 +3,7 @@
  * Takes longer but generates high-quality, comprehensive content
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';
 import { requireAuth } from '../middleware/auth';

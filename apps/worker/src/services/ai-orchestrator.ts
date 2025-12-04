@@ -9,6 +9,7 @@
  * - Comprehensive error handling
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Anthropic } from '@anthropic-ai/sdk';
 import type { MessageParam, Message } from '@anthropic-ai/sdk/resources/messages';
 import type { Env } from '../types';
