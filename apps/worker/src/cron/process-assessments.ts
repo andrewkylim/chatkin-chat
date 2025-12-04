@@ -70,7 +70,7 @@ export async function processUnprocessedAssessments(env: Env): Promise<void> {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'X-User-ID': userId
+					'X-Internal-User-ID': userId
 				}
 			});
 

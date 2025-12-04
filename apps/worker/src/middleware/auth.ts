@@ -65,11 +65,21 @@ export async function verifySupabaseToken(
 
 /**
  * Extract and verify authentication token from request
+ * Also supports X-Internal-User-ID header for internal cron/worker calls
  */
 export async function requireAuth(
   request: Request,
   env: Env
 ): Promise<AuthenticatedUser> {
+  // Check for internal user ID header (for cron jobs)
+  const internalUserId = request.headers.get('X-Internal-User-ID');
+  if (internalUserId) {
+    return {
+      userId: internalUserId,
+      email: undefined
+    };
+  }
+
   // Extract token from Authorization header
   const authHeader = request.headers.get('Authorization');
 
