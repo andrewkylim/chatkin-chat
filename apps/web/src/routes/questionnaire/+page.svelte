@@ -484,6 +484,15 @@
 
 			if (notesError) throw notesError;
 
+			// Delete conversations (chats)
+			deleteStatus = 'Deleting conversations...';
+			const { error: conversationsError } = await supabase
+				.from('conversations')
+				.delete()
+				.eq('user_id', user.id);
+
+			if (conversationsError) throw conversationsError;
+
 			// Delete assessment responses
 			deleteStatus = 'Deleting assessment responses...';
 			const { error: responsesError } = await supabase
@@ -550,6 +559,8 @@
 				<ul>
 					<li>All tasks</li>
 					<li>All notes</li>
+					<li>All conversations (chats)</li>
+					<li>All files</li>
 					<li>Your assessment results</li>
 				</ul>
 				<p>
