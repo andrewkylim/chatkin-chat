@@ -44,6 +44,16 @@ vi.mock('../../src/utils/supabase-admin', () => ({
   }))
 }));
 
+vi.mock('../../src/services/image-processor', () => ({
+  fetchImageFromUrl: vi.fn().mockResolvedValue({
+    source: {
+      type: 'base64',
+      media_type: 'image/jpeg',
+      data: 'fake-base64-data'
+    }
+  })
+}));
+
 describe('AI Chat Endpoint', () => {
   const corsHeaders: CorsHeaders = {
     'Access-Control-Allow-Origin': 'http://localhost:5173',
