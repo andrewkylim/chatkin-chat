@@ -32,7 +32,25 @@
 <div class="error-page">
 	<div class="error-container">
 		<div class="error-content">
-			<img src="/error.webp" alt="Error illustration" class="error-illustration" />
+			<svg class="error-illustration" viewBox="0 0 24 24" fill="none">
+				<!-- Outer circle -->
+				<circle
+					cx="12"
+					cy="12"
+					r="9"
+					stroke="#ef4444"
+					stroke-width="2"
+					fill="none"
+				/>
+				<!-- Inner filled circle -->
+				<circle
+					cx="12"
+					cy="12"
+					r="9"
+					fill="#ef4444"
+					opacity="0.6"
+				/>
+			</svg>
 
 			{#if isNotFound}
 				<h1>404 - Page Not Found</h1>

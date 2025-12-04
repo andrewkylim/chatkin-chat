@@ -336,20 +336,27 @@ Write an assessment report (800-1200 words) that speaks like a direct friend who
 
 **What to Include:**
 
-1. **What I'm Seeing** (3-4 sentences)
+1. **Summary** (3-4 sentences)
    - The big picture truth about where they are
    - Main pattern or theme across domains
    - What's working vs what's stuck
 
 2. **Domain Breakdown**
 
-   For each domain (Body, Mind, Purpose, Connection, Growth, Finance), format like this:
+   For each domain (Body, Mind, Purpose, Connection, Growth, Finance), format EXACTLY like this:
 
-   **DomainName (X.X/10)** [One paragraph covering: what they said, what that actually means, the real blocker, and one concrete thing to try]
+   **DomainName (X.X/10)** One paragraph covering: what they said, what that actually means, the real blocker, and one concrete thing to try.
 
-   [Blank line between each domain]
+   CRITICAL FORMATTING RULES:
+   - Each domain MUST start with **DomainName (X.X/10)** followed by a space and the paragraph content
+   - There MUST be a blank line between each domain entry
+   - Do NOT run domain paragraphs together
+   - Example format:
+     **Body (4.3/10)** Your paragraph here...
 
-   Make each domain a separate paragraph with proper spacing. Do NOT run domains together into one block of text.
+     **Mind (3.2/10)** Your paragraph here...
+
+     **Purpose (5.1/10)** Your paragraph here...
 
 3. **Patterns Worth Naming**
    - Contradictions between domains (e.g., "You say you want X but you're avoiding Y")
@@ -389,10 +396,15 @@ FORMATTING RULES:
 
 	// Ensure consistent spacing between domain breakdowns
 	// Add double line break before domain names with scores like **Body (4.3/10)**
+	// Handle case with single newline
 	report = report.replace(/([^\n])\n(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
 
-	// Also handle case where domains are run together without any line break
-	report = report.replace(/(\.)(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
+	// Handle case where domains are run together without any line break (after period or other sentence ending)
+	report = report.replace(/([.!?])(\s*)(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$4');
+
+	// Also ensure double line break after each domain paragraph ends (before next domain starts)
+	// This catches cases where there's content after a domain that doesn't end with proper spacing
+	report = report.replace(/([.!?])\s+(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
 
 	// Ensure consistent spacing before "Try this:" and bold action items
 	// Add line break before "Try this:" if it's not already there

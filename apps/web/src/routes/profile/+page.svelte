@@ -152,6 +152,11 @@
 		// Remove horizontal rules (---, ***, ___)
 		html = html.replace(/^[-*_]{3,}$/gm, '').trim();
 
+		// IMPORTANT: Ensure domains have proper line breaks BEFORE converting markdown
+		// Add double line break before domain headers if not already present
+		html = html.replace(/([^\n])\n?(\*\*(?:Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
+		html = html.replace(/([.!?])\s*(\*\*(?:Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
+
 		// Convert any heading markers (##, ###, ####) to styled h3 elements
 		html = html.replace(/^#{2,4}\s+(.+)$/gm, '<h3 class="section-marker">$1</h3>');
 

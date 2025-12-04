@@ -126,7 +126,11 @@
 	</section>
 
 	<footer class="footer">
-		<p>&copy; 2025 Chatkin • v{version}</p>
+		<p>&copy; 2025 Chatkin</p>
+		<p>
+			<a href="mailto:support@chatkin.ai" class="footer-email">support@chatkin.ai</a>
+			<span> • v{version}</span>
+		</p>
 	</footer>
 </div>
 
@@ -361,13 +365,29 @@
 		padding: 20px;
 		background: var(--bg-secondary);
 		border-top: 1px solid var(--border-color);
-		text-align: center;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		max-width: 1200px;
+		margin: 0 auto;
+		width: 100%;
 	}
 
 	.footer p {
 		color: var(--text-secondary);
 		font-size: 0.875rem;
 		margin: 0;
+	}
+
+	.footer-email {
+		color: var(--text-secondary);
+		text-decoration: none;
+		transition: color 0.2s ease;
+	}
+
+	.footer-email:hover {
+		color: var(--text-primary);
+		text-decoration: underline;
 	}
 
 	/* Responsive */
@@ -378,6 +398,12 @@
 
 		.btn-text-mobile {
 			display: inline;
+		}
+
+		.footer {
+			flex-direction: column;
+			gap: 8px;
+			text-align: center;
 		}
 	}
 
