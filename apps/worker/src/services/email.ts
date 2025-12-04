@@ -194,7 +194,7 @@ export class EmailService {
     `;
 	}
 
-	profileReadyEmail(tasksCreated: number, notesCreated: number, actionUrl: string): string {
+	profileReadyEmail(_tasksCreated: number, _notesCreated: number, actionUrl: string): string {
 		return `
       <!DOCTYPE html>
       <html>

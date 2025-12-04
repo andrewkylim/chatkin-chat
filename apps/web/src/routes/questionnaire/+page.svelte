@@ -612,7 +612,7 @@
 					<p class="analysis-note">
 						We'll send you an email when it's ready. You can safely close this page.
 					</p>
-					<button class="retry-button" on:click={() => goto('/profile')}>
+					<button class="retry-button" onclick={() => goto('/profile')}>
 						Go to Profile Anyway
 					</button>
 				{/if}
