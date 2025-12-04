@@ -202,58 +202,44 @@ export class EmailService {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: #f9fafb; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #C77C5C 0%, #A86645 100%); color: white; padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center; }
-            .logo { width: 56px; height: 56px; margin: 0 auto 20px; background: white; border-radius: 50%; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-            .header h1 { margin: 0 0 12px 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
-            .header p { margin: 0; font-size: 17px; opacity: 0.95; line-height: 1.5; }
-            .content { background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none; }
-            .domains-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
-            .domain-icon { width: 100%; aspect-ratio: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }
-            .domain-icon:hover { transform: translateY(-2px); }
-            .highlight-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 24px; margin: 32px 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            .button { display: inline-block; background: #C77C5C; color: white; padding: 18px 40px; text-decoration: none; border-radius: 10px; margin-top: 28px; font-weight: 600; font-size: 17px; transition: all 0.3s; box-shadow: 0 4px 14px rgba(199, 124, 92, 0.35); }
-            .button:hover { background: #A86645; box-shadow: 0 6px 20px rgba(199, 124, 92, 0.45); transform: translateY(-2px); }
-            .footer { text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1f2937; background: #ffffff; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 40px auto; padding: 0; }
+            .header { background: #ffffff; padding: 40px 40px 32px; text-align: center; }
+            .logo { width: 48px; height: 48px; margin: 0 auto 24px; }
+            .header h1 { margin: 0; font-size: 28px; font-weight: 600; color: #111827; letter-spacing: -0.5px; }
+            .content { background: #ffffff; padding: 0 40px 40px; }
+            .domains-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 32px 0; }
+            .domain-icon { width: 100%; aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+            .button { display: inline-block; background: #111827; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; margin-top: 32px; font-weight: 500; font-size: 15px; }
+            .footer { text-align: center; margin-top: 48px; padding-top: 32px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <div class="logo">
-                <img src="https://chatkin.ai/logo.webp" alt="Chatkin" style="width: 100%; height: 100%; object-fit: contain;" />
+                <img src="https://chatkin.ai/logo.webp" alt="Chatkin" style="width: 100%; height: 100%;" />
               </div>
-              <h1>✨ Your Lifeboard is Ready</h1>
-              <p>Your personalized assessment and lifeboard awaits</p>
+              <h1>Your assessment is ready</h1>
             </div>
             <div class="content">
-              <p style="font-size: 17px; margin: 0 0 24px 0; color: #374151; line-height: 1.7;">Great news! We've finished analyzing your assessment and your personalized lifeboard is ready to explore.</p>
+              <p style="font-size: 16px; margin: 0 0 32px 0; color: #4b5563;">Your personalized assessment and lifeboard are now available.</p>
 
               <div class="domains-grid">
-                <div class="domain-icon" style="background: #10B981;">💪</div>
-                <div class="domain-icon" style="background: #3B82F6;">🧠</div>
-                <div class="domain-icon" style="background: #8B5CF6;">🎯</div>
-                <div class="domain-icon" style="background: #F59E0B;">🤝</div>
-                <div class="domain-icon" style="background: #EAB308;">📈</div>
-                <div class="domain-icon" style="background: #EF4444;">💰</div>
+                <div class="domain-icon" style="background: #10B981;"></div>
+                <div class="domain-icon" style="background: #3B82F6;"></div>
+                <div class="domain-icon" style="background: #8B5CF6;"></div>
+                <div class="domain-icon" style="background: #F59E0B;"></div>
+                <div class="domain-icon" style="background: #EAB308;"></div>
+                <div class="domain-icon" style="background: #EF4444;"></div>
               </div>
 
-              <div class="highlight-box">
-                <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #1e40af;">
-                  <strong style="font-size: 17px;">What's inside:</strong><br/>
-                  Your comprehensive wellness assessment with insights across all 6 life domains: Body, Mind, Purpose, Connection, Growth, and Finance. Plus personalized recommendations to help you thrive.
-                </p>
-              </div>
-
-              <p style="font-size: 16px; color: #6b7280; margin: 32px 0 0 0; text-align: center;">Ready to explore your lifeboard?</p>
               <center>
-                <a href="${actionUrl}" class="button">View Your Lifeboard →</a>
+                <a href="${actionUrl}" class="button">View Lifeboard</a>
               </center>
             </div>
             <div class="footer">
-              <p style="margin: 0 0 12px 0;">Start your wellness journey with personalized insights</p>
-              <p style="margin: 0; color: #9ca3af; font-size: 13px;">© ${new Date().getFullYear()} Chatkin. All rights reserved.</p>
+              <p style="margin: 0; color: #9ca3af; font-size: 13px;">© ${new Date().getFullYear()} Chatkin</p>
             </div>
           </div>
         </body>
