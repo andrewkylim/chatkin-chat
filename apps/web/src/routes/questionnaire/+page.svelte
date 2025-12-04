@@ -29,6 +29,7 @@
 	let showRetakeWarning = $state(false); // Show retake warning modal
 	let deletingContent = $state(false); // Deleting content state
 	let deleteStatus = $state(''); // Status message during deletion
+	let showTimeoutMessage = $state(false); // Show timeout message if polling takes too long
 
 	const currentQuestion = $derived(questions[currentQuestionIndex]);
 	const currentDomain = $derived(currentQuestion?.domain);
@@ -356,13 +357,44 @@
 
 			if (updateError) throw updateError;
 
-			// Navigate to profile to see results
-			goto('/profile');
+			// Poll until onboarding is complete
+			await pollForOnboardingComplete();
 		} catch (err) {
 			console.error('Error submitting questionnaire:', err);
 			error = 'Failed to submit questionnaire. Please try again.';
 			submitting = false;
 		}
+	}
+
+	async function pollForOnboardingComplete() {
+		if (!$auth.user) return;
+
+		const maxAttempts = 60; // 10 minutes (60 × 10 seconds)
+		let attempts = 0;
+
+		const pollInterval = setInterval(async () => {
+			attempts++;
+
+			try {
+				const { data } = await supabase
+					.from('assessment_results')
+					.select('onboarding_processed')
+					.eq('user_id', $auth.user!.id)
+					.single();
+
+				if (data?.onboarding_processed) {
+					// Success! Tasks and notes are ready
+					clearInterval(pollInterval);
+					goto('/profile');
+				} else if (attempts >= maxAttempts) {
+					// Timeout after 10 minutes
+					clearInterval(pollInterval);
+					showTimeoutMessage = true;
+				}
+			} catch (err) {
+				console.error('Error polling onboarding status:', err);
+			}
+		}, 10000); // Poll every 10 seconds
 	}
 
 	async function handleCancelRetake() {
@@ -565,16 +597,25 @@
 			</div>
 		{:else if submitting}
 			<div class="analysis-container">
-				<div class="spinner-large"></div>
-				<h2 class="analysis-title">Creating Your Profile</h2>
-				<p class="analysis-description">
-					Analyzing your responses and generating a comprehensive report with personalized
-					recommendations.
-				</p>
-				<p class="analysis-note">This usually takes 2-5 minutes. We'll email you when it's ready.</p>
-				<p class="analysis-note" style="margin-top: 16px; font-weight: 600;">
-					✓ Feel free to close this window. Your profile will be ready shortly.
-				</p>
+				{#if !showTimeoutMessage}
+					<div class="spinner-large"></div>
+					<h2 class="analysis-title">Creating Your Profile</h2>
+					<p class="analysis-description">
+						Analyzing your responses and generating personalized tasks and notes.
+					</p>
+					<p class="analysis-note">This usually takes 2-5 minutes.</p>
+				{:else}
+					<h2 class="analysis-title">Taking Longer Than Expected</h2>
+					<p class="analysis-description">
+						Your profile is still being generated in the background.
+					</p>
+					<p class="analysis-note">
+						We'll send you an email when it's ready. You can safely close this page.
+					</p>
+					<button class="retry-button" on:click={() => goto('/profile')}>
+						Go to Profile Anyway
+					</button>
+				{/if}
 			</div>
 		{:else if showDomainTransition && previousDomain !== currentDomain}
 			<div class="transition-container">

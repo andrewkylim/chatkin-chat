@@ -5,11 +5,13 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Env, CorsHeaders } from '../types';
+import type { ExecutionContext } from '@cloudflare/workers-types';
 import { createAnthropicClient } from '../ai/client';
 import { requireAuth } from '../middleware/auth';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
+import { processSingleAssessment } from '../cron/process-assessments';
 
 interface QuestionResponse {
 	question_id: string;
@@ -31,7 +33,8 @@ interface DomainScores {
 export async function handleGenerateAssessmentReport(
 	request: Request,
 	env: Env,
-	corsHeaders: CorsHeaders
+	corsHeaders: CorsHeaders,
+	ctx?: ExecutionContext
 ): Promise<Response> {
 	if (request.method !== 'POST') {
 		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -130,7 +133,19 @@ export async function handleGenerateAssessmentReport(
 			throw new WorkerError('Failed to update user profile', 500);
 		}
 
-		logger.info('Assessment report generated successfully - will be processed by cron', { userId: user.userId });
+		// Trigger background processing immediately (don't wait for cron)
+		if (ctx) {
+			ctx.waitUntil(
+				processSingleAssessment(user.userId, env).catch(err => {
+					logger.error('Immediate processing failed, cron will retry', {
+						userId: user.userId,
+						error: err
+					});
+				})
+			);
+		}
+
+		logger.info('Assessment report generated successfully - background processing triggered', { userId: user.userId });
 
 		return new Response(
 			JSON.stringify({
