@@ -231,6 +231,9 @@
 	}
 
 	async function executeOperations(operations: Operation[], messageIndex: number) {
+		const messageToUpdate = messages[messageIndex];
+		const messageId = messageToUpdate.id;
+
 		messages = messages.map((msg, idx) =>
 			idx === messageIndex
 				? {
@@ -263,14 +266,28 @@
 		const errorMsg = result.errorCount > 0 ? `${result.errorCount} failed` : '';
 		const parts = [successMsg, errorMsg].filter(Boolean);
 
+		const completionMessage = `${parts.join(', ')}!\n\n${result.results.join('\n')}`;
+
 		messages = messages.map((msg, idx) =>
 			idx === messageIndex
 				? {
 						role: 'ai',
-						content: `${parts.join(', ')}!\n\n${result.results.join('\n')}`
+						content: completionMessage
 					}
 				: msg
 		);
+
+		// Update the database message to clear operations so modal doesn't reappear on refresh
+		if (messageId) {
+			try {
+				await updateMessageMetadata(messageId, {
+					operations: null
+				});
+			} catch (error) {
+				logger.error('Failed to update message metadata', error);
+			}
+		}
+
 		scrollToBottom();
 	}
 
@@ -280,8 +297,9 @@
 		executeOperations(message.selectedOperations, index);
 	}
 
-	function handleInlineOperationCancel(index: number) {
+	async function handleInlineOperationCancel(index: number) {
 		const message = messages[index];
+		const messageId = message.id;
 		const operations = message.operations || [];
 
 		// Determine what type of operations were cancelled
@@ -320,6 +338,17 @@
 					}
 				: msg
 		);
+
+		// Update the database message to clear operations so modal doesn't reappear on refresh
+		if (messageId) {
+			try {
+				await updateMessageMetadata(messageId, {
+					operations: null
+				});
+			} catch (error) {
+				logger.error('Failed to update message metadata', error);
+			}
+		}
 	}
 
 	function toggleOperationSelection(messageIndex: number, opIndex: number) {
