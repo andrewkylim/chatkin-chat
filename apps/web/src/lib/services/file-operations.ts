@@ -42,6 +42,7 @@ export class FileOperationsService {
 					note_id: null,
 					conversation_id: file.conversationId || null,
 					message_id: null,
+					domain: 'Mind', // Default to Mind for conversation files
 					is_hidden_from_library: false,
 					title: result.file.title || null,
 					description: result.file.description || null,

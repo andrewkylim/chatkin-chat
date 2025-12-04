@@ -81,7 +81,7 @@ export class WorkerService {
 	 * Get worker URL based on environment
 	 */
 	private getWorkerUrl(): string {
-		return import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+		return PUBLIC_WORKER_URL;
 	}
 
 	/**

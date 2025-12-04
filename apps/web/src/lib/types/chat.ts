@@ -25,6 +25,8 @@ export interface AIQuestion {
   options: string[];
 }
 
+export type WellnessDomain = 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
+
 export interface TaskData {
   title: string;
   description?: string;
@@ -32,12 +34,14 @@ export interface TaskData {
   status: TaskStatus;
   due_date?: string | null;
   project_id?: string | null;
+  domain: WellnessDomain;
 }
 
 export interface NoteData {
   title: string;
   content?: string;
   project_id?: string | null;
+  domain: WellnessDomain;
 }
 
 export interface ProjectData {

@@ -1,5 +1,5 @@
 import { supabase } from '$lib/supabase';
-import type { Conversation, Message } from '@chatkin/types';
+import type { Conversation, Message, WellnessDomain } from '@chatkin/types';
 
 type ConversationInsert = Omit<Conversation, 'id' | 'created_at' | 'updated_at'>;
 type MessageInsert = Omit<Message, 'id' | 'created_at'>;
@@ -41,7 +41,7 @@ export async function getOrCreateConversation(
 		user_id: user.id,
 		scope,
 		project_id: null,
-		domain: domainOrProjectId || 'Mind', // Use provided domain or default to 'Mind'
+		domain: (domainOrProjectId as WellnessDomain) || 'Mind', // Use provided domain or default to 'Mind'
 		title: scope === 'global' ? 'General Chat' : scope === 'project' ? 'Project Chat' : `${scope.charAt(0).toUpperCase() + scope.slice(1)} Chat`,
 		mode: 'chat', // Default to chat mode
 		conversation_summary: null,

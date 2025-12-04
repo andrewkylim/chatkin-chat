@@ -10,6 +10,12 @@
 	// Single video background
 	const videoUrl = 'https://pub-76d4674ef944431f921668504bc4c830.r2.dev/12596084_1920_1080_30fps.mp4';
 
+	let videoError = false;
+
+	function handleVideoError() {
+		videoError = true;
+	}
+
 	// Redirect logged-in users to chat
 	onMount(() => {
 		if ($auth.user) {
@@ -39,6 +45,7 @@
 		<div class="hero-container">
 			<div class="animation-container">
 				<div class="big-circle">
+				{#if !videoError}
 				<video
 					class="circle-video"
 					src={videoUrl}
@@ -46,7 +53,9 @@
 					loop
 					muted
 					playsinline
+					on:error={handleVideoError}
 				></video>
+				{/if}
 				</div>
 			</div>
 			<h1 class="hero-title">
@@ -234,15 +243,17 @@
 		justify-content: center;
 		align-items: center;
 		margin-bottom: 32px;
+		width: 100%;
 	}
 
 	.big-circle {
 		width: 200px;
 		height: 200px;
 		border-radius: 50%;
-		background: transparent;
+		background: #1e40af;
 		position: relative;
 		overflow: hidden;
+		margin: 0 auto;
 	}
 
 	.circle-video {

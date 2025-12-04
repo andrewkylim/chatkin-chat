@@ -182,6 +182,7 @@ export async function createRecurringTaskInstance(
 
 	const newTask: Omit<TaskInsert, 'user_id'> = {
 		project_id: parentTask.project_id || null,
+		domain: parentTask.domain,
 		title: parentTask.title,
 		description: parentTask.description,
 		status: 'todo',

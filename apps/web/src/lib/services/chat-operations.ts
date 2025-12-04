@@ -19,6 +19,8 @@ export interface ExecutionResult {
 	results: string[];
 }
 
+type WellnessDomain = 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
+
 interface TaskData {
 	title: string;
 	description?: string;
@@ -26,12 +28,14 @@ interface TaskData {
 	status?: 'todo' | 'in_progress' | 'completed';
 	due_date?: string | null;
 	project_id?: string | null;
+	domain: WellnessDomain;
 }
 
 interface NoteData {
 	title: string;
 	content?: string;
 	project_id?: string | null;
+	domain: WellnessDomain;
 }
 
 export class ChatOperationsService {
@@ -117,6 +121,7 @@ export class ChatOperationsService {
 				status: taskData.status || 'todo',
 				due_date: taskData.due_date || null,
 				project_id: targetProjectId,
+				domain: taskData.domain,
 				is_recurring: false,
 				recurrence_pattern: null,
 				parent_task_id: null,
@@ -142,7 +147,8 @@ export class ChatOperationsService {
 			await createNote({
 				title: noteData.title,
 				content: noteData.content || '',
-				project_id: targetProjectId
+				project_id: targetProjectId,
+				domain: noteData.domain
 			});
 			notificationCounts.incrementCount('notes');
 		}
