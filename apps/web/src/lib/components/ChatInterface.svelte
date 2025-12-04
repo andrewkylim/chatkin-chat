@@ -223,6 +223,7 @@
 							priority: taskData.priority,
 							status: taskData.status,
 							due_date: taskData.due_date ?? null,
+							domain: taskData.domain || 'Purpose',
 							project_id: taskData.project_id || projectId || null,
 							is_recurring: false,
 							recurrence_pattern: null,

@@ -598,12 +598,15 @@
 		{:else if submitting}
 			<div class="analysis-container">
 				{#if !showTimeoutMessage}
-					<div class="spinner-large"></div>
+					<div class="domain-color-spinner"></div>
 					<h2 class="analysis-title">Creating Your Profile</h2>
 					<p class="analysis-description">
 						Analyzing your responses and generating personalized tasks and notes.
 					</p>
-					<p class="analysis-note">This usually takes 2-5 minutes.</p>
+					<p class="analysis-note">This usually takes 30-60 seconds.</p>
+					<p class="analysis-help">
+						Don't want to wait? You can close this page — we'll email you when it's ready.
+					</p>
 				{:else}
 					<h2 class="analysis-title">Taking Longer Than Expected</h2>
 					<p class="analysis-description">
@@ -899,8 +902,7 @@
 
 	.loading-container,
 	.error-container,
-	.transition-container,
-	.analysis-container {
+	.transition-container {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -908,6 +910,16 @@
 		min-height: 100vh;
 		gap: 24px;
 		padding: 20px;
+	}
+
+	.analysis-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-start;
+		min-height: 100vh;
+		gap: 16px;
+		padding: 120px 20px 20px;
 	}
 
 	.spinner {
@@ -919,19 +931,39 @@
 		animation: spin 1s linear infinite;
 	}
 
-	.spinner-large {
+	.domain-color-spinner {
 		width: 64px;
 		height: 64px;
-		border: 5px solid var(--border-color);
-		border-top-color: var(--accent-primary);
+		border: 5px solid transparent;
 		border-radius: 50%;
-		animation: spin 1s linear infinite;
+		animation: spin 2s linear infinite, domainColorCycle 6s linear infinite;
 		margin-bottom: 16px;
 	}
 
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
+		}
+	}
+
+	@keyframes domainColorCycle {
+		0%, 16.66% {
+			border-top-color: #10B981; /* Body */
+		}
+		16.67%, 33.33% {
+			border-top-color: #3B82F6; /* Mind */
+		}
+		33.34%, 50% {
+			border-top-color: #8B5CF6; /* Purpose */
+		}
+		50.01%, 66.66% {
+			border-top-color: #F59E0B; /* Connection */
+		}
+		66.67%, 83.33% {
+			border-top-color: #EAB308; /* Growth */
+		}
+		83.34%, 100% {
+			border-top-color: #EF4444; /* Finance */
 		}
 	}
 
@@ -964,6 +996,14 @@
 		text-align: center;
 		font-style: italic;
 		margin: 8px 0 0 0;
+	}
+
+	.analysis-help {
+		font-size: 0.875rem;
+		color: var(--text-tertiary);
+		text-align: center;
+		margin: 12px 0 0 0;
+		opacity: 0.8;
 	}
 
 	.sub-text {
