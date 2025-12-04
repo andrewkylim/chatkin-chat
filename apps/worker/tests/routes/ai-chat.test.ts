@@ -28,6 +28,22 @@ vi.mock('../../src/utils/logger', () => ({
   }
 }));
 
+vi.mock('../../src/utils/supabase-admin', () => ({
+  createSupabaseAdmin: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          is: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => Promise.resolve({ data: [], error: null }))
+            }))
+          }))
+        }))
+      }))
+    }))
+  }))
+}));
+
 describe('AI Chat Endpoint', () => {
   const corsHeaders: CorsHeaders = {
     'Access-Control-Allow-Origin': 'http://localhost:5173',
@@ -123,7 +139,8 @@ describe('AI Chat Endpoint', () => {
         { role: 'user', content: 'Hello' },
         { role: 'ai', content: 'Hi there!' }
       ],
-      context: { scope: 'global' }
+      context: { scope: 'global' },
+      mode: 'action'
     };
 
     const request = new Request('http://localhost/ai-chat', {
@@ -192,7 +209,8 @@ describe('AI Chat Endpoint', () => {
       conversationHistory: [
         { role: 'ai', content: 'Welcome! How can I help?' } // Initial AI greeting
       ],
-      context: { scope: 'global' }
+      context: { scope: 'global' },
+      mode: 'action'
     };
 
     const request = new Request('http://localhost/ai-chat', {
@@ -224,7 +242,8 @@ describe('AI Chat Endpoint', () => {
 
     const chatRequest: ChatRequest = {
       message: 'Test',
-      context: { scope: 'tasks' }
+      context: { scope: 'tasks' },
+      mode: 'action'
     };
 
     const request = new Request('http://localhost/ai-chat', {
@@ -238,8 +257,8 @@ describe('AI Chat Endpoint', () => {
     expect(mockCreate).toHaveBeenCalled();
     const callArgs = mockCreate.mock.calls[0][0];
 
-    // System prompt should include tasks-specific content
-    expect(callArgs.system).toContain('TASKS AI assistant');
+    // System prompt should include "The Operator" persona for action mode
+    expect(callArgs.system).toContain('The Operator');
   });
 
   it('should include tools in API request', async () => {

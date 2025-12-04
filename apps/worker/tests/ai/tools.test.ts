@@ -14,7 +14,7 @@ describe('AI Tools', () => {
     const askQuestions = tools.find(t => t.name === 'ask_questions');
 
     expect(askQuestions).toBeDefined();
-    expect(askQuestions?.description).toContain('REQUIRED FIRST STEP');
+    expect(askQuestions?.description).toContain('Ask clarifying questions when critical');
     expect(askQuestions?.input_schema.type).toBe('object');
     expect(askQuestions?.input_schema.properties.questions).toBeDefined();
   });
