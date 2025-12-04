@@ -187,7 +187,7 @@ CRITICAL REQUIREMENTS:
 
 	const message = await client.messages.create({
 		model: 'claude-3-5-haiku-20241022',
-		max_tokens: 8000, // Higher limit for quality content
+		max_tokens: 16000, // Higher limit for 12 detailed notes (200-400 words each)
 		messages: [{ role: 'user', content: prompt }]
 	});
 
