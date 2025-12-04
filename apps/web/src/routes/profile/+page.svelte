@@ -696,7 +696,7 @@
 		}
 
 		.scores-grid {
-			grid-template-columns: repeat(2, 1fr);
+			grid-template-columns: 1fr;
 			gap: 12px;
 		}
 
