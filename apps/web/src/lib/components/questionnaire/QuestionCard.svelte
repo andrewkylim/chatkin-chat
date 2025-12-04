@@ -633,22 +633,47 @@
 		}
 
 		.scale-options {
-			gap: 8px;
+			gap: 6px;
+			flex-wrap: nowrap;
 		}
 
 		.scale-button {
-			width: 50px;
-			height: 50px;
-			font-size: 1.1rem;
+			flex: 1;
+			min-width: 0;
+			padding: 16px 8px;
+			aspect-ratio: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.scale-button .circle-icon {
+			width: 32px;
+			height: 32px;
+		}
+
+		.emoji-container {
+			gap: 6px;
+			flex-wrap: nowrap;
 		}
 
 		.emoji-button {
-			min-width: 80px;
-			padding: 12px 16px;
+			flex: 1;
+			min-width: 0;
+			padding: 16px 8px;
+			aspect-ratio: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 
-		.emoji {
-			font-size: 2rem;
+		.emoji-button .circle-icon {
+			width: 32px;
+			height: 32px;
+		}
+
+		.scale-label {
+			font-size: 0.75rem;
 		}
 	}
 </style>
