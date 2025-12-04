@@ -144,8 +144,7 @@
 
 	/* Navigation */
 	.nav {
-		position: sticky;
-		top: 0;
+		position: relative;
 		z-index: 100;
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);

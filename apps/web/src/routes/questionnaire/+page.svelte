@@ -548,9 +548,9 @@
 					Analyzing your responses and generating a comprehensive report with personalized
 					recommendations.
 				</p>
-				<p class="analysis-note">This may take up to 3 minutes. We'll email you when it's ready.</p>
+				<p class="analysis-note">This usually takes 2-5 minutes. We'll email you when it's ready.</p>
 				<p class="analysis-note" style="margin-top: 16px; font-weight: 600;">
-					✓ Feel free to close this window. Your profile is being created in the background.
+					✓ Feel free to close this window. Your profile will be ready shortly.
 				</p>
 			</div>
 		{:else if showDomainTransition && previousDomain !== currentDomain}

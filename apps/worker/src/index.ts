@@ -21,6 +21,7 @@ import { handleGenerateNotes } from './routes/generate-notes';
 import { handleSummarizeConversation } from './routes/summarize-conversation';
 import { checkTaskReminders } from './cron/task-reminders';
 import { analyzePatterns } from './cron/analyze-patterns';
+import { processUnprocessedAssessments } from './cron/process-assessments';
 import { createNotificationService } from './services/notification-service';
 import { createSupabaseAdmin } from './utils/supabase-admin';
 import { logger } from './utils/logger';
@@ -29,7 +30,7 @@ export { Env };
 
 // Main handler
 const handler = {
-  async fetch(request: Request, env: Env, ctx: globalThis.ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: globalThis.ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Get CORS headers
@@ -66,7 +67,7 @@ const handler = {
     }
 
     if (url.pathname === '/api/generate-assessment-report') {
-      return handleGenerateAssessmentReport(request, env, corsHeaders, ctx);
+      return handleGenerateAssessmentReport(request, env, corsHeaders);
     }
 
     if (url.pathname === '/api/generate-onboarding') {
@@ -107,33 +108,47 @@ const handler = {
     });
   },
 
-  async scheduled(_controller: globalThis.ScheduledController, env: Env, ctx: globalThis.ExecutionContext): Promise<void> {
-    logger.info('Running scheduled jobs...');
+  async scheduled(controller: globalThis.ScheduledController, env: Env, ctx: globalThis.ExecutionContext): Promise<void> {
+    logger.info('Running scheduled jobs...', { cron: controller.cron });
 
-    // Run pattern analysis (detect stuck tasks, domain shutdowns, wins, etc.)
-    ctx.waitUntil(
-      analyzePatterns(env).catch((error) => {
-        logger.error('Pattern analysis failed in scheduled job', { error });
-      })
-    );
+    // Process unprocessed assessments (runs every 5 minutes)
+    if (controller.cron === '*/5 * * * *') {
+      ctx.waitUntil(
+        processUnprocessedAssessments(env).catch((error) => {
+          logger.error('Assessment processing failed in scheduled job', { error });
+        })
+      );
+      logger.info('Assessment processing job dispatched');
+      return;
+    }
 
-    // Run notification dispatch (task reminders, observations, check-ins)
-    const supabase = createSupabaseAdmin(env);
-    const notificationService = createNotificationService(supabase);
-    ctx.waitUntil(
-      notificationService.sendNotifications().catch((error) => {
-        logger.error('Notification dispatch failed in scheduled job', { error });
-      })
-    );
+    // Daily jobs (runs at 2am UTC)
+    if (controller.cron === '0 2 * * *') {
+      // Run pattern analysis (detect stuck tasks, domain shutdowns, wins, etc.)
+      ctx.waitUntil(
+        analyzePatterns(env).catch((error) => {
+          logger.error('Pattern analysis failed in scheduled job', { error });
+        })
+      );
 
-    // Legacy task reminders (can be removed once notification service is fully rolled out)
-    ctx.waitUntil(
-      checkTaskReminders(env).catch((error) => {
-        logger.error('Task reminders failed in scheduled job', { error });
-      })
-    );
+      // Run notification dispatch (task reminders, observations, check-ins)
+      const supabase = createSupabaseAdmin(env);
+      const notificationService = createNotificationService(supabase);
+      ctx.waitUntil(
+        notificationService.sendNotifications().catch((error) => {
+          logger.error('Notification dispatch failed in scheduled job', { error });
+        })
+      );
 
-    logger.info('Scheduled jobs dispatched');
+      // Legacy task reminders (can be removed once notification service is fully rolled out)
+      ctx.waitUntil(
+        checkTaskReminders(env).catch((error) => {
+          logger.error('Task reminders failed in scheduled job', { error });
+        })
+      );
+
+      logger.info('Daily jobs dispatched');
+    }
   },
 };
 

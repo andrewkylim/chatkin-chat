@@ -10,9 +10,6 @@ import { requireAuth } from '../middleware/auth';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
-import { EmailService } from '../services/email';
-import { handleGenerateOnboarding } from './generate-onboarding';
-import { handleGenerateNotes } from './generate-notes';
 
 interface QuestionResponse {
 	question_id: string;
@@ -34,8 +31,7 @@ interface DomainScores {
 export async function handleGenerateAssessmentReport(
 	request: Request,
 	env: Env,
-	corsHeaders: CorsHeaders,
-	ctx?: globalThis.ExecutionContext
+	corsHeaders: CorsHeaders
 ): Promise<Response> {
 	if (request.method !== 'POST') {
 		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -105,6 +101,7 @@ export async function handleGenerateAssessmentReport(
 				user_id: user.userId,
 				domain_scores: domainScores,
 				ai_report: aiReport,
+				onboarding_processed: false, // Will be processed by cron job
 				updated_at: new Date().toISOString()
 			},
 			{ onConflict: 'user_id' }
@@ -132,111 +129,14 @@ export async function handleGenerateAssessmentReport(
 			throw new WorkerError('Failed to update user profile', 500);
 		}
 
-		logger.info('Assessment report generated successfully', { userId: user.userId });
+		logger.info('Assessment report generated successfully - will be processed by cron', { userId: user.userId });
 
-		// If context is available, continue processing in background
-		if (ctx) {
-			ctx.waitUntil(
-				(async () => {
-					logger.info('Starting background processing', { userId: user.userId });
-					let tasksCreated = 0;
-					let notesCreated = 0;
-
-					// Generate onboarding content (projects + tasks)
-					try {
-						logger.info('Starting onboarding content generation', { userId: user.userId });
-						const onboardingResponse = await handleGenerateOnboarding(request, env, corsHeaders);
-
-						if (onboardingResponse.ok) {
-							const result = (await onboardingResponse.json()) as {
-								success: boolean;
-								created?: { tasks: number; notes: number };
-							};
-							logger.info('Onboarding content generated successfully', {
-								userId: user.userId,
-								created: result.created
-							});
-
-							tasksCreated = result.created?.tasks || 0;
-							notesCreated = result.created?.notes || 0;
-						} else {
-							const errorText = await onboardingResponse.text();
-							logger.error('Onboarding generation failed', {
-								userId: user.userId,
-								status: onboardingResponse.status,
-								error: errorText
-							});
-						}
-					} catch (err) {
-						logger.error('Failed to generate onboarding content', {
-							userId: user.userId,
-							error: err
-						});
-					}
-
-					// Generate notes
-					try {
-						logger.info('Starting notes generation', { userId: user.userId });
-						const notesResponse = await handleGenerateNotes(request, env, corsHeaders);
-
-						if (notesResponse.ok) {
-							const notesResult = (await notesResponse.json()) as {
-								success: boolean;
-								created?: { notes: number };
-							};
-							logger.info('Notes generated successfully', {
-								userId: user.userId,
-								created: notesResult.created
-							});
-						} else {
-							const errorText = await notesResponse.text();
-							logger.error('Notes generation failed', {
-								userId: user.userId,
-								status: notesResponse.status,
-								error: errorText
-							});
-						}
-					} catch (notesErr) {
-						logger.error('Failed to generate notes', {
-							userId: user.userId,
-							error: notesErr
-						});
-					}
-
-					// Send email notification
-					if (user.email) {
-						try {
-							const emailService = new EmailService(env);
-							const profileUrl = `${env.PUBLIC_WORKER_URL}/profile`;
-							const emailHtml = emailService.profileReadyEmail(tasksCreated, notesCreated, profileUrl);
-
-							await emailService.sendEmail({
-								to: user.email,
-								subject: '✨ Your Profile is Ready!',
-								html: emailHtml
-							});
-
-							logger.info('Profile ready email sent', { userId: user.userId, email: user.email });
-						} catch (emailErr) {
-							logger.error('Failed to send profile ready email', {
-								userId: user.userId,
-								error: emailErr
-							});
-						}
-					}
-
-					logger.info('Background processing completed', { userId: user.userId });
-				})()
-			);
-		}
-
-		// Return immediately - background processing will continue
 		return new Response(
 			JSON.stringify({
 				success: true,
 				domain_scores: domainScores,
 				focus_areas: focusAreas,
-				processing_in_background: !!ctx
+				processing_in_background: true
 			}),
 			{
 				headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -411,7 +311,7 @@ FORMATTING RULES:
 	report = report.replace(/([^\n])\n(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
 
 	// Handle case where domains are run together without any line break (after period or other sentence ending)
-	report = report.replace(/([.!?])(\s*)(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$4');
+	report = report.replace(/([.!?])(\s*)(\*\*(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$3');
 
 	// Also ensure double line break after each domain paragraph ends (before next domain starts)
 	// This catches cases where there's content after a domain that doesn't end with proper spacing
