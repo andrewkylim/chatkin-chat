@@ -728,28 +728,32 @@
 
 	.header-title-group {
 		display: flex;
-		align-items: center;
-		gap: 8px;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 2px;
 		min-width: 0;
+		flex: 1;
 	}
 
 	.chat-header h1 {
-		font-size: 1.5rem;
+		font-size: 1.25rem;
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		margin: 0;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		width: 100%;
 	}
 
 	.header-subtitle {
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
 		color: var(--text-secondary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		width: 100%;
 	}
 
 	/* Talk Mode Button */
