@@ -2133,6 +2133,9 @@
 		}
 
 		.mobile-header {
+			position: sticky;
+			top: 0;
+			z-index: 10;
 			flex-shrink: 0;
 			padding: 16px 20px;
 			background: var(--bg-secondary);

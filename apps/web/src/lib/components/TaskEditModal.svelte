@@ -398,4 +398,34 @@
 		border-radius: var(--radius-md);
 		margin-bottom: 16px;
 	}
+
+	@media (max-width: 400px) {
+		.modal-actions {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.modal-actions > div[style*="flex: 1"] {
+			display: none;
+		}
+
+		.delete-btn,
+		.secondary-btn,
+		.primary-btn {
+			width: 100%;
+			justify-content: center;
+		}
+
+		.delete-btn {
+			order: 3;
+		}
+
+		.secondary-btn {
+			order: 2;
+		}
+
+		.primary-btn {
+			order: 1;
+		}
+	}
 </style>
