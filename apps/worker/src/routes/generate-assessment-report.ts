@@ -5,7 +5,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Env, CorsHeaders } from '../types';
-import type { ExecutionContext } from '@cloudflare/workers-types';
 import { createAnthropicClient } from '../ai/client';
 import { requireAuth } from '../middleware/auth';
 import { handleError, WorkerError } from '../utils/error-handler';
@@ -33,8 +32,7 @@ interface DomainScores {
 export async function handleGenerateAssessmentReport(
 	request: Request,
 	env: Env,
-	corsHeaders: CorsHeaders,
-	ctx?: ExecutionContext
+	corsHeaders: CorsHeaders
 ): Promise<Response> {
 	if (request.method !== 'POST') {
 		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -133,26 +131,23 @@ export async function handleGenerateAssessmentReport(
 			throw new WorkerError('Failed to update user profile', 500);
 		}
 
-		// Trigger background processing immediately (don't wait for cron)
-		if (ctx) {
-			ctx.waitUntil(
-				processSingleAssessment(user.userId, env).catch(err => {
-					logger.error('Immediate processing failed, cron will retry', {
-						userId: user.userId,
-						error: err
-					});
-				})
-			);
+		// Process onboarding immediately (synchronously)
+		try {
+			await processSingleAssessment(user.userId, env);
+			logger.info('Assessment report and onboarding generated successfully', { userId: user.userId });
+		} catch (err) {
+			// If immediate processing fails, log it - cron will retry
+			logger.error('Immediate onboarding processing failed, cron will retry', {
+				userId: user.userId,
+				error: err
+			});
 		}
-
-		logger.info('Assessment report generated successfully - background processing triggered', { userId: user.userId });
 
 		return new Response(
 			JSON.stringify({
 				success: true,
 				domain_scores: domainScores,
-				focus_areas: focusAreas,
-				processing_in_background: true
+				focus_areas: focusAreas
 			}),
 			{
 				headers: { ...corsHeaders, 'Content-Type': 'application/json' }

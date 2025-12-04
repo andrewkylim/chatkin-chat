@@ -67,7 +67,7 @@ const handler = {
     }
 
     if (url.pathname === '/api/generate-assessment-report') {
-      return handleGenerateAssessmentReport(request, env, corsHeaders, _ctx);
+      return handleGenerateAssessmentReport(request, env, corsHeaders);
     }
 
     if (url.pathname === '/api/generate-onboarding') {
