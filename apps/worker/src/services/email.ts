@@ -202,58 +202,58 @@ export class EmailService {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: #ffffff; margin: 0; padding: 0; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: #f9fafb; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #C77C5C 0%, #A86645 100%); color: white; padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center; }
-            .logo { width: 48px; height: 48px; margin: 0 auto 16px; }
-            .header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 600; }
-            .header p { margin: 0; font-size: 16px; opacity: 0.95; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none; }
-            .stats-container { display: flex; gap: 16px; margin: 24px 0; justify-content: center; flex-wrap: wrap; }
-            .stat-box { background: white; padding: 20px 24px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); min-width: 120px; }
-            .stat-number { font-size: 32px; font-weight: 700; color: #C77C5C; margin: 0 0 4px 0; }
-            .stat-label { font-size: 14px; color: #6b7280; margin: 0; font-weight: 500; }
-            .highlight-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 20px; margin: 24px 0; border-radius: 8px; }
-            .button { display: inline-block; background: #C77C5C; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; margin-top: 24px; font-weight: 600; font-size: 16px; transition: background 0.2s; box-shadow: 0 4px 12px rgba(199, 124, 92, 0.3); }
-            .button:hover { background: #A86645; box-shadow: 0 6px 16px rgba(199, 124, 92, 0.4); }
-            .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
+            .logo { width: 56px; height: 56px; margin: 0 auto 20px; background: white; border-radius: 50%; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+            .header h1 { margin: 0 0 12px 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+            .header p { margin: 0; font-size: 17px; opacity: 0.95; line-height: 1.5; }
+            .content { background: white; padding: 40px 30px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none; }
+            .domains-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
+            .domain-icon { width: 100%; aspect-ratio: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }
+            .domain-icon:hover { transform: translateY(-2px); }
+            .highlight-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #3b82f6; padding: 24px; margin: 32px 0; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            .button { display: inline-block; background: #C77C5C; color: white; padding: 18px 40px; text-decoration: none; border-radius: 10px; margin-top: 28px; font-weight: 600; font-size: 17px; transition: all 0.3s; box-shadow: 0 4px 14px rgba(199, 124, 92, 0.35); }
+            .button:hover { background: #A86645; box-shadow: 0 6px 20px rgba(199, 124, 92, 0.45); transform: translateY(-2px); }
+            .footer { text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <img src="https://chatkin.ai/logo.webp" alt="Chatkin" class="logo" />
-              <h1>✨ Your Profile is Ready!</h1>
-              <p>We've analyzed your assessment and created your personalized life plan</p>
+              <div class="logo">
+                <img src="https://chatkin.ai/logo.webp" alt="Chatkin" style="width: 100%; height: 100%; object-fit: contain;" />
+              </div>
+              <h1>✨ Your Lifeboard is Ready</h1>
+              <p>Your personalized assessment and lifeboard awaits</p>
             </div>
             <div class="content">
-              <p style="font-size: 16px; margin: 0 0 20px 0;">Great news! We've finished analyzing your assessment responses and your personalized profile is ready to explore.</p>
+              <p style="font-size: 17px; margin: 0 0 24px 0; color: #374151; line-height: 1.7;">Great news! We've finished analyzing your assessment and your personalized lifeboard is ready to explore.</p>
 
-              <div class="stats-container">
-                <div class="stat-box">
-                  <p class="stat-number">${tasksCreated}</p>
-                  <p class="stat-label">Tasks Created</p>
-                </div>
-                <div class="stat-box">
-                  <p class="stat-number">${notesCreated}</p>
-                  <p class="stat-label">Domain Notes</p>
-                </div>
+              <div class="domains-grid">
+                <div class="domain-icon" style="background: #10B981;">💪</div>
+                <div class="domain-icon" style="background: #3B82F6;">🧠</div>
+                <div class="domain-icon" style="background: #8B5CF6;">🎯</div>
+                <div class="domain-icon" style="background: #F59E0B;">🤝</div>
+                <div class="domain-icon" style="background: #EAB308;">📈</div>
+                <div class="domain-icon" style="background: #EF4444;">💰</div>
               </div>
 
               <div class="highlight-box">
-                <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #92400e;">
-                  <strong>What's inside:</strong><br/>
-                  Your comprehensive assessment report with insights across all 6 life domains (Body, Mind, Purpose, Connection, Growth, Finance), plus personalized tasks and detailed notes to help you take action.
+                <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #1e40af;">
+                  <strong style="font-size: 17px;">What's inside:</strong><br/>
+                  Your comprehensive wellness assessment with insights across all 6 life domains: Body, Mind, Purpose, Connection, Growth, and Finance. Plus personalized recommendations to help you thrive.
                 </p>
               </div>
 
-              <p style="font-size: 15px; color: #6b7280; margin: 24px 0 0 0;">Ready to get started?</p>
+              <p style="font-size: 16px; color: #6b7280; margin: 32px 0 0 0; text-align: center;">Ready to explore your lifeboard?</p>
               <center>
-                <a href="${actionUrl}" class="button">View Your Profile →</a>
+                <a href="${actionUrl}" class="button">View Your Lifeboard →</a>
               </center>
             </div>
             <div class="footer">
-              <p style="margin-top: 12px; color: #9ca3af; font-size: 12px;">© ${new Date().getFullYear()} Chatkin. All rights reserved.</p>
+              <p style="margin: 0 0 12px 0;">Start your wellness journey with personalized insights</p>
+              <p style="margin: 0; color: #9ca3af; font-size: 13px;">© ${new Date().getFullYear()} Chatkin. All rights reserved.</p>
             </div>
           </div>
         </body>
