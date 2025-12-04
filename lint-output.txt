@@ -1,0 +1,176 @@
+
+> chatkin-os@0.1.0 lint /Users/andrewlim/Documents/GitHub/chatkin-os
+> eslint .
+
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/MobileChatLayout.svelte
+  65:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/TaskDetailModal.svelte
+  51:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/UnifiedChatContent.svelte
+   66:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   69:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  410:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  420:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  631:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  739:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/UnifiedChatPage.svelte
+  13:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/chat/ChatInput.svelte
+  17:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/chat/MessageBubble.svelte
+  34:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/chat/QuestionsForm.svelte
+  33:15  warning  'question' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/profile/DomainScoreCard.svelte
+  18:11  warning  'getDomainIcon' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/projects/DomainProjectCard.svelte
+  59:8  warning  'icons' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/projects/ProfileSummaryBanner.svelte
+  81:7  warning  `{@html}` can lead to XSS attack  svelte/no-at-html-tags
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/lib/components/questionnaire/IntroPage.svelte
+  6:3  warning  'onReset' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/routes/notes/[id]/+page.svelte
+  297:9  warning  `{@html}` can lead to XSS attack  svelte/no-at-html-tags
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/routes/profile/+page.svelte
+  259:6  warning  `{@html}` can lead to XSS attack  svelte/no-at-html-tags
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/routes/projects/+page.svelte
+    3:9   warning  'EditProjectModal' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    6:11  warning  'getProjects' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+   89:11  warning  'getDomainColor' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+  101:11  warning  'getDomainConfig' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/routes/projects/[id]/chat/+page.svelte
+   69:6   warning  'projects' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+  166:17  warning  'handleDeleteProject' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  174:17  warning  'handleProjectUpdated' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/routes/questionnaire/+page.svelte
+   24:28  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  105:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  161:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  219:8   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  221:31  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/web/src/routes/settings/+page.svelte
+   87:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+  120:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+  153:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/index.ts
+  32:48  error  'ExecutionContext' is not defined  no-undef
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/routes/ai-chat.ts
+  118:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/routes/generate-assessment-report.ts
+   25:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:8   error    'ExecutionContext' is not defined         no-undef
+  302:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  408:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/routes/generate-notes.ts
+  125:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/routes/generate-onboarding-old.ts
+  202:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  204:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  205:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/routes/generate-onboarding.ts
+  152:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  154:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  172:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  175:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  179:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  179:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  236:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/routes/send-notification.ts
+  65:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/services/ai-orchestrator.ts
+   24:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  217:82  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  227:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  240:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  245:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  249:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/services/notification-service.ts
+  17:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/src/services/pattern-analyzer.ts
+   13:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   81:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  146:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/tests/services/ai-orchestrator.test.ts
+   65:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   96:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  206:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  249:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  289:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  317:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  355:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  429:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  459:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  484:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  516:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/tests/services/image-processor.test.ts
+   13:8   warning  'ImageMediaType' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   88:26  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+   99:26  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  113:26  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  127:26  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  156:30  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  176:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  196:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  264:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  289:35  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  290:30  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/apps/worker/tests/services/message-formatter.test.ts
+  139:44  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  159:44  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  199:44  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  218:44  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  284:13  warning  'result' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/andrewlim/Documents/GitHub/chatkin-os/seed-projects.js
+  28:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  36:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  49:5   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  53:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  65:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  66:21  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+✖ 106 problems (2 errors, 104 warnings)
+
+ ELIFECYCLE  Command failed with exit code 1.

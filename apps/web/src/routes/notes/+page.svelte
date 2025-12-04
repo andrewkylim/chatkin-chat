@@ -31,7 +31,6 @@
 
 	// Get note utilities and actions
 	const {
-		truncateTitle,
 		formatDate,
 		getContentPreview,
 		getWordCount,
@@ -181,7 +180,7 @@
 						<div class="note-card" class:standalone={!note.project_id}>
 							<a href="/notes/{note.id}" class="note-link">
 								<div class="note-header">
-									<h3>{truncateTitle(note.title, 100)}</h3>
+									<h3>{note.title}</h3>
 									{#if note.domain}
 										<span class="note-project">{note.domain}</span>
 									{:else}
@@ -196,23 +195,32 @@
 							</a>
 							<div class="card-actions">
 								<button
-									class="icon-action-btn"
-									on:click|stopPropagation={() => startEditNote(note)}
-									title="Edit note"
+									class="icon-action-btn menu-btn"
+									on:click|stopPropagation={() => toggleNoteMenu(note.id)}
+									title="More options"
 								>
-									<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M10.5 2l1.5 1.5L5 10.5H3.5V9L10.5 2z"/>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+										<circle cx="8" cy="3" r="1.5"/>
+										<circle cx="8" cy="8" r="1.5"/>
+										<circle cx="8" cy="13" r="1.5"/>
 									</svg>
 								</button>
-								<button
-									class="icon-action-btn delete-action-btn"
-									on:click|stopPropagation={() => deleteNoteId = note.id}
-									title="Delete note"
-								>
-									<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M2 3h10M5 3V2a1 1 0 011-1h2a1 1 0 011 1v1M11 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3"/>
-									</svg>
-								</button>
+								{#if openMenuNoteId === note.id}
+									<div class="dropdown-menu">
+										<button class="menu-item" on:click|stopPropagation={() => { startEditNote(note); openMenuNoteId = null; }}>
+											<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M12 2l2 2L6 12H4v-2L12 2z"/>
+											</svg>
+											Edit
+										</button>
+										<button class="menu-item delete" on:click|stopPropagation={() => { deleteNoteId = note.id; openMenuNoteId = null; }}>
+											<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
+											</svg>
+											Delete
+										</button>
+									</div>
+								{/if}
 							</div>
 						</div>
 					{/each}
@@ -263,7 +271,7 @@
 					<div class="note-card" class:standalone={!note.project_id}>
 						<a href="/notes/{note.id}" class="note-link">
 							<div class="note-header">
-								<h3>{truncateTitle(note.title, 100)}</h3>
+								<h3>{note.title}</h3>
 								{#if note.domain}
 									<span class="note-project">{note.domain}</span>
 								{:else}
@@ -479,11 +487,12 @@
 
 	/* Notes List Section */
 	.notes-section {
-		flex: 2;
+		flex: 1 1 0%;
 		display: flex;
 		flex-direction: column;
 		border-right: 1px solid var(--border-color);
 		background: var(--bg-secondary);
+		min-width: 0;
 	}
 
 	.section-header {
@@ -541,6 +550,7 @@
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
 		padding: 20px;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
@@ -552,6 +562,7 @@
 		border-radius: var(--radius-lg);
 		position: relative;
 		transition: all 0.2s ease;
+		min-width: 0;
 	}
 
 	.note-link {
@@ -561,6 +572,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
+		min-width: 0;
 	}
 
 	.note-card:hover {
@@ -661,6 +673,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
+		min-width: 0;
 	}
 
 	.note-header h3 {
@@ -671,6 +684,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		padding-right: 80px;
 	}
 
 	.note-project {
@@ -716,11 +730,11 @@
 
 	/* Chat Section */
 	.chat-section {
-		flex: 1;
+		flex: 0 0 400px;
 		display: flex;
 		flex-direction: column;
 		background: var(--bg-primary);
-		min-width: 400px;
+		max-width: 50%;
 	}
 
 	.chat-header {
