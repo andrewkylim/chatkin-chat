@@ -533,8 +533,12 @@
 
 					<!-- Fallback when all tasks are completed -->
 					{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
-						<div class="empty-state">
-							<div class="project-icon-large">✅</div>
+						<div class="empty-state completed-state">
+							<div class="completed-circle">
+								<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="20 6 9 17 4 12"></polyline>
+								</svg>
+							</div>
 							<h2>All tasks completed!</h2>
 							<p>Great work! You've completed all your tasks.</p>
 							<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed Tasks</button>
@@ -776,8 +780,12 @@
 
 				<!-- Fallback when all tasks are completed -->
 				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
-					<div class="empty-state">
-						<div class="project-icon-large">✅</div>
+					<div class="empty-state completed-state">
+						<div class="completed-circle">
+							<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="20 6 9 17 4 12"></polyline>
+							</svg>
+						</div>
 						<h2>All tasks completed!</h2>
 						<p>Great work! You've completed all your tasks.</p>
 						<button class="toggle-link" onclick={toggleShowCompleted}>Show Completed Tasks</button>
@@ -1856,6 +1864,11 @@
 		min-height: 400px;
 	}
 
+	.empty-state.completed-state {
+		padding: 40px 20px;
+		min-height: 300px;
+	}
+
 	.loading-state p {
 		color: var(--text-secondary);
 		margin: 0;
@@ -1879,6 +1892,18 @@
 		justify-content: center;
 		font-size: 64px;
 		margin-bottom: 8px;
+	}
+
+	.completed-circle {
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		background: #10B981;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 20px;
+		color: white;
 	}
 
 	/* Modal */

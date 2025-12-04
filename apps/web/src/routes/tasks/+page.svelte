@@ -317,11 +317,12 @@
 
 					<!-- Fallback when all tasks are completed -->
 					{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0}
-						<div class="empty-state">
-							<svg class="completion-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M9 11l3 3L22 4"></path>
-								<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-							</svg>
+						<div class="empty-state completed-state">
+							<div class="completed-circle">
+								<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="20 6 9 17 4 12"></polyline>
+								</svg>
+							</div>
 							<h2>All tasks completed!</h2>
 							<p>Great work! You've completed all your tasks.</p>
 							<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
@@ -512,11 +513,12 @@
 
 				<!-- Fallback when all tasks are completed -->
 				{#if todayTasks.length === 0 && thisWeekTasks.length === 0 && laterTasks.length === 0 && completedTasks.length > 0 && !showCompletedTasks}
-					<div class="empty-state">
-						<svg class="completion-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M9 11l3 3L22 4"></path>
-							<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-						</svg>
+					<div class="empty-state completed-state">
+						<div class="completed-circle">
+							<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="20 6 9 17 4 12"></polyline>
+							</svg>
+						</div>
 						<h2>All tasks completed!</h2>
 						<p>Great work! You've completed all your tasks.</p>
 						<button class="toggle-link" on:click={toggleShowCompleted}>Show Completed Tasks</button>
@@ -1681,5 +1683,22 @@
 	.completion-icon {
 		color: #6B9B6E;
 		margin-bottom: 16px;
+	}
+
+	.completed-circle {
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		background: #10B981;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 20px;
+		color: white;
+	}
+
+	.empty-state.completed-state {
+		padding: 40px 20px;
+		min-height: 300px;
 	}
 </style>
