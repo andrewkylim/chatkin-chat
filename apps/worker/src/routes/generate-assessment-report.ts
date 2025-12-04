@@ -397,11 +397,13 @@ Write an assessment report (800-1200 words) that speaks like a direct friend who
 
 FORMATTING RULES:
 - No title or document heading
-- Use ## for section headings
+- Use ## for section headings (Summary, Domain Breakdown, etc.)
+- For DOMAIN HEADERS: ALWAYS use **DomainName (score/10)** format - this is REQUIRED, not optional
 - Use bullet points with - for lists
-- Use **bold** for emphasis
+- Use **bold** for emphasis within text
 - NO horizontal rules (---)
-- Start directly with content`;
+- Start directly with content
+- CRITICAL: Every single domain (Body, Mind, Purpose, Connection, Growth, Finance) MUST have **Name (X.X/10)** at the start`;
 
 	const message = await client.messages.create({
 		model: 'claude-sonnet-4-20250514',
