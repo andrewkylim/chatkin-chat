@@ -744,8 +744,8 @@
 		display: none;
 	}
 
-	/* Mobile Styles */
-	@media (max-width: 768px) {
+	/* Mobile & Tablet Styles (includes iPad) */
+	@media (max-width: 1024px) {
 		.page-header {
 			display: none;
 		}
@@ -777,9 +777,9 @@
 		}
 
 		.mobile-logo {
-			width: 48px;
-			height: 48px;
-			border-radius: 8px;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
 			transition: all 0.15s ease;
 		}
 
@@ -814,6 +814,15 @@
 
 		.summary-grid {
 			grid-template-columns: 1fr;
+		}
+	}
+
+	/* Tablet/iPad specific - 2 column grid */
+	@media (min-width: 768px) and (max-width: 1024px) {
+		.domains-grid,
+		.projects-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 20px;
 		}
 	}
 

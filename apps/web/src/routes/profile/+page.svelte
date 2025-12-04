@@ -254,7 +254,7 @@
 	<header class="mobile-header">
 		<div class="mobile-header-left">
 			<a href="/chat" class="mobile-logo-button">
-				<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
+				<div class="mobile-logo" style="background-color: #8b5cf6"></div>
 			</a>
 			<h1>Profile</h1>
 		</div>
@@ -445,8 +445,8 @@
 	}
 
 	.spinner {
-		width: 48px;
-		height: 48px;
+		width: 40px;
+		height: 40px;
 		border: 4px solid var(--border-color);
 		border-top-color: var(--accent-primary);
 		border-radius: 50%;
@@ -670,9 +670,9 @@
 		}
 
 		.mobile-logo {
-			width: 48px;
-			height: 48px;
-			border-radius: 8px;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
 			transition: all 0.15s ease;
 		}
 

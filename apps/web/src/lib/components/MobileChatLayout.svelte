@@ -101,23 +101,39 @@
 		'/files': '#64748b'      // Slate Gray
 	};
 
+	// Domain colors for domain-specific pages
+	const domainColors: Record<string, string> = {
+		Body: '#10B981',      // Green
+		Mind: '#3B82F6',      // Blue
+		Purpose: '#8B5CF6',   // Purple
+		Connection: '#F59E0B', // Amber
+		Growth: '#EAB308',    // Yellow
+		Finance: '#EF4444'    // Red
+	};
+
 	const logoColor = $derived.by(() => {
+		// Check for domain-specific routes (e.g., /projects/Mind/chat)
+		const domainMatch = currentPath.match(/\/projects\/([^/]+)/);
+		if (domainMatch) {
+			const domain = domainMatch[1];
+			if (domainColors[domain]) {
+				return domainColors[domain];
+			}
+		}
+
 		// Check for exact matches first
 		if (sectionColorMap[currentPath]) {
-			console.log('Exact match for path:', currentPath, '→', sectionColorMap[currentPath]);
 			return sectionColorMap[currentPath];
 		}
 
 		// Check for partial matches (e.g., /projects/123 matches /projects)
 		for (const [route, color] of Object.entries(sectionColorMap)) {
 			if (currentPath.startsWith(route)) {
-				console.log('Partial match for path:', currentPath, 'matches route:', route, '→', color);
 				return color;
 			}
 		}
 
 		// Default to chat blue if no match
-		console.log('No match for path:', currentPath, '→ defaulting to blue');
 		return '#3b82f6';
 	});
 
@@ -681,8 +697,8 @@
 	}
 
 	.chat-logo {
-		width: 48px;
-		height: 48px;
+		width: 40px;
+		height: 40px;
 		border-radius: 50%;
 		transition: all 0.15s ease;
 	}
@@ -1028,8 +1044,8 @@
 	}
 
 	.input-wrapper :global(.mic-btn) {
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
 		background: transparent;
 		border: none;
 		padding: 0;
@@ -1105,8 +1121,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 32px;
-		height: 32px;
+		width: 40px;
+		height: 40px;
 		border-radius: 50%;
 		border: 1px solid transparent;
 		background: transparent;

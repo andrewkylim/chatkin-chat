@@ -7,32 +7,32 @@
 	// Domain AI descriptions
 	const domainAIConfig: Record<string, { title: string; subtitle: string; welcome: string }> = {
 		Body: {
-			title: 'Body AI',
+			title: 'Body',
 			subtitle: 'Your health and fitness coach',
 			welcome: "Hi! I'm your Body AI coach. I can help you manage your health, fitness, nutrition, and physical wellness. What would you like to work on?"
 		},
 		Mind: {
-			title: 'Mind AI',
+			title: 'Mind',
 			subtitle: 'Your mental health guide',
 			welcome: "Hi! I'm your Mind AI guide. I can help you with mental health, stress management, mindfulness, and emotional wellbeing. What's on your mind?"
 		},
 		Purpose: {
-			title: 'Purpose AI',
+			title: 'Purpose',
 			subtitle: 'Your career and purpose advisor',
 			welcome: "Hi! I'm your Purpose AI advisor. I can help you with career goals, life purpose, professional development, and meaningful work. What would you like to explore?"
 		},
 		Connection: {
-			title: 'Connection AI',
+			title: 'Connection',
 			subtitle: 'Your relationships coach',
 			welcome: "Hi! I'm your Connection AI coach. I can help you with relationships, social connections, communication, and building meaningful bonds. What would you like to discuss?"
 		},
 		Growth: {
-			title: 'Growth AI',
+			title: 'Growth',
 			subtitle: 'Your personal development mentor',
 			welcome: "Hi! I'm your Growth AI mentor. I can help you with personal development, learning, skills, and continuous improvement. What would you like to grow?"
 		},
 		Finance: {
-			title: 'Finance AI',
+			title: 'Finance',
 			subtitle: 'Your financial planning advisor',
 			welcome: "Hi! I'm your Finance AI advisor. I can help you with budgeting, financial planning, investments, and money management. What financial goals are you working on?"
 		}

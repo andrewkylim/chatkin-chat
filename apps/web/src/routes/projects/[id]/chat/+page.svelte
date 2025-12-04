@@ -22,32 +22,32 @@
 	// Domain AI descriptions
 	const domainAIConfig: Record<string, { title: string; subtitle: string; welcome: string }> = {
 		Body: {
-			title: 'Body AI',
+			title: 'Body',
 			subtitle: 'Your health and fitness coach',
 			welcome: "Hi! I'm your Body AI coach. I can help you manage your health, fitness, nutrition, and physical wellness. What would you like to work on?"
 		},
 		Mind: {
-			title: 'Mind AI',
+			title: 'Mind',
 			subtitle: 'Your mental health guide',
 			welcome: "Hi! I'm your Mind AI guide. I can help you with mental health, stress management, mindfulness, and emotional wellbeing. What's on your mind?"
 		},
 		Purpose: {
-			title: 'Purpose AI',
+			title: 'Purpose',
 			subtitle: 'Your career and purpose advisor',
 			welcome: "Hi! I'm your Purpose AI advisor. I can help you with career goals, life purpose, professional development, and meaningful work. What would you like to explore?"
 		},
 		Connection: {
-			title: 'Connection AI',
+			title: 'Connection',
 			subtitle: 'Your relationships coach',
 			welcome: "Hi! I'm your Connection AI coach. I can help you with relationships, social connections, communication, and building meaningful bonds. What would you like to discuss?"
 		},
 		Growth: {
-			title: 'Growth AI',
+			title: 'Growth',
 			subtitle: 'Your personal development mentor',
 			welcome: "Hi! I'm your Growth AI mentor. I can help you with personal development, learning, skills, and continuous improvement. What would you like to grow?"
 		},
 		Finance: {
-			title: 'Finance AI',
+			title: 'Finance',
 			subtitle: 'Your financial planning advisor',
 			welcome: "Hi! I'm your Finance AI advisor. I can help you with budgeting, financial planning, investments, and money management. What financial goals are you working on?"
 		}
@@ -59,12 +59,22 @@
 		welcome: `Hi! I can help you manage tasks and notes in your ${domain} domain. What would you like to work on?`
 	};
 
+	// Domain colors for logo
+	const domainColors: Record<string, string> = {
+		Body: '#10B981',      // Green
+		Mind: '#3B82F6',      // Blue
+		Purpose: '#8B5CF6',   // Purple
+		Connection: '#F59E0B', // Amber
+		Growth: '#EAB308',    // Yellow
+		Finance: '#EF4444'    // Red
+	};
+
+	$: domainColor = domainColors[domain as string] || '#14b8a6'; // Default to teal
+
 	let tasks: Task[] = [];
 	let notes: Note[] = [];
 	let files: File[] = [];
 	let loading = true;
-	let showMenu = false;
-	let showDeleteConfirm = false;
 	let showEditTaskModal = false;
 	let editingTask: Task | null = null;
 	let showCompletedTasks = false;
@@ -97,9 +107,6 @@
 	// Close menu when clicking outside
 	function handleClickOutside(event: MouseEvent) {
 		const target = event.target as HTMLElement;
-		if (showMenu && !target.closest('.menu-container')) {
-			showMenu = false;
-		}
 		if (showNewItemMenu && !target.closest('.new-item-container')) {
 			showNewItemMenu = false;
 		}
@@ -159,15 +166,7 @@
 		}
 	}
 
-	// Domain management functions (disabled - domains are built-in)
-	async function _handleDeleteProject() {
-		alert('Domains cannot be deleted');
-	}
-
-	function startEditProject() {
-		alert('Domain settings are not editable');
-	}
-
+	// Domain data refresh
 	async function _handleProjectUpdated() {
 		await loadData();
 	}
@@ -379,6 +378,9 @@
 						<path d="M14 2l-8 8 8 8"/>
 					</svg>
 				</a>
+				<div class="domain-title-desktop">
+					<h1>{domainConfig.title}</h1>
+				</div>
 				<div class="header-actions">
 					<!-- New Item Button with Dropdown -->
 					<div class="new-item-container">
@@ -414,32 +416,6 @@
 							</div>
 						{/if}
 					</div>
-
-					<div class="menu-container">
-						<button class="icon-btn" title="Project menu" onclick={() => showMenu = !showMenu}>
-							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-								<circle cx="10" cy="10" r="1.5"/>
-								<circle cx="4" cy="10" r="1.5"/>
-								<circle cx="16" cy="10" r="1.5"/>
-							</svg>
-						</button>
-						{#if showMenu}
-							<div class="dropdown-menu">
-								<button class="menu-item" onclick={startEditProject}>
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
-									</svg>
-									Edit Project
-								</button>
-								<button class="menu-item delete-item" onclick={() => { showMenu = false; showDeleteConfirm = true; }}>
-									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-									</svg>
-									Delete Project
-								</button>
-							</div>
-						{/if}
-					</div>
 				</div>
 			</header>
 
@@ -449,10 +425,6 @@
 					<p>Loading {domain} domain...</p>
 				</div>
 			{:else}
-				<div class="project-title-wrapper">
-					<h1 class="project-title">{domain}</h1>
-				</div>
-
 				{#if tasks.length === 0 && notes.length === 0 && files.length === 0}
 					<div class="empty-state">
 						<h2>No tasks, notes, or files yet</h2>
@@ -676,7 +648,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
+					<div class="mobile-logo" style="background-color: {domainColor}"></div>
 				</a>
 				<a href="/projects" class="back-btn">
 					<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -687,34 +659,7 @@
 					<span class="domain-title-mobile">{domainConfig.title}</span>
 				</div>
 			</div>
-			<div class="mobile-header-actions">
-				<div class="menu-container">
-					<button class="icon-btn" title="Project menu" onclick={() => showMenu = !showMenu}>
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-							<circle cx="10" cy="10" r="1.5"/>
-							<circle cx="4" cy="10" r="1.5"/>
-							<circle cx="16" cy="10" r="1.5"/>
-						</svg>
-					</button>
-					{#if showMenu}
-						<div class="dropdown-menu">
-							<button class="menu-item" onclick={startEditProject}>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M11.5 2l2.5 2.5L6 12.5H3.5V10L11.5 2z"/>
-								</svg>
-								Edit Project
-							</button>
-							<button class="menu-item delete-item" onclick={() => { showMenu = false; showDeleteConfirm = true; }}>
-								<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-									<path d="M2 4h12M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M13 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V4"/>
-								</svg>
-								Delete Project
-							</button>
-						</div>
-					{/if}
-				</div>
-				<MobileUserMenu />
-			</div>
+			<MobileUserMenu />
 		</header>
 
 		<div class="mobile-content-area">
@@ -724,10 +669,6 @@
 					<p>Loading {domain} domain...</p>
 				</div>
 			{:else}
-				<div class="project-title-wrapper mobile">
-					<h1 class="project-title mobile">{domain}</h1>
-				</div>
-
 				{#if tasks.length === 0 && notes.length === 0 && files.length === 0}
 					<div class="empty-state">
 						<h2>No tasks, notes, or files yet</h2>
@@ -936,24 +877,6 @@
 			{/if}
 		</div>
 	</div>
-
-	<!-- Edit Project Modal -->
-	<!-- EditProjectModal removed - domains are not editable -->
-
-	<!-- Delete Confirmation Modal -->
-	{#if showDeleteConfirm}
-		<div class="modal-overlay" onclick={() => showDeleteConfirm = false}>
-			<div class="modal" onclick={(e) => e.stopPropagation()}>
-				<h2>Delete Domain?</h2>
-				<p>Domains cannot be deleted. They are a built-in feature of the system.</p>
-				<div class="modal-actions">
-					<button type="button" class="secondary-btn" onclick={() => showDeleteConfirm = false}>
-						Close
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<TaskEditModal
 		show={showEditTaskModal}
@@ -1221,6 +1144,25 @@
 	.back-btn:hover {
 		background: var(--bg-primary);
 		transform: translateX(-2px);
+	}
+
+	.domain-title-desktop {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		padding: 0 16px;
+		min-width: 0;
+	}
+
+	.domain-title-desktop h1 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		margin: 0;
+		color: var(--text-primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.header-actions {
@@ -2197,9 +2139,9 @@
 		}
 
 		.mobile-logo {
-			width: 48px;
-			height: 48px;
-			border-radius: 8px;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
 			transition: all 0.15s ease;
 		}
 
