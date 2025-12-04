@@ -343,20 +343,28 @@ Write an assessment report (800-1200 words) that speaks like a direct friend who
 
 2. **Domain Breakdown**
 
-   For each domain (Body, Mind, Purpose, Connection, Growth, Finance), format EXACTLY like this:
+   CRITICAL: You MUST format each domain on its own line with a blank line between each one.
 
-   **DomainName (X.X/10)** One paragraph covering: what they said, what that actually means, the real blocker, and one concrete thing to try.
+   Format each domain EXACTLY like this:
 
-   CRITICAL FORMATTING RULES:
-   - Each domain MUST start with **DomainName (X.X/10)** followed by a space and the paragraph content
-   - There MUST be a blank line between each domain entry
-   - Do NOT run domain paragraphs together
-   - Example format:
-     **Body (4.3/10)** Your paragraph here...
+   **Body (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-     **Mind (3.2/10)** Your paragraph here...
+   **Mind (X.X/10)** Your single paragraph analysis here.
 
-     **Purpose (5.1/10)** Your paragraph here...
+   **Purpose (X.X/10)** Your single paragraph analysis here.
+
+   **Connection (X.X/10)** Your single paragraph analysis here.
+
+   **Growth (X.X/10)** Your single paragraph analysis here.
+
+   **Finance (X.X/10)** Your single paragraph analysis here.
+
+   REQUIRED FORMAT RULES - FOLLOW EXACTLY:
+   - Start each domain with **DomainName (score/10)**
+   - Put ONE blank line between each domain
+   - Each domain is ONE paragraph of 2-4 sentences
+   - Do NOT combine domains into one paragraph
+   - Do NOT omit the blank lines between domains
 
 3. **Patterns Worth Naming**
    - Contradictions between domains (e.g., "You say you want X but you're avoiding Y")

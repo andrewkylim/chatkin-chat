@@ -152,11 +152,6 @@
 		// Remove horizontal rules (---, ***, ___)
 		html = html.replace(/^[-*_]{3,}$/gm, '').trim();
 
-		// IMPORTANT: Ensure domains have proper line breaks BEFORE converting markdown
-		// Add double line break before domain headers if not already present
-		html = html.replace(/([^\n])\n?(\*\*(?:Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
-		html = html.replace(/([.!?])\s*(\*\*(?:Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)\*\*)/g, '$1\n\n$2');
-
 		// Convert any heading markers (##, ###, ####) to styled h3 elements
 		html = html.replace(/^#{2,4}\s+(.+)$/gm, '<h3 class="section-marker">$1</h3>');
 
@@ -169,20 +164,51 @@
 		// Wrap consecutive list items in ul tags
 		html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul class="report-list">$&</ul>');
 
-		// Split by double line breaks and process paragraphs
+		// CRITICAL: Split domain paragraphs after HTML conversion
+		// Find and separate each domain into its own paragraph
+		const domainHeaderRegex = /<strong>(Body|Mind|Purpose|Connection|Growth|Finance)\s*\([0-9.]+\/10\)<\/strong>/g;
+
+		// First, check if we have domain breakdowns in the content
+		if (domainHeaderRegex.test(html)) {
+			// Reset regex since test() consumed it
+			domainHeaderRegex.lastIndex = 0;
+
+			// Replace each domain section with a clear separator
+			let processedHtml = html;
+			const domainNames = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
+
+			domainNames.forEach(domain => {
+				// Match the domain header and capture everything until the next domain or section end
+				const singleDomainRegex = new RegExp(
+					`(<strong>${domain}\\s*\\([0-9.]+\\/10\\)<\\/strong>)([^]*?)(?=<strong>(?:Body|Mind|Purpose|Connection|Growth|Finance)\\s*\\([0-9.]+\\/10\\)<\\/strong>|<h3|<ul|$)`,
+					'g'
+				);
+
+				processedHtml = processedHtml.replace(singleDomainRegex, (match, header, content) => {
+					const cleanContent = (header + content).replace(/\n+/g, ' ').trim();
+					return `\n\n<p class="domain-paragraph">${cleanContent}</p>\n\n`;
+				});
+			});
+
+			html = processedHtml;
+		}
+
+		// Process remaining content (non-domain paragraphs)
 		const sections = html.split(/\n\n+/);
-		html = sections.map(section => {
+		const processedSections = sections.map(section => {
 			section = section.trim();
 			if (!section) return '';
 
-			// Don't wrap headings, lists, or already formatted content
-			if (section.startsWith('<h3') || section.startsWith('<ul') || section.includes('</')) {
+			// Skip if already formatted (domain paragraph, heading, list)
+			if (section.includes('domain-paragraph') || section.startsWith('<h3') || section.startsWith('<ul') || section.startsWith('<p')) {
 				return section;
 			}
 
 			// Wrap plain text in paragraphs
 			return `<p>${section.replace(/\n/g, ' ')}</p>`;
-		}).filter(s => s).join('\n\n');
+		}).filter(s => s);
+
+		html = processedSections.join('\n\n');
 
 		// Split by section headings and wrap each in a div
 		const sectionParts = html.split(/(<h3 class="section-marker">.*?<\/h3>)/s);
@@ -527,6 +553,15 @@
 		margin: 1.25rem 0;
 		line-height: 1.7;
 		color: var(--text-primary);
+	}
+
+	.report-sections-wrapper :global(p.domain-paragraph) {
+		margin: 1.75rem 0;
+		padding-bottom: 1rem;
+	}
+
+	.report-sections-wrapper :global(p.domain-paragraph + p.domain-paragraph) {
+		margin-top: 2rem;
 	}
 
 	.report-sections-wrapper :global(p:first-of-type) {
