@@ -162,7 +162,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
+					<div class="mobile-logo" style="background-color: #14b8a6"></div>
 				</a>
 				<h1>Projects</h1>
 			</div>

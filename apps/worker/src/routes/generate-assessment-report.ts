@@ -118,6 +118,7 @@ export async function handleGenerateAssessmentReport(
 				user_id: user.userId,
 				profile_summary: profileSummary,
 				focus_areas: focusAreas,
+				has_completed_questionnaire: true,
 				last_profile_update: new Date().toISOString(),
 				updated_at: new Date().toISOString()
 			},

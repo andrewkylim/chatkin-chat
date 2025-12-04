@@ -247,7 +247,7 @@
 		<header class="mobile-header">
 			<div class="mobile-header-left">
 				<a href="/chat" class="mobile-logo-button">
-					<img src="/logo.svg" alt="Chatkin" class="mobile-logo" />
+					<div class="mobile-logo" style="background-color: #f59e0b"></div>
 				</a>
 				<h1>Notes</h1>
 			</div>
@@ -1220,7 +1220,7 @@
 		.mobile-logo {
 			width: 48px;
 			height: 48px;
-			border-radius: 8px;
+			border-radius: 50%;
 			transition: all 0.15s ease;
 		}
 

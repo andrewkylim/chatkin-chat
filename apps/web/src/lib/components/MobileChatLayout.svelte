@@ -91,6 +91,36 @@
 	let uploadStatus = $state('');
 	const currentPath = $derived($page.url.pathname);
 
+	// Map current route to section color
+	const sectionColorMap: Record<string, string> = {
+		'/chat': '#3b82f6',      // Blue
+		'/profile': '#8b5cf6',   // Purple
+		'/projects': '#14b8a6',  // Teal
+		'/tasks': '#ec4899',     // Pink
+		'/notes': '#f59e0b',     // Amber
+		'/files': '#64748b'      // Slate Gray
+	};
+
+	const logoColor = $derived.by(() => {
+		// Check for exact matches first
+		if (sectionColorMap[currentPath]) {
+			console.log('Exact match for path:', currentPath, '→', sectionColorMap[currentPath]);
+			return sectionColorMap[currentPath];
+		}
+
+		// Check for partial matches (e.g., /projects/123 matches /projects)
+		for (const [route, color] of Object.entries(sectionColorMap)) {
+			if (currentPath.startsWith(route)) {
+				console.log('Partial match for path:', currentPath, 'matches route:', route, '→', color);
+				return color;
+			}
+		}
+
+		// Default to chat blue if no match
+		console.log('No match for path:', currentPath, '→ defaulting to blue');
+		return '#3b82f6';
+	});
+
 	export function scrollToBottom() {
 		if (messagesContainer) {
 			messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -138,7 +168,7 @@
 				</a>
 			{:else}
 				<button class="logo-button">
-					<img src="/logo.svg" alt="Chatkin" class="chat-logo" />
+					<div class="chat-logo" style="background-color: {logoColor}"></div>
 				</button>
 			{/if}
 			<div class="header-title-group">
@@ -653,7 +683,7 @@
 	.chat-logo {
 		width: 48px;
 		height: 48px;
-		border-radius: 8px;
+		border-radius: 50%;
 		transition: all 0.15s ease;
 	}
 
