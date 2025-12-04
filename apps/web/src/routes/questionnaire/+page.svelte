@@ -67,18 +67,33 @@
 			showIntro = false;
 		}
 
-		// Check if user has completed the assessment by checking for assessment_results
-		// We check assessment_results instead of has_completed_questionnaire because
-		// the user_profiles row gets deleted during retake, but assessment_results persists
+		// Check if user has completed the assessment
 		const { data: assessmentResults } = await supabase
 			.from('assessment_results')
 			.select('user_id')
 			.eq('user_id', $auth.user.id)
 			.maybeSingle();
 
-		// If assessment_results exists, redirect to profile (results are ready)
-		if (assessmentResults !== null) {
+		const { data: profile } = await supabase
+			.from('user_profiles')
+			.select('has_completed_questionnaire')
+			.eq('user_id', $auth.user.id)
+			.maybeSingle();
+
+		const hasCompletedBefore = profile?.has_completed_questionnaire === true;
+
+		// If assessment_results exists AND user hasn't explicitly started a retake,
+		// redirect to profile (results are ready)
+		if (assessmentResults !== null && hasCompletedBefore) {
 			goto('/profile');
+			return;
+		}
+
+		// If assessment_results exists but has_completed_questionnaire is false,
+		// user is retaking - show retake warning
+		if (assessmentResults !== null && !hasCompletedBefore) {
+			_canExit = true;
+			showRetakeWarning = true;
 			return;
 		}
 
