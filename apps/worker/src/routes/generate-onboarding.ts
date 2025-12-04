@@ -283,7 +283,7 @@ Return ONLY JSON array (exactly 6 notes, one per domain):
 CRITICAL: Use EXACT domain names. Generate exactly 6 detailed notes. Make them personal and specific using their actual assessment data.`;
 
 	const message = await client.messages.create({
-		model: 'claude-sonnet-4-20250514',
+		model: 'claude-3-5-haiku-20241022',
 		max_tokens: 8000,
 		messages: [{ role: 'user', content: prompt }]
 	});

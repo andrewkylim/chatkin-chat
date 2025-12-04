@@ -40,7 +40,7 @@ Respond with ONLY a JSON object in this exact format:
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 150,
       temperature: 0.3,
       messages: [{
