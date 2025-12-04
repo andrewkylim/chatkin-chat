@@ -54,7 +54,7 @@ describe('Tasks Database Operations', () => {
       expect(tasks).toEqual([mockTask]);
     });
 
-    it('should filter tasks by project', async () => {
+    it('should filter tasks by domain', async () => {
       const mockEq = vi.fn().mockResolvedValue({
         data: [mockTask],
         error: null
@@ -70,7 +70,7 @@ describe('Tasks Database Operations', () => {
 
       await getTasks('project-123');
 
-      expect(mockEq).toHaveBeenCalledWith('project_id', 'project-123');
+      expect(mockEq).toHaveBeenCalledWith('domain', 'project-123');
     });
 
     it('should throw error on database error', async () => {

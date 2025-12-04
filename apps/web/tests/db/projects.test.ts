@@ -322,9 +322,11 @@ describe('Projects Database Operations', () => {
         } else if (table === 'files') {
           return {
             select: vi.fn().mockReturnValue({
-              match: vi.fn().mockResolvedValue({
-                data: mockFiles,
-                error: null
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({
+                  data: mockFiles,
+                  error: null
+                })
               })
             })
           };
@@ -366,9 +368,11 @@ describe('Projects Database Operations', () => {
         } else if (table === 'files') {
           return {
             select: vi.fn().mockReturnValue({
-              match: vi.fn().mockResolvedValue({
-                data: [{ id: 'file-1' }],
-                error: null
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({
+                  data: [{ id: 'file-1' }],
+                  error: null
+                })
               })
             })
           };
@@ -408,9 +412,11 @@ describe('Projects Database Operations', () => {
         } else if (table === 'files') {
           return {
             select: vi.fn().mockReturnValue({
-              match: vi.fn().mockResolvedValue({
-                data: [{ id: 'file-1' }],
-                error: null
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({
+                  data: [{ id: 'file-1' }],
+                  error: null
+                })
               })
             })
           };
