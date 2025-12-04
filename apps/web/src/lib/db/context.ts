@@ -314,15 +314,32 @@ async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]>
 	if (error) throw error;
 	if (!notes) return [];
 
-	return (notes as unknown as NoteWithProjectResponse[]).map(note => ({
-		id: note.id,
-		title: note.title,
-		content: note.content,
-		domain: note.domain,
-		project_name: note.projects?.name || null,
-		updated_at: note.updated_at,
-		is_system_generated: note.is_system_generated || false
-	}));
+	// Fetch note blocks for each note to get the actual content
+	const notesWithContent = await Promise.all(
+		(notes as unknown as NoteWithProjectResponse[]).map(async (note) => {
+			// Fetch blocks for this note
+			const { data: blocks } = await supabase
+				.from('note_blocks')
+				.select('content')
+				.eq('note_id', note.id)
+				.order('position', { ascending: true });
+
+			// Concatenate block content with newlines
+			const blockContent = blocks?.map(b => b.content).join('\n\n') || '';
+
+			return {
+				id: note.id,
+				title: note.title,
+				content: blockContent || note.content, // Use block content, fallback to note.content
+				domain: note.domain,
+				project_name: note.projects?.name || null,
+				updated_at: note.updated_at,
+				is_system_generated: note.is_system_generated || false
+			};
+		})
+	);
+
+	return notesWithContent;
 }
 
 /**
@@ -360,7 +377,7 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 		}
 	}
 
-	// Projects section
+	// Projects section (skip if empty to reduce noise in scoped contexts)
 	if (context.projects.length > 0) {
 		formatted += '### Projects\n';
 		for (const project of context.projects) {
@@ -371,8 +388,6 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 			formatted += ` (${project.completedTaskCount}/${project.taskCount} tasks done, ${project.noteCount} notes, ${project.fileCount} files)\n`;
 		}
 		formatted += '\n';
-	} else {
-		formatted += '### Projects\n(No projects yet)\n\n';
 	}
 
 	// Tasks section

@@ -945,9 +945,8 @@
 	.domain-color-spinner {
 		width: 64px;
 		height: 64px;
-		border: 5px solid transparent;
 		border-radius: 50%;
-		animation: spin 2s linear infinite, domainColorCycle 6s linear infinite;
+		animation: domainColorCycle 6s linear infinite;
 		margin-bottom: 16px;
 	}
 
@@ -959,22 +958,22 @@
 
 	@keyframes domainColorCycle {
 		0%, 16.66% {
-			border-top-color: #10B981; /* Body */
+			background-color: #10B981; /* Body */
 		}
 		16.67%, 33.33% {
-			border-top-color: #3B82F6; /* Mind */
+			background-color: #3B82F6; /* Mind */
 		}
 		33.34%, 50% {
-			border-top-color: #8B5CF6; /* Purpose */
+			background-color: #8B5CF6; /* Purpose */
 		}
 		50.01%, 66.66% {
-			border-top-color: #F59E0B; /* Connection */
+			background-color: #F59E0B; /* Connection */
 		}
 		66.67%, 83.33% {
-			border-top-color: #EAB308; /* Growth */
+			background-color: #EAB308; /* Growth */
 		}
 		83.34%, 100% {
-			border-top-color: #EF4444; /* Finance */
+			background-color: #EF4444; /* Finance */
 		}
 	}
 

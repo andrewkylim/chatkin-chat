@@ -247,7 +247,7 @@
 				: msg
 		);
 
-		const result = await chatOps.executeOperations(operations, projectId);
+		const result = await chatOps.executeOperations(operations, projectId, scope);
 
 		// Reload context
 		workspaceContextString = await chatOps.reloadContext();
@@ -661,6 +661,14 @@
 			domain: scope === 'project' && projectId ? (projectId as any) : undefined
 		});
 		workspaceContextString = formatWorkspaceContextForAI(workspaceContext);
+
+		logger.info('Workspace context loaded', {
+			scope,
+			projectsCount: workspaceContext.projects.length,
+			tasksCount: workspaceContext.tasks.length,
+			notesCount: workspaceContext.notes.length,
+			contextLength: workspaceContextString.length
+		});
 
 		// Ready for display
 		messagesReady = true;

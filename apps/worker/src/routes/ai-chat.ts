@@ -42,7 +42,6 @@ export async function handleAIChat(
     // Use the auth token from body for database queries (it should match the request auth)
 
     logger.debug('Processing AI chat request', {
-      scope: context?.scope,
       mode: mode,
       messageLength: message.length,
       hasHistory: !!conversationHistory?.length,
@@ -53,6 +52,12 @@ export async function handleAIChat(
 
     // Build base system prompt
     let systemPrompt = buildSystemPrompt(context, workspaceContext, mode);
+
+    logger.info('System prompt built', {
+      mode,
+      promptLength: systemPrompt.length,
+      promptStart: systemPrompt.substring(0, 300)
+    });
 
     // Load unsurfaced coach observations (if in chat mode and early in conversation)
     if (mode === 'chat' && conversationHistory && conversationHistory.length <= 4) {

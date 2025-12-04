@@ -5,41 +5,39 @@
 import type { ChatRequest } from '@chatkin/types/api';
 import { getChatModePrompt, getActionModePrompt } from './base';
 import { getGlobalPrompt } from './global';
-import { getTasksPrompt } from './tasks';
-import { getNotesPrompt } from './notes';
-import { getProjectPrompt } from './project';
 
 export function buildSystemPrompt(
   context: ChatRequest['context'],
   workspaceContext?: string,
   mode: 'chat' | 'action' = 'action'
 ): string {
-  // Use mode-specific base prompt
-  let systemPrompt = mode === 'chat'
+  const scope = context?.scope || 'global';
+  const domain = context?.domain;
+  const projectId = context?.projectId;
+
+  // Build soft context hint
+  let contextHint = '';
+  if (scope === 'notes') {
+    contextHint = '\n**Context:** You\'re on the Notes page. User is browsing their notes collection.\n';
+  } else if (scope === 'tasks') {
+    contextHint = '\n**Context:** You\'re on the Tasks page. User is browsing their tasks.\n';
+  } else if (scope === 'project' && domain) {
+    contextHint = `\n**Context:** You're on the ${domain} domain project page. When creating new items, default to the ${domain} domain unless the user specifies otherwise.\n`;
+  }
+
+  // Always use global prompt (no scope restrictions)
+  let systemPrompt = getGlobalPrompt();
+  systemPrompt += contextHint;
+
+  // Add mode-specific prompt
+  systemPrompt += '\n\n';
+  systemPrompt += mode === 'chat'
     ? getChatModePrompt(workspaceContext)
     : getActionModePrompt(workspaceContext);
 
   // Add project-specific context
-  if (context?.projectId) {
+  if (projectId) {
     systemPrompt += '\n\nYou are currently assisting with a specific project. All tasks/notes you create should be relevant to this project context.';
-  }
-
-  // Add scope-specific prompts
-  const scope = context?.scope || 'global';
-
-  switch (scope) {
-    case 'global':
-      systemPrompt += getGlobalPrompt();
-      break;
-    case 'tasks':
-      systemPrompt += getTasksPrompt();
-      break;
-    case 'notes':
-      systemPrompt += getNotesPrompt();
-      break;
-    case 'project':
-      systemPrompt += getProjectPrompt(context?.projectId);
-      break;
   }
 
   return systemPrompt;

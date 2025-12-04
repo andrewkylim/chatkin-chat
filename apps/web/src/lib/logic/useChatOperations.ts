@@ -130,10 +130,11 @@ export async function sendMessageToAI(options: SendMessageOptions): Promise<Mess
  */
 export async function executeOperationsAction(
 	operations: Operation[],
-	projectId?: string
+	projectId?: string,
+	scope?: 'global' | 'tasks' | 'notes' | 'project'
 ): Promise<{ successCount: number; errorCount: number; results: string[] }> {
 	try {
-		return await chatOperationsService.executeOperations(operations, projectId);
+		return await chatOperationsService.executeOperations(operations, projectId, scope);
 	} catch (error) {
 		handleError(error, {
 			operation: 'Execute operations',

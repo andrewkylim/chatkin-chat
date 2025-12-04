@@ -42,10 +42,11 @@
 
 <div class="inline-questions">
 	{#each questions as q, qIndex}
-		{@const isProjectQuestion = q.question.toLowerCase().includes('project') ||
-		                            q.question.toLowerCase().includes('domain')}
-		<div class="question-block">
-			<label class="question-label" for={`q${messageIndex}_${qIndex}`}>{q.question}</label>
+		{#if q && q.question}
+			{@const isProjectQuestion = q.question.toLowerCase().includes('project') ||
+			                            q.question.toLowerCase().includes('domain')}
+			<div class="question-block">
+				<label class="question-label" for={`q${messageIndex}_${qIndex}`}>{q.question}</label>
 			<select
 				id={`q${messageIndex}_${qIndex}`}
 				class="question-select"
@@ -69,6 +70,7 @@
 				/>
 			{/if}
 		</div>
+		{/if}
 	{/each}
 </div>
 
@@ -100,7 +102,7 @@
 	.question-select {
 		width: 100%;
 		padding: 0.75rem 1rem;
-		background: rgba(0, 0, 0, 0.2);
+		background: var(--bg-tertiary);
 		border: 1px solid var(--border-color);
 		border-radius: 0.5rem;
 		color: var(--text-primary);
@@ -117,14 +119,14 @@
 
 	.question-select:hover {
 		border-color: rgba(199, 124, 92, 0.5);
-		background: rgba(0, 0, 0, 0.3);
+		background: var(--bg-secondary);
 	}
 
 	.question-select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
 		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
-		background: rgba(0, 0, 0, 0.3);
+		background: var(--bg-secondary);
 	}
 
 	.other-input {

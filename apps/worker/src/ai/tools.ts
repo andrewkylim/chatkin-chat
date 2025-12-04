@@ -6,7 +6,7 @@ export function getTools() {
   return [
     {
       name: 'ask_questions',
-      description: 'Ask clarifying questions when critical information is missing. Only use for ambiguous requests (e.g., "Plan vacation" - needs when/where). For simple requests, just use propose_operations directly.',
+      description: 'Ask clarifying questions using a modal UI when truly ambiguous requests require user input (e.g., "Plan vacation" needs destination/dates, "Create morning routine" could span multiple domains). RARELY USED - most requests should use propose_operations with smart defaults. When you do use this, provide 2-4 options per question.',
       input_schema: {
         type: 'object' as const,
         properties: {
