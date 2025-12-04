@@ -343,37 +343,29 @@ Write an assessment report (800-1200 words) that speaks like a direct friend who
 
 2. **Domain Breakdown**
 
-   YOU MUST FORMAT EACH DOMAIN EXACTLY AS SHOWN BELOW. DO NOT DEVIATE FROM THIS FORMAT.
+   MANDATORY FORMATTING: Each of the 6 domains below MUST be written EXACTLY like this example:
 
-   **Body (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
+   **DomainName (X.X/10)** Your analysis paragraph here.
 
-   **Mind (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
+   YOU MUST WRITE ALL SIX DOMAINS IN THIS EXACT FORMAT:
 
-   **Purpose (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
+   First, write: **Body (${domainScores.Body?.toFixed(1) || 'X.X'}/10)** followed by your analysis paragraph.
 
-   **Connection (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
+   Then write: **Mind (${domainScores.Mind?.toFixed(1) || 'X.X'}/10)** followed by your analysis paragraph.
 
-   **Growth (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
+   Then write: **Purpose (${domainScores.Purpose?.toFixed(1) || 'X.X'}/10)** followed by your analysis paragraph.
 
-   **Finance (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
+   Then write: **Connection (${domainScores.Connection?.toFixed(1) || 'X.X'}/10)** followed by your analysis paragraph.
 
-   ABSOLUTELY CRITICAL FORMATTING REQUIREMENTS:
-   - EVERY single domain MUST start with **DomainName (score/10)** including the ** asterisks
-   - The ** markers are MANDATORY for ALL SIX domains, not just the first one
-   - Put a blank line between each domain entry
-   - Each domain is ONE paragraph of 2-4 sentences
-   - ALL SIX domains MUST have this exact format: **DomainName (score/10)** followed by text
+   Then write: **Growth (${domainScores.Growth?.toFixed(1) || 'X.X'}/10)** followed by your analysis paragraph.
 
-   CORRECT formatting example:
-   **Body (3.6/10)** Text here about body.
+   Then write: **Finance (${domainScores.Finance?.toFixed(1) || 'X.X'}/10)** followed by your analysis paragraph.
 
-   **Mind (4.2/10)** Text here about mind.
+   Each domain paragraph should cover: what they said, what that means, the blocker, and one thing to try.
 
-   INCORRECT formatting (DO NOT DO THIS):
-   **Body (3.6/10)** Text here.
-   Mind Text here. ← WRONG! Missing ** markers and (score/10)
+   Put a blank line between each domain.
 
-   Purpose Text here. ← WRONG! Missing ** markers and (score/10)
+   If you write even ONE domain without the ** markers and (score/10), you have failed the task.
 
 3. **Patterns Worth Naming**
    - Contradictions between domains (e.g., "You say you want X but you're avoiding Y")
