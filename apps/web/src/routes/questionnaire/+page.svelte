@@ -67,23 +67,22 @@
 			showIntro = false;
 		}
 
-		// Check if user has completed the assessment (not just partial responses)
-		const { data: profile } = await supabase
-			.from('user_profiles')
-			.select('has_completed_questionnaire')
+		// Check if user has completed the assessment by checking for assessment_results
+		// We check assessment_results instead of has_completed_questionnaire because
+		// the user_profiles row gets deleted during retake, but assessment_results persists
+		const { data: assessmentResults } = await supabase
+			.from('assessment_results')
+			.select('user_id')
 			.eq('user_id', $auth.user.id)
 			.maybeSingle();
 
-		const hasCompletedBefore = profile?.has_completed_questionnaire === true;
-
-		// Show retake warning if user has completed assessment before
-		if (hasCompletedBefore) {
-			_canExit = true;
-			showRetakeWarning = true;
-			return; // Don't load questions yet, wait for user decision
+		// If assessment_results exists, redirect to profile (results are ready)
+		if (assessmentResults !== null) {
+			goto('/profile');
+			return;
 		}
 
-		// User hasn't completed before, load questions and check for partial progress
+		// Load questions and check for partial progress
 		await loadQuestions();
 		await loadExistingResponses();
 
@@ -93,13 +92,22 @@
 		// Allow exit if user has any existing responses (partial progress)
 		_canExit = existingResponseCount > 0;
 
+		// Check if all questions are answered (but no assessment_results yet)
+		const firstUnansweredIndex = questions.findIndex(q => !responses.has(q.id));
+		const allQuestionsAnswered = firstUnansweredIndex === -1 && questions.length > 0;
+
+		if (allQuestionsAnswered) {
+			// User finished all questions but processing isn't complete yet
+			// Show processing page
+			submitting = true;
+			loading = false;
+			showIntro = false;
+			return;
+		}
+
 		// Jump to first unanswered question if returning with partial progress
 		if (existingResponseCount > 0) {
-			// Find the first question that hasn't been answered
-			const firstUnansweredIndex = questions.findIndex(q => !responses.has(q.id));
-			if (firstUnansweredIndex !== -1) {
-				currentQuestionIndex = firstUnansweredIndex;
-			}
+			currentQuestionIndex = firstUnansweredIndex;
 			showIntro = false;
 		}
 	}
