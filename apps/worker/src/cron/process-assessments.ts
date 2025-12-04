@@ -115,19 +115,23 @@ export async function processSingleAssessment(userId: string, env: Env): Promise
 			}
 		}
 
-		// Mark as processed
-		const { error: updateError } = await supabaseAdmin
-			.from('assessment_results')
-			.update({
-				onboarding_processed: true,
-				onboarding_processed_at: new Date().toISOString()
-			})
-			.eq('user_id', userId);
+		// Only mark as processed if tasks were actually created
+		if (tasksCreated > 0) {
+			const { error: updateError } = await supabaseAdmin
+				.from('assessment_results')
+				.update({
+					onboarding_processed: true,
+					onboarding_processed_at: new Date().toISOString()
+				})
+				.eq('user_id', userId);
 
-		if (updateError) {
-			logger.error('Failed to mark assessment as processed', { userId, error: updateError });
+			if (updateError) {
+				logger.error('Failed to mark assessment as processed', { userId, error: updateError });
+			} else {
+				logger.info('Assessment processing completed successfully', { userId, tasksCreated, notesCreated });
+			}
 		} else {
-			logger.info('Assessment processing completed', { userId, tasksCreated, notesCreated });
+			logger.error('No tasks created - not marking as processed', { userId, tasksCreated, notesCreated });
 		}
 
 	} catch (err) {
