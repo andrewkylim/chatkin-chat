@@ -343,28 +343,37 @@ Write an assessment report (800-1200 words) that speaks like a direct friend who
 
 2. **Domain Breakdown**
 
-   CRITICAL: You MUST format each domain on its own line with a blank line between each one.
-
-   Format each domain EXACTLY like this:
+   YOU MUST FORMAT EACH DOMAIN EXACTLY AS SHOWN BELOW. DO NOT DEVIATE FROM THIS FORMAT.
 
    **Body (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-   **Mind (X.X/10)** Your single paragraph analysis here.
+   **Mind (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-   **Purpose (X.X/10)** Your single paragraph analysis here.
+   **Purpose (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-   **Connection (X.X/10)** Your single paragraph analysis here.
+   **Connection (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-   **Growth (X.X/10)** Your single paragraph analysis here.
+   **Growth (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-   **Finance (X.X/10)** Your single paragraph analysis here.
+   **Finance (X.X/10)** Your single paragraph analysis here covering what they said, what that means, the blocker, and one thing to try.
 
-   REQUIRED FORMAT RULES - FOLLOW EXACTLY:
-   - Start each domain with **DomainName (score/10)**
-   - Put ONE blank line between each domain
+   ABSOLUTELY CRITICAL FORMATTING REQUIREMENTS:
+   - EVERY single domain MUST start with **DomainName (score/10)** including the ** asterisks
+   - The ** markers are MANDATORY for ALL SIX domains, not just the first one
+   - Put a blank line between each domain entry
    - Each domain is ONE paragraph of 2-4 sentences
-   - Do NOT combine domains into one paragraph
-   - Do NOT omit the blank lines between domains
+   - ALL SIX domains MUST have this exact format: **DomainName (score/10)** followed by text
+
+   CORRECT formatting example:
+   **Body (3.6/10)** Text here about body.
+
+   **Mind (4.2/10)** Text here about mind.
+
+   INCORRECT formatting (DO NOT DO THIS):
+   **Body (3.6/10)** Text here.
+   Mind Text here. ← WRONG! Missing ** markers and (score/10)
+
+   Purpose Text here. ← WRONG! Missing ** markers and (score/10)
 
 3. **Patterns Worth Naming**
    - Contradictions between domains (e.g., "You say you want X but you're avoiding Y")
