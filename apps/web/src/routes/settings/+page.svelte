@@ -278,15 +278,6 @@
 				);
 			}
 
-			// Delete all projects (cascades to project conversations and messages)
-			deleteAllStatus = 'Deleting projects...';
-			const { error: _projectsError } = await supabase
-				.from('projects')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_projectsError) throw new Error(`Failed to delete projects: ${_projectsError.message}`);
-
 			// Delete all tasks
 			deleteAllStatus = 'Deleting tasks...';
 			const { error: _tasksError } = await supabase
@@ -384,9 +375,6 @@
 					)
 				);
 			}
-
-			// Delete all projects
-			await supabase.from('projects').delete().eq('user_id', user.id);
 
 			// Delete all tasks
 			await supabase.from('tasks').delete().eq('user_id', user.id);
@@ -668,7 +656,7 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Clear All Chat History</h3>
 						<p class="section-description">
-							Clear all your conversation history across the entire app. This will delete all messages in Global Chat, Tasks Chat, Notes Chat, and Project Chats. Note: This does not delete your files, projects, tasks, or notes.
+							Clear all your conversation history across the entire app. This will delete all messages in Global Chat, Tasks Chat, Notes Chat, and Domain Chats. Note: This does not delete your files, tasks, or notes.
 						</p>
 
 						<button
@@ -691,7 +679,7 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Retake Assessment</h3>
 						<p class="section-description">
-							Retake the assessment to update your profile. This will delete all existing projects, tasks, notes, and files. This action cannot be undone.
+							Retake the assessment to update your profile. This will delete all existing tasks, notes, and files. This action cannot be undone.
 						</p>
 
 						<button
@@ -707,7 +695,7 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Delete All Content</h3>
 						<p class="section-description">
-							Permanently delete all your content including projects, tasks, notes, files, and images. This action cannot be undone.
+							Permanently delete all your content including tasks, notes, files, and images. This action cannot be undone.
 						</p>
 
 						<button
