@@ -16,7 +16,7 @@
 	let deleteAllStatus = '';
 	let deletingAll = false;
 
-	let showRetakeModal = false;
+	let retaking = false;
 
 	// Collapsible sections
 	let notificationsExpanded = false;
@@ -369,6 +369,13 @@
 	async function handleRetakeAssessment() {
 		if (!$auth.user) return;
 
+		// Confirm before deleting everything
+		if (!confirm('⚠️ This will delete ALL your tasks, notes, files, and chat conversations.\n\nYou will be redirected to retake the assessment.\n\nThis action cannot be undone. Continue?')) {
+			return;
+		}
+
+		retaking = true;
+
 		try {
 			const user = $auth.user;
 
@@ -411,13 +418,35 @@
 			// Delete all notes
 			await supabase.from('notes').delete().eq('user_id', user.id);
 
+			// Delete all conversations and messages
+			const { data: conversations } = await supabase
+				.from('conversations')
+				.select('id')
+				.eq('user_id', user.id);
+
+			if (conversations && conversations.length > 0) {
+				const conversationIds = conversations.map(c => c.id);
+				await supabase.from('messages').delete().in('conversation_id', conversationIds);
+				await supabase.from('conversations').delete().eq('user_id', user.id);
+			}
+
 			// Delete assessment responses
 			await supabase.from('assessment_responses').delete().eq('user_id', user.id);
 
-			// Delete assessment results
-			await supabase.from('assessment_results').delete().eq('user_id', user.id);
+			// Delete assessment results (CRITICAL: must complete before redirect)
+			const { error: deleteAssessmentError } = await supabase
+				.from('assessment_results')
+				.delete()
+				.eq('user_id', user.id);
 
-			// NOW update the profile to mark questionnaire as incomplete
+			if (deleteAssessmentError) {
+				console.error('Failed to delete assessment results:', deleteAssessmentError);
+				alert('Failed to reset assessment. Please try again.');
+				retaking = false;
+				return;
+			}
+
+			// Update the profile to mark questionnaire as incomplete
 			const { error: _updateError } = await supabase
 				.from('user_profiles')
 				.update({
@@ -426,13 +455,19 @@
 				})
 				.eq('user_id', user.id);
 
-			if (_updateError) throw _updateError;
+			if (_updateError) {
+				console.error('Failed to update profile:', _updateError);
+				alert('Failed to reset profile. Please try again.');
+				retaking = false;
+				return;
+			}
 
-			// Close modal and redirect
-			showRetakeModal = false;
+			// Redirect to questionnaire
 			goto('/questionnaire');
 		} catch (_err) {
 			console.error('Error retaking questionnaire:', _err);
+			alert('An error occurred. Please try again.');
+			retaking = false;
 		}
 	}
 </script>
@@ -708,14 +743,15 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Retake Assessment</h3>
 						<p class="section-description">
-							Retake the assessment to update your profile. This will delete all existing tasks, notes, and files. This action cannot be undone.
+							Retake the assessment to update your profile. This will delete all existing tasks, notes, files, and chat conversations. This action cannot be undone.
 						</p>
 
 						<button
 							class="danger-btn"
-							on:click={() => showRetakeModal = true}
+							on:click={handleRetakeAssessment}
+							disabled={retaking}
 						>
-							Retake Assessment
+							{retaking ? 'Resetting...' : 'Retake Assessment'}
 						</button>
 					</div>
 
@@ -798,49 +834,6 @@
 	</div>
 {/if}
 
-{#if showRetakeModal}
-	<div class="modal-overlay" on:click={() => showRetakeModal = false}>
-		<div class="modal" on:click|stopPropagation>
-			<div class="modal-header-with-icon">
-				<svg class="warning-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-					<path d="M12 2L2 20h20L12 2z" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-					<path d="M12 9v4" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/>
-					<circle cx="12" cy="17" r="0.5" fill="#F59E0B" stroke="#F59E0B" stroke-width="1"/>
-				</svg>
-				<h2>Retake Assessment?</h2>
-			</div>
-			<p class="warning-text">
-				Retaking this assessment will delete all your existing content:
-			</p>
-			<ul class="delete-list">
-				<li>All projects</li>
-				<li>All tasks</li>
-				<li>All notes</li>
-				<li>Your assessment results</li>
-			</ul>
-			<p class="warning-text">
-				Your current progress will be replaced with new AI-generated content based on your updated responses.
-			</p>
-
-			<div class="modal-actions">
-				<button
-					type="button"
-					class="secondary-btn"
-					on:click={() => showRetakeModal = false}
-				>
-					Cancel
-				</button>
-				<button
-					type="button"
-					class="danger-btn"
-					on:click={handleRetakeAssessment}
-				>
-					Continue & Delete All
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
 </AppLayout>
 
 <style>
