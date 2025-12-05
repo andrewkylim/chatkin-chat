@@ -42,7 +42,7 @@ export async function getOrCreateConversation(
 		scope,
 		domain: (domainOrProjectId as WellnessDomain) || 'Mind', // Use provided domain or default to 'Mind'
 		title: scope === 'global' ? 'General Chat' : scope === 'project' ? 'Project Chat' : `${scope.charAt(0).toUpperCase() + scope.slice(1)} Chat`,
-		mode: 'chat', // Default to chat mode
+		mode: 'action', // Default to action mode - AI can chat OR propose operations
 		conversation_summary: null,
 		message_count: 0,
 		last_summarized_at: null

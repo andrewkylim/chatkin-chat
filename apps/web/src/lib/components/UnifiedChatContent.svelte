@@ -79,7 +79,7 @@
 		saving?: boolean;
 	}> = [];
 	let uploadStatus: string = '';
-	let aiMode: 'chat' | 'action' = 'chat';
+	let aiMode: 'chat' | 'action' = 'action'; // Default to action mode - AI can chat OR propose operations
 
 	async function scrollToBottom() {
 		await tick();
@@ -120,11 +120,10 @@
 		inputMessage = '';
 		uploadedFiles = [];
 
-		// Save user message (but don't show it in UI if auto-starting)
-		await chatOps.saveUserMessage(conversation.id, userMessage, filesToSend);
-
-		// Add to UI only if NOT auto-start
+		// Save user message to DB and add to UI (skip both if auto-starting)
 		if (!isAutoStart) {
+			await chatOps.saveUserMessage(conversation.id, userMessage, filesToSend);
+
 			messages = [
 				...messages,
 				{
@@ -611,9 +610,12 @@
 		// Get or create conversation
 		conversation = await getOrCreateConversation(scope, projectId);
 
-		// Load AI mode from conversation
+		// Load AI mode from conversation (default to action if not set)
 		if (conversation.mode) {
 			aiMode = conversation.mode;
+		} else {
+			// Default to action mode for new conversations
+			aiMode = 'action';
 		}
 
 		// Load message history
