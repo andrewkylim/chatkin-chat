@@ -4,13 +4,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 interface QueryFilters {
-	project_id?: string;
+	domain?: string;
 	status?: string;
 	search_query?: string;
 	conversation_id?: string;
 	mime_type_prefix?: string;
 	is_hidden_from_library?: boolean;
-	include_archived?: boolean;
 }
 
 export async function executeQueryTool(
@@ -36,8 +35,8 @@ export async function executeQueryTool(
 			case 'query_tasks': {
 				let query = supabase.from('tasks').select('*');
 
-				if (toolInput.filters?.project_id) {
-					query = query.eq('project_id', toolInput.filters.project_id);
+				if (toolInput.filters?.domain) {
+					query = query.eq('domain', toolInput.filters.domain);
 				}
 				if (toolInput.filters?.status) {
 					query = query.eq('status', toolInput.filters.status);
@@ -59,8 +58,8 @@ export async function executeQueryTool(
 			case 'query_notes': {
 				let query = supabase.from('notes').select('*');
 
-				if (toolInput.filters?.project_id) {
-					query = query.eq('project_id', toolInput.filters.project_id);
+				if (toolInput.filters?.domain) {
+					query = query.eq('domain', toolInput.filters.domain);
 				}
 				if (toolInput.filters?.search_query) {
 					query = query.or(
@@ -74,36 +73,16 @@ export async function executeQueryTool(
 				if (error) throw error;
 
 				// Note: select('*') includes full content. If token usage becomes an issue,
-				// consider selecting only id, title, project_id, updated_at by default.
+				// consider selecting only id, title, domain, updated_at by default.
 				// For now, keeping it simple as requested.
 				return JSON.stringify({ count: data.length, notes: data }, null, 2);
-			}
-
-			case 'query_projects': {
-				let query = supabase.from('projects').select('*');
-
-				if (!toolInput.filters?.include_archived) {
-					query = query.eq('is_archived', false);
-				}
-				if (toolInput.filters?.search_query) {
-					query = query.or(
-						`name.ilike.%${toolInput.filters.search_query}%,description.ilike.%${toolInput.filters.search_query}%`
-					);
-				}
-
-				query = query.order('created_at', { ascending: false });
-
-				const { data, error } = await query;
-				if (error) throw error;
-
-				return JSON.stringify({ count: data.length, projects: data }, null, 2);
 			}
 
 			case 'query_files': {
 				let query = supabase.from('files').select('*');
 
-				if (toolInput.filters?.project_id) {
-					query = query.eq('project_id', toolInput.filters.project_id);
+				if (toolInput.filters?.domain) {
+					query = query.eq('domain', toolInput.filters.domain);
 				}
 				if (toolInput.filters?.conversation_id) {
 					query = query.eq('conversation_id', toolInput.filters.conversation_id);

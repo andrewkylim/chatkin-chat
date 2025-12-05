@@ -20,6 +20,7 @@ export interface ChatRequest {
     projectId?: string;
     taskIds?: string[];
     scope?: 'global' | 'tasks' | 'notes' | 'project';
+    domain?: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
   };
   authToken?: string; // User's auth token for database queries (RLS)
   mode?: 'chat' | 'action'; // Chat mode (Marvin persona, read-only) or Action mode (task-oriented, full CRUD)

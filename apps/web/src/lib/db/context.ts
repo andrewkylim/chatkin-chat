@@ -7,11 +7,27 @@ import type { WellnessDomain } from '@chatkin/types';
 import { getAllConversationsWithHistory } from './conversations';
 
 export interface WorkspaceContext {
-	projects: ProjectSummary[];
+	domains: DomainSummary[];
 	tasks: TaskSummary[];
 	notes: NoteSummary[];
 	userProfile?: UserProfileSummary;
 	crossDomainConversations?: CrossDomainConversation[];
+	draftTasks?: DraftTask[];
+}
+
+export interface DraftTask {
+	domain: WellnessDomain;
+	title: string;
+	description: string;
+	priority: 'low' | 'medium' | 'high';
+}
+
+export interface DomainSummary {
+	domain: WellnessDomain;
+	taskCount: number;
+	completedTaskCount: number;
+	noteCount: number;
+	fileCount: number;
 }
 
 export interface CrossDomainConversation {
@@ -38,36 +54,22 @@ interface TaskDBResponse {
 	status: 'todo' | 'in_progress' | 'completed';
 }
 
-interface TaskWithProjectResponse {
+interface TaskWithDomainResponse {
 	id: string;
 	title: string;
 	status: 'todo' | 'in_progress' | 'completed';
 	priority: 'low' | 'medium' | 'high';
 	due_date: string | null;
 	domain: WellnessDomain;
-	project_id: string | null;
-	projects: { name: string } | null;
 }
 
-interface NoteWithProjectResponse {
+interface NoteWithDomainResponse {
 	id: string;
 	title: string | null;
 	content: string | null;
 	updated_at: string;
 	domain: WellnessDomain;
-	project_id: string | null;
 	is_system_generated: boolean;
-	projects: { name: string } | null;
-}
-
-export interface ProjectSummary {
-	id: string;
-	name: string;
-	description: string | null;
-	taskCount: number;
-	completedTaskCount: number;
-	noteCount: number;
-	fileCount: number;
 }
 
 export interface TaskSummary {
@@ -77,7 +79,6 @@ export interface TaskSummary {
 	priority: 'low' | 'medium' | 'high';
 	due_date: string | null;
 	domain: WellnessDomain;
-	project_name: string | null;
 }
 
 export interface NoteSummary {
@@ -85,14 +86,13 @@ export interface NoteSummary {
 	title: string | null;
 	content: string | null;
 	domain: WellnessDomain;
-	project_name: string | null;
 	updated_at: string;
 	is_system_generated: boolean;
 }
 
 /**
  * Load full workspace context for AI
- * Includes all projects, tasks, and notes summaries
+ * Includes domain summaries, tasks, and notes
  * Optionally filter by scope and domain
  * For global scope, includes cross-domain conversation history
  */
@@ -106,17 +106,20 @@ export async function loadWorkspaceContext(options?: {
 	const scope = options?.scope || 'global';
 	const domain = options?.domain;
 
-	// Load all projects with stats (or filter to specific domain if in project scope)
-	const projects = await loadProjectsSummary(domain);
+	// Load domain summaries with stats (or filter to specific domain)
+	const domains = await loadDomainsSummary(domain);
 
-	// Load tasks (filtered by domain if in project scope)
+	// Load tasks (filtered by domain if specified)
 	const tasks = await loadTasksSummary(domain);
 
-	// Load notes (filtered by domain if in project scope)
+	// Load notes (filtered by domain if specified)
 	const notes = await loadNotesSummary(domain);
 
-	// Load user profile (with domain score if in project scope)
+	// Load user profile (with domain score if specified)
 	const userProfile = await loadUserProfile(domain);
+
+	// Load draft tasks (if any exist from recent assessment)
+	const draftTasks = await loadDraftTasks();
 
 	// For global scope, load cross-domain conversations
 	let crossDomainConversations: CrossDomainConversation[] | undefined;
@@ -139,7 +142,24 @@ export async function loadWorkspaceContext(options?: {
 		}
 	}
 
-	return { projects, tasks, notes, userProfile, crossDomainConversations };
+	return { domains, tasks, notes, userProfile, crossDomainConversations, draftTasks };
+}
+
+/**
+ * Load draft tasks from assessment results
+ * These are AI-generated suggestions that haven't been committed yet
+ */
+async function loadDraftTasks(): Promise<DraftTask[] | undefined> {
+	const { data, error } = await supabase
+		.from('assessment_results')
+		.select('draft_tasks')
+		.maybeSingle();
+
+	if (error || !data || !data.draft_tasks) {
+		return undefined;
+	}
+
+	return data.draft_tasks as DraftTask[];
 }
 
 /**
@@ -179,42 +199,29 @@ async function loadUserProfile(domain?: WellnessDomain): Promise<UserProfileSumm
 }
 
 /**
- * Load projects summary with task/note counts
+ * Load domain summaries with task/note/file counts
  * Optionally filter to a specific domain
  */
-async function loadProjectsSummary(domain?: WellnessDomain): Promise<ProjectSummary[]> {
-	let query = supabase
-		.from('projects')
-		.select('id, name, description')
-		.order('updated_at', { ascending: false});
+async function loadDomainsSummary(filterDomain?: WellnessDomain): Promise<DomainSummary[]> {
+	const allDomains: WellnessDomain[] = ['Body', 'Mind', 'Purpose', 'Connection', 'Growth', 'Finance'];
+	const domainsToLoad = filterDomain ? [filterDomain] : allDomains;
 
-	// Filter to specific domain if provided (domain is stored as project name)
-	if (domain) {
-		query = query.eq('name', domain);
-	}
+	const domainSummaries: DomainSummary[] = [];
 
-	const { data: projects, error: projectsError } = await query;
-
-	if (projectsError) throw projectsError;
-	if (!projects) return [];
-
-	// Load task counts for each project
-	const projectSummaries: ProjectSummary[] = [];
-
-	for (const project of projects) {
+	for (const domain of domainsToLoad) {
 		const [tasksResult, notesResult, filesResult] = await Promise.all([
 			supabase
 				.from('tasks')
 				.select('id, status')
-				.eq('project_id', project.id),
+				.eq('domain', domain),
 			supabase
 				.from('notes')
 				.select('id')
-				.eq('project_id', project.id),
+				.eq('domain', domain),
 			supabase
 				.from('files')
 				.select('id')
-				.eq('project_id', project.id)
+				.eq('domain', domain)
 				.eq('is_hidden_from_library', false)
 		]);
 
@@ -223,10 +230,8 @@ async function loadProjectsSummary(domain?: WellnessDomain): Promise<ProjectSumm
 		const files = filesResult.data || [];
 		const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
-		projectSummaries.push({
-			id: project.id,
-			name: project.name,
-			description: project.description,
+		domainSummaries.push({
+			domain,
 			taskCount: tasks.length,
 			completedTaskCount: completedTasks,
 			noteCount: notes.length,
@@ -234,11 +239,11 @@ async function loadProjectsSummary(domain?: WellnessDomain): Promise<ProjectSumm
 		});
 	}
 
-	return projectSummaries;
+	return domainSummaries;
 }
 
 /**
- * Load tasks summary with project names and domains
+ * Load tasks summary with domains
  * Optionally filter to a specific domain
  */
 async function loadTasksSummary(domain?: WellnessDomain): Promise<TaskSummary[]> {
@@ -250,9 +255,7 @@ async function loadTasksSummary(domain?: WellnessDomain): Promise<TaskSummary[]>
 			status,
 			priority,
 			due_date,
-			domain,
-			project_id,
-			projects (name)
+			domain
 		`)
 		.order('created_at', { ascending: false })
 		.limit(100); // Limit to avoid overwhelming the AI
@@ -267,19 +270,18 @@ async function loadTasksSummary(domain?: WellnessDomain): Promise<TaskSummary[]>
 	if (error) throw error;
 	if (!tasks) return [];
 
-	return (tasks as unknown as TaskWithProjectResponse[]).map(task => ({
+	return (tasks as unknown as TaskWithDomainResponse[]).map(task => ({
 		id: task.id,
 		title: task.title,
 		status: task.status,
 		priority: task.priority,
 		due_date: task.due_date,
-		domain: task.domain,
-		project_name: task.projects?.name || null
+		domain: task.domain
 	}));
 }
 
 /**
- * Load notes summary with project names and domains
+ * Load notes summary with domains
  * Optionally filter to a specific domain
  * Loads: system-generated notes + recently updated user notes (last 7 days)
  */
@@ -294,9 +296,7 @@ async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]>
 			content,
 			updated_at,
 			domain,
-			project_id,
-			is_system_generated,
-			projects (name)
+			is_system_generated
 		`)
 		.order('updated_at', { ascending: false })
 		.limit(15); // Reduced limit to prevent context overflow with content
@@ -316,7 +316,7 @@ async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]>
 
 	// Fetch note blocks for each note to get the actual content
 	const notesWithContent = await Promise.all(
-		(notes as unknown as NoteWithProjectResponse[]).map(async (note) => {
+		(notes as unknown as NoteWithDomainResponse[]).map(async (note) => {
 			// Fetch blocks for this note
 			const { data: blocks } = await supabase
 				.from('note_blocks')
@@ -332,7 +332,6 @@ async function loadNotesSummary(domain?: WellnessDomain): Promise<NoteSummary[]>
 				title: note.title,
 				content: blockContent || note.content, // Use block content, fallback to note.content
 				domain: note.domain,
-				project_name: note.projects?.name || null,
 				updated_at: note.updated_at,
 				is_system_generated: note.is_system_generated || false
 			};
@@ -352,40 +351,51 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 	if (context.userProfile && context.userProfile.summary) {
 		formatted += '### User Profile & Psychological Analysis\n\n';
 
-		// If domain-specific, highlight that domain score with interpretation
-		if (context.userProfile.domainName && context.userProfile.domainScore !== undefined) {
-			formatted += `**${context.userProfile.domainName} Domain Score**: ${context.userProfile.domainScore.toFixed(1)}/10\n\n`;
-			formatted += `This user scored ${context.userProfile.domainScore.toFixed(1)}/10 in ${context.userProfile.domainName}, indicating `;
-
-			if (context.userProfile.domainScore < 5) {
-				formatted += `significant challenges in this area that need attention.\n\n`;
-			} else if (context.userProfile.domainScore < 7) {
-				formatted += `room for improvement and growth opportunities.\n\n`;
-			} else {
-				formatted += `relative strength, though continued support is valuable.\n\n`;
-			}
-		}
-
+		// Just include the rich profile summary - no generic score interpretations
 		formatted += context.userProfile.summary;
 		formatted += '\n\n';
 		formatted += `**Priority Focus Areas**: ${context.userProfile.focusAreas.join(', ')}\n\n`;
 
-		if (context.userProfile.domainName) {
-			formatted += `**Your Role**: You are the ${context.userProfile.domainName} domain expert. Focus on this domain's specific challenges, goals, and opportunities based on the profile above. Pay attention to the domain score—it shows where the user needs support.\n\n`;
-		} else {
-			formatted += '**Using This Profile**: This analysis informs all your interactions. Reference specific insights when relevant, tailor suggestions to this user\'s unique situation, and maintain awareness of their challenges and goals.\n\n';
-		}
+		// Add guidance on how to use the profile naturally
+		formatted += '**How to use this profile:**\n';
+		formatted += '- Think of this as deep background knowledge about the user - it informs your understanding but doesn\'t need to be explicitly mentioned in every response\n';
+		formatted += '- Like a good friend who knows your history: you remember it, it shapes how you respond, but you don\'t constantly bring it up\n';
+		formatted += '- Reference specific insights when they\'re genuinely relevant to what the user is discussing\n';
+		formatted += '- The profile helps you understand WHY certain patterns exist, which makes you more effective when the conversation goes deeper\n';
+		formatted += '- In casual exchanges, let this context inform your tone and awareness, but don\'t force it into the conversation\n\n';
 	}
 
-	// Projects section (skip if empty to reduce noise in scoped contexts)
-	if (context.projects.length > 0) {
-		formatted += '### Projects\n';
-		for (const project of context.projects) {
-			formatted += `- **${project.name}** [id: ${project.id}]`;
-			if (project.description) {
-				formatted += `: ${project.description}`;
-			}
-			formatted += ` (${project.completedTaskCount}/${project.taskCount} tasks done, ${project.noteCount} notes, ${project.fileCount} files)\n`;
+	// Draft Tasks section (FIRST SESSION AFTER ASSESSMENT)
+	if (context.draftTasks && context.draftTasks.length > 0) {
+		formatted += '### 🎯 FIRST SESSION - Draft Tasks for Co-Creation\n\n';
+		formatted += '**IMPORTANT: These are draft suggestions, NOT committed tasks yet.**\n\n';
+		formatted += 'The user just completed their assessment and was redirected here.\n';
+		formatted += 'Your job: Present these drafts and co-create the actual tasks with them.\n\n';
+		formatted += '**Draft tasks to present:**\n';
+		for (const draft of context.draftTasks) {
+			formatted += `- [${draft.domain}] ${draft.title}\n`;
+			formatted += `  ${draft.description}\n`;
+			formatted += `  Priority: ${draft.priority}\n\n`;
+		}
+		formatted += '**Your opening:** Lead with these. Present them confidently but invite refinement.\n';
+		formatted += 'Example: "Based on your assessment, here\'s what I think you should tackle first: [list 3-5]. Which of these actually matters to you?"\n\n';
+		formatted += '**After they respond:** Use Action Mode to create only the tasks they commit to.\n\n';
+	}
+
+	// Domains section (skip if empty to reduce noise in scoped contexts)
+	if (context.domains.length > 0) {
+		formatted += '### Wellness Domains\n';
+		const domainEmojis: Record<WellnessDomain, string> = {
+			Body: '💪',
+			Mind: '🧠',
+			Purpose: '🎯',
+			Connection: '🤝',
+			Growth: '🌱',
+			Finance: '💰'
+		};
+		for (const domainSummary of context.domains) {
+			const emoji = domainEmojis[domainSummary.domain];
+			formatted += `- ${emoji} **${domainSummary.domain}**: ${domainSummary.completedTaskCount}/${domainSummary.taskCount} tasks done, ${domainSummary.noteCount} notes, ${domainSummary.fileCount} files\n`;
 		}
 		formatted += '\n';
 	}
@@ -406,9 +416,6 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 				if (task.priority === 'high') formatted += ' [HIGH]';
 				if (task.due_date) formatted += ` (due: ${task.due_date})`;
 				formatted += ` [Domain: ${task.domain}]`;
-				if (task.project_name) {
-					formatted += ` [Project: ${task.project_name}]`;
-				}
 				formatted += '\n';
 			}
 		}
@@ -418,9 +425,6 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 			for (const task of inProgressTasks.slice(0, 5)) {
 				formatted += `- ${task.title} [id: ${task.id}]`;
 				formatted += ` [Domain: ${task.domain}]`;
-				if (task.project_name) {
-					formatted += ` [Project: ${task.project_name}]`;
-				}
 				formatted += '\n';
 			}
 		}
@@ -441,9 +445,6 @@ export function formatWorkspaceContextForAI(context: WorkspaceContext): string {
 
 		for (const note of context.notes.slice(0, 15)) {
 			formatted += `**${note.title || 'Untitled'}** [id: ${note.id}] [Domain: ${note.domain}]`;
-			if (note.project_name) {
-				formatted += ` [Project: ${note.project_name}]`;
-			}
 			if (note.is_system_generated) {
 				formatted += ' [System-Generated]';
 			}

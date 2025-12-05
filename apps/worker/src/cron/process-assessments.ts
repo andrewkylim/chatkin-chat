@@ -57,18 +57,18 @@ export async function processSingleAssessment(userId: string, env: Env): Promise
 			'Access-Control-Allow-Credentials': 'true'
 		};
 
-		// Generate onboarding content (tasks + notes)
+		// Generate onboarding content (draft tasks + notes)
 		try {
 			const onboardingResponse = await handleGenerateOnboarding(fakeRequest, env, corsHeaders);
 
 			if (onboardingResponse.ok) {
 				const result = await onboardingResponse.json() as {
 					success: boolean;
-					created?: { tasks: number; notes: number };
+					created?: { draft_tasks: number; notes: number };
 				};
-				tasksCreated = result.created?.tasks || 0;
+				tasksCreated = result.created?.draft_tasks || 0; // Now checking draft_tasks
 				notesCreated = result.created?.notes || 0;
-				logger.info('Onboarding content generated', { userId, tasksCreated, notesCreated });
+				logger.info('Onboarding content generated', { userId, draftTasks: tasksCreated, notesCreated });
 			} else {
 				logger.error('Onboarding generation failed', {
 					userId,
@@ -96,26 +96,7 @@ export async function processSingleAssessment(userId: string, env: Env): Promise
 			logger.error('Failed to generate notes', { userId, error: err });
 		}
 
-		// Send email notification
-		if (userEmail) {
-			try {
-				const emailService = new EmailService(env);
-				const profileUrl = `${env.PUBLIC_WORKER_URL}/profile`;
-				const emailHtml = emailService.profileReadyEmail(tasksCreated, notesCreated, profileUrl);
-
-				await emailService.sendEmail({
-					to: userEmail,
-					subject: '✨ Your Profile is Ready!',
-					html: emailHtml
-				});
-
-				logger.info('Profile ready email sent', { userId });
-			} catch (emailErr) {
-				logger.error('Failed to send email', { userId, error: emailErr });
-			}
-		}
-
-		// Only mark as processed if tasks were actually created
+		// Only mark as processed if draft tasks were actually created
 		if (tasksCreated > 0) {
 			const { error: updateError } = await supabaseAdmin
 				.from('assessment_results')
@@ -128,10 +109,29 @@ export async function processSingleAssessment(userId: string, env: Env): Promise
 			if (updateError) {
 				logger.error('Failed to mark assessment as processed', { userId, error: updateError });
 			} else {
-				logger.info('Assessment processing completed successfully', { userId, tasksCreated, notesCreated });
+				logger.info('Assessment processing completed successfully', { userId, draftTasks: tasksCreated, notesCreated });
+
+				// Send email notification ONLY AFTER successfully marking as processed
+				if (userEmail) {
+					try {
+						const emailService = new EmailService(env);
+						const profileUrl = `${env.PUBLIC_WORKER_URL}/chat`; // Changed to /chat for co-creation
+						const emailHtml = emailService.profileReadyEmail(tasksCreated, notesCreated, profileUrl);
+
+						await emailService.sendEmail({
+							to: userEmail,
+							subject: 'Your assessment is ready',
+							html: emailHtml
+						});
+
+						logger.info('Profile ready email sent', { userId });
+					} catch (emailErr) {
+						logger.error('Failed to send email', { userId, error: emailErr });
+					}
+				}
 			}
 		} else {
-			logger.error('No tasks created - not marking as processed', { userId, tasksCreated, notesCreated });
+			logger.error('No draft tasks created - not marking as processed', { userId, draftTasks: tasksCreated, notesCreated });
 		}
 
 	} catch (err) {

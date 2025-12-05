@@ -8,10 +8,9 @@
 	import FileRow from '$lib/components/FileRow.svelte';
 	import ImageViewer from '$lib/components/ImageViewer.svelte';
 	import { deleteFile, getUserStorageUsage, getLibraryFiles, createFile } from '$lib/db/files';
-	import type { File, Project } from '@chatkin/types';
+	import type { File } from '@chatkin/types';
 
 	let files: File[] = [];
-	let projects: Project[] = [];
 	let selectedFiles: Set<string> = new Set();
 	let searchQuery = '';
 	let viewMode: 'grid' | 'list' = 'grid'; // Default to grid
@@ -47,18 +46,8 @@
 
 		await loadFiles();
 		await loadStorageUsage();
-		await loadProjects();
 		setupInfiniteScroll();
 	});
-
-	async function loadProjects() {
-		try {
-			const { getProjects } = await import('$lib/db/projects');
-			projects = await getProjects();
-		} catch (error) {
-			console.error('Failed to load projects:', error);
-		}
-	}
 
 	async function loadFiles() {
 		loading = true;
@@ -606,7 +595,6 @@
 					{#each filteredFiles as file (file.id)}
 						<FileCard
 							{file}
-							{projects}
 							selected={selectedFiles.has(file.id)}
 							selectMode={selectedCount > 0}
 							on:toggle={() => toggleFileSelection(file.id)}

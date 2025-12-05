@@ -7,7 +7,7 @@
 
 import { createTask, updateTask, deleteTask } from '$lib/db/tasks';
 import { createNote, updateNote, deleteNote } from '$lib/db/notes';
-import { updateFileProject, deleteFile } from '$lib/db/files';
+import { updateFileDomain, deleteFile } from '$lib/db/files';
 import { loadWorkspaceContext, formatWorkspaceContextForAI } from '$lib/db/context';
 import { notificationCounts } from '$lib/stores/notifications';
 import { logger } from '$lib/utils/logger';
@@ -27,14 +27,12 @@ interface TaskData {
 	priority?: 'low' | 'medium' | 'high';
 	status?: 'todo' | 'in_progress' | 'completed';
 	due_date?: string | null;
-	project_id?: string | null;
 	domain: WellnessDomain;
 }
 
 interface NoteData {
 	title: string;
 	content?: string;
-	project_id?: string | null;
 	domain: WellnessDomain;
 }
 
@@ -42,22 +40,19 @@ export class ChatOperationsService {
 	/**
 	 * Execute a list of operations sequentially
 	 * @param operations - Operations to execute
-	 * @param projectId - Current project context (for smart project assignment)
 	 * @returns Execution results
 	 */
 	async executeOperations(
-		operations: Operation[],
-		projectId?: string
+		operations: Operation[]
 	): Promise<ExecutionResult> {
 		let successCount = 0;
 		let errorCount = 0;
 		const results: string[] = [];
-		let lastCreatedProjectId: string | null = null;
 
 		for (const op of operations) {
 			try {
 				if (op.operation === 'create') {
-					await this.executeCreate(op, projectId, lastCreatedProjectId);
+					await this.executeCreate(op);
 					results.push(`✓ Created ${op.type}: ${this.getItemTitle(op)}`);
 					successCount++;
 				} else if (op.operation === 'update') {
@@ -83,36 +78,12 @@ export class ChatOperationsService {
 	 * Execute create operation
 	 */
 	private async executeCreate(
-		op: Operation,
-		projectId?: string,
-		lastCreatedProjectId?: string | null
+		op: Operation
 	): Promise<void> {
 		if (!op.data) throw new Error('Missing data for create operation');
 
 		if (op.type === 'task') {
 			const taskData = op.data as unknown as TaskData;
-
-			// Validate project_id - must be a valid UUID or null
-			// AI sometimes returns project names instead of IDs, so we need to filter those out
-			let targetProjectId = taskData.project_id || lastCreatedProjectId || projectId || null;
-
-			// Log what the AI provided
-			logger.info('Task creation - project_id analysis', {
-				aiProvided: taskData.project_id,
-				lastCreated: lastCreatedProjectId,
-				contextProjectId: projectId,
-				finalChoice: targetProjectId
-			});
-
-			// UUID validation regex
-			const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-			if (targetProjectId && !uuidRegex.test(targetProjectId)) {
-				logger.warn(`Invalid project_id "${targetProjectId}", using fallback`, {
-					operation: 'create task',
-					providedId: targetProjectId
-				});
-				targetProjectId = lastCreatedProjectId || projectId || null;
-			}
 
 			await createTask({
 				title: taskData.title,
@@ -120,7 +91,6 @@ export class ChatOperationsService {
 				priority: taskData.priority || 'medium',
 				status: taskData.status || 'todo',
 				due_date: taskData.due_date || null,
-				project_id: targetProjectId,
 				domain: taskData.domain,
 				is_recurring: false,
 				recurrence_pattern: null,
@@ -131,28 +101,13 @@ export class ChatOperationsService {
 		} else if (op.type === 'note') {
 			const noteData = op.data as unknown as NoteData;
 
-			// Validate project_id - must be a valid UUID or null
-			let targetProjectId = noteData.project_id || lastCreatedProjectId || projectId || null;
-
-			// UUID validation regex
-			const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-			if (targetProjectId && !uuidRegex.test(targetProjectId)) {
-				logger.warn(`Invalid project_id "${targetProjectId}", using fallback`, {
-					operation: 'create note',
-					providedId: targetProjectId
-				});
-				targetProjectId = lastCreatedProjectId || projectId || null;
-			}
-
 			await createNote({
 				title: noteData.title,
 				content: noteData.content || '',
-				project_id: targetProjectId,
 				domain: noteData.domain
 			});
 			notificationCounts.incrementCount('notes');
 		}
-		// Add project creation if needed in the future
 	}
 
 	/**
@@ -176,8 +131,8 @@ export class ChatOperationsService {
 		const opType = op.type as string;
 		if (opType === 'file') {
 			const changes = op.changes as Record<string, unknown>;
-			if (changes.project_id !== undefined) {
-				await updateFileProject(op.id, changes.project_id as string | null);
+			if (changes.domain !== undefined) {
+				await updateFileDomain(op.id, changes.domain as string);
 			}
 		}
 	}

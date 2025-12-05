@@ -202,44 +202,29 @@ export class EmailService {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1f2937; background: #ffffff; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 40px auto; padding: 0; }
-            .header { background: #ffffff; padding: 40px 40px 32px; text-align: center; }
-            .logo { width: 48px; height: 48px; margin: 0 auto 24px; }
-            .header h1 { margin: 0; font-size: 28px; font-weight: 600; color: #111827; letter-spacing: -0.5px; }
-            .content { background: #ffffff; padding: 0 40px 40px; }
-            .domains-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 32px 0; }
-            .domain-icon { width: 100%; aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-            .button { display: inline-block; background: #111827; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; margin-top: 32px; font-weight: 500; font-size: 15px; }
-            .footer { text-align: center; margin-top: 48px; padding-top: 32px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1f2937; background: #fafafa; margin: 0; padding: 0; }
+            .container { max-width: 560px; margin: 40px auto; padding: 0; background: #ffffff; text-align: center; }
+            .header { padding: 48px 40px 32px; border-bottom: 1px solid #e5e7eb; }
+            .circle { width: 80px; height: 80px; margin: 0 auto 24px; background: #f59e0b; border-radius: 50%; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 600; color: #111827; letter-spacing: -0.3px; }
+            .content { padding: 40px; }
+            .content p { font-size: 16px; margin: 0 0 32px 0; color: #4b5563; line-height: 1.5; }
+            .button { display: inline-block; background: #111827; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 15px; }
+            .footer { text-align: center; padding: 32px 40px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 13px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">
-                <img src="https://chatkin.ai/logo.webp" alt="Chatkin" style="width: 100%; height: 100%;" />
-              </div>
+              <div class="circle"></div>
               <h1>Your assessment is ready</h1>
             </div>
             <div class="content">
-              <p style="font-size: 16px; margin: 0 0 32px 0; color: #4b5563;">Your personalized assessment and lifeboard are now available.</p>
-
-              <div class="domains-grid">
-                <div class="domain-icon" style="background: #10B981;"></div>
-                <div class="domain-icon" style="background: #3B82F6;"></div>
-                <div class="domain-icon" style="background: #8B5CF6;"></div>
-                <div class="domain-icon" style="background: #F59E0B;"></div>
-                <div class="domain-icon" style="background: #EAB308;"></div>
-                <div class="domain-icon" style="background: #EF4444;"></div>
-              </div>
-
-              <center>
-                <a href="${actionUrl}" class="button">View Lifeboard</a>
-              </center>
+              <p>Your personalized plan and AI coach are now available.</p>
+              <a href="${actionUrl}" class="button">View Your Plan</a>
             </div>
             <div class="footer">
-              <p style="margin: 0; color: #9ca3af; font-size: 13px;">© ${new Date().getFullYear()} Chatkin</p>
+              <p style="margin: 0;">© ${new Date().getFullYear()} Chatkin</p>
             </div>
           </div>
         </body>

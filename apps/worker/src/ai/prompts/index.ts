@@ -13,7 +13,6 @@ export function buildSystemPrompt(
 ): string {
   const scope = context?.scope || 'global';
   const domain = context?.domain;
-  const projectId = context?.projectId;
 
   // Build soft context hint
   let contextHint = '';
@@ -21,8 +20,8 @@ export function buildSystemPrompt(
     contextHint = '\n**Context:** You\'re on the Notes page. User is browsing their notes collection.\n';
   } else if (scope === 'tasks') {
     contextHint = '\n**Context:** You\'re on the Tasks page. User is browsing their tasks.\n';
-  } else if (scope === 'project' && domain) {
-    contextHint = `\n**Context:** You're on the ${domain} domain project page. When creating new items, default to the ${domain} domain unless the user specifies otherwise.\n`;
+  } else if (domain) {
+    contextHint = `\n**Context:** You're on the ${domain} domain page. When creating new items, default to the ${domain} domain unless the user specifies otherwise.\n`;
   }
 
   // Always use global prompt (no scope restrictions)
@@ -34,11 +33,6 @@ export function buildSystemPrompt(
   systemPrompt += mode === 'chat'
     ? getChatModePrompt(workspaceContext)
     : getActionModePrompt(workspaceContext);
-
-  // Add project-specific context
-  if (projectId) {
-    systemPrompt += '\n\nYou are currently assisting with a specific project. All tasks/notes you create should be relevant to this project context.';
-  }
 
   return systemPrompt;
 }

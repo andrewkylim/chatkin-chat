@@ -103,7 +103,7 @@
 		}));
 	}
 
-	async function sendMessage(message?: string) {
+	async function sendMessage(message?: string, isAutoStart = false) {
 		const userMessage = message || inputMessage.trim();
 		if (!userMessage || !conversation) {
 			return;
@@ -120,19 +120,21 @@
 		inputMessage = '';
 		uploadedFiles = [];
 
-		// Save user message
+		// Save user message (but don't show it in UI if auto-starting)
 		await chatOps.saveUserMessage(conversation.id, userMessage, filesToSend);
 
-		// Add to UI
-		messages = [
-			...messages,
-			{
-				role: 'user',
-				content: userMessage,
-				files: filesToSend.length > 0 ? filesToSend : undefined
-			}
-		];
-		scrollToBottom();
+		// Add to UI only if NOT auto-start
+		if (!isAutoStart) {
+			messages = [
+				...messages,
+				{
+					role: 'user',
+					content: userMessage,
+					files: filesToSend.length > 0 ? filesToSend : undefined
+				}
+			];
+			scrollToBottom();
+		}
 
 		// Add AI placeholder
 		const aiMessageIndex = messages.length;
@@ -664,11 +666,24 @@
 
 		logger.info('Workspace context loaded', {
 			scope,
-			projectsCount: workspaceContext.projects.length,
+			domainsCount: workspaceContext.domains.length,
 			tasksCount: workspaceContext.tasks.length,
 			notesCount: workspaceContext.notes.length,
-			contextLength: workspaceContextString.length
+			contextLength: workspaceContextString.length,
+			hasDraftTasks: !!workspaceContext.draftTasks && workspaceContext.draftTasks.length > 0
 		});
+
+		// Auto-start conversation if draft tasks exist and no messages yet
+		const hasDraftTasks = workspaceContext.draftTasks && workspaceContext.draftTasks.length > 0;
+		const hasNoMessages = messages.length === 0;
+		const isGlobalScope = scope === 'global';
+
+		if (hasDraftTasks && hasNoMessages && isGlobalScope) {
+			logger.info('Auto-starting conversation with draft tasks');
+			// Trigger AI greeting with draft tasks
+			// We send a hidden "start" message that the AI will respond to with draft tasks
+			await sendMessage('start', true); // true = isAutoStart flag
+		}
 
 		// Ready for display
 		messagesReady = true;

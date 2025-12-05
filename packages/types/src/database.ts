@@ -5,17 +5,6 @@
 
 export type WellnessDomain = 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
 
-export interface Project {
-  id: string;
-  user_id: string;
-  name: string; // Fixed to match domain name
-  description: string | null;
-  color: string | null; // Fixed emoji per domain
-  domain: WellnessDomain; // NOT NULL - unique per user (each user has exactly 6 projects)
-  created_at: string;
-  updated_at: string;
-}
-
 export interface RecurrencePattern {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number; // e.g., 2 for "every 2 weeks"
@@ -27,8 +16,7 @@ export interface RecurrencePattern {
 
 export interface Task {
   id: string;
-  project_id: string | null; // NULL = standalone task
-  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance) - single source of truth for categorization
   user_id: string;
   title: string;
   description: string | null;
@@ -48,8 +36,7 @@ export interface Task {
 
 export interface Note {
   id: string;
-  project_id: string | null; // NULL = standalone note
-  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance) - single source of truth for categorization
   user_id: string;
   title: string | null;
   created_at: string;
@@ -68,8 +55,7 @@ export interface NoteBlock {
 export interface Conversation {
   id: string;
   user_id: string;
-  project_id: string | null; // NULL = not project-scoped
-  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance) - single source of truth for categorization
   scope: 'global' | 'project' | 'tasks' | 'notes';
   title: string | null;
   mode: 'chat' | 'action'; // Chat mode (Marvin persona, read-only) or Action mode (task-oriented, full CRUD)
@@ -95,8 +81,7 @@ export interface File {
   note_id: string | null;
   conversation_id: string | null; // Link to chat conversation
   message_id: string | null; // Link to specific message
-  project_id: string | null; // Link to project (NULL = standalone file)
-  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance)
+  domain: WellnessDomain; // Wellness domain (Body, Mind, Purpose, Connection, Growth, Finance) - single source of truth for categorization
   filename: string;
   mime_type: string;
   size_bytes: number;

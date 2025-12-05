@@ -6,6 +6,11 @@
 	export let onCancel: () => void;
 	export let messageIndex: number;
 
+	// Filter out invalid questions (defensive programming)
+	$: validQuestions = (questions || []).filter(
+		(q) => q && q.question && Array.isArray(q.options) && q.options.length > 0
+	);
+
 	// Track answers in component state
 	let answers: Record<string, string> = {};
 	let showOtherInput: Record<string, boolean> = {};
@@ -25,7 +30,7 @@
 	}
 
 	function handleSubmit() {
-		if (Object.keys(answers).length === 0 || Object.keys(answers).length < questions.length) {
+		if (Object.keys(answers).length === 0 || Object.keys(answers).length < validQuestions.length) {
 			alert('Please select an answer for each question');
 			return;
 		}
@@ -40,9 +45,13 @@
 	}
 </script>
 
-<div class="inline-questions">
-	{#each questions as q, qIndex}
-		{#if q && q.question}
+{#if validQuestions.length === 0}
+	<div class="error-message">
+		<p>No valid questions received. Please try again.</p>
+	</div>
+{:else}
+	<div class="inline-questions">
+		{#each validQuestions as q, qIndex}
 			{@const isProjectQuestion = q.question.toLowerCase().includes('project') ||
 			                            q.question.toLowerCase().includes('domain')}
 			<div class="question-block">
@@ -53,7 +62,7 @@
 				onchange={(e) => handleSelectChange(qIndex, q.question, e.currentTarget.value)}
 			>
 				<option value="">Select an option...</option>
-				{#each (q.options || []).filter((opt) => opt.toLowerCase() !== 'other') as option}
+				{#each q.options.filter((opt) => opt.toLowerCase() !== 'other') as option}
 					<option value={option}>{option}</option>
 				{/each}
 				{#if !isProjectQuestion}
@@ -70,9 +79,9 @@
 				/>
 			{/if}
 		</div>
-		{/if}
-	{/each}
-</div>
+		{/each}
+	</div>
+{/if}
 
 <div class="confirmation-buttons">
 	<button class="confirm-btn" type="button" onclick={handleSubmit}> Submit </button>
@@ -191,6 +200,20 @@
 
 	.cancel-btn:active {
 		transform: translateY(0);
+	}
+
+	.error-message {
+		padding: 1rem;
+		background: rgba(239, 68, 68, 0.1);
+		border: 1px solid rgba(239, 68, 68, 0.3);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		margin-top: 0.75rem;
+	}
+
+	.error-message p {
+		margin: 0;
+		font-size: 0.875rem;
 	}
 
 	/* Mobile optimizations */

@@ -112,21 +112,12 @@
 	};
 
 	const logoColor = $derived.by(() => {
-		// Check for domain-specific routes (e.g., /projects/Mind/chat)
-		const domainMatch = currentPath.match(/\/projects\/([^/]+)/);
-		if (domainMatch) {
-			const domain = domainMatch[1];
-			if (domainColors[domain]) {
-				return domainColors[domain];
-			}
-		}
-
 		// Check for exact matches first
 		if (sectionColorMap[currentPath]) {
 			return sectionColorMap[currentPath];
 		}
 
-		// Check for partial matches (e.g., /projects/123 matches /projects)
+		// Check for partial matches
 		for (const [route, color] of Object.entries(sectionColorMap)) {
 			if (currentPath.startsWith(route)) {
 				return color;
@@ -617,13 +608,6 @@
 			<span>Chat</span>
 		</a>
 
-		<a href="/projects" class="nav-item" class:active={currentPath.startsWith('/projects')}>
-			<span>Projects</span>
-			{#if $notificationCounts.projects > 0}
-				<span class="notification-dot"></span>
-			{/if}
-		</a>
-
 		<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
 			<span>Tasks</span>
 			{#if $notificationCounts.tasks > 0}
@@ -736,7 +720,7 @@
 	}
 
 	.chat-header h1 {
-		font-size: 1.25rem;
+		font-size: 1.5rem;
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		margin: 0;

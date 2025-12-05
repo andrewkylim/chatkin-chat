@@ -383,9 +383,10 @@
 					.single();
 
 				if (data?.onboarding_processed) {
-					// Success! Tasks and notes are ready
+					// Success! Draft tasks and notes are ready
+					// Redirect to chat for AI-led co-creation
 					clearInterval(pollInterval);
-					goto('/profile');
+					goto('/chat');
 				} else if (attempts >= maxAttempts) {
 					// Timeout after 10 minutes
 					clearInterval(pollInterval);
@@ -614,7 +615,7 @@
 					<p class="analysis-description">
 						Analyzing your responses and generating personalized tasks and notes.
 					</p>
-					<p class="analysis-note">This usually takes 30-60 seconds.</p>
+					<p class="analysis-note">This usually takes 5-10 minutes.</p>
 					<p class="analysis-help">
 						Don't want to wait? You can close this page — we'll email you when it's ready.
 					</p>

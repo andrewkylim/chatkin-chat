@@ -53,6 +53,16 @@ export async function handleAIChat(
     // Build base system prompt
     let systemPrompt = buildSystemPrompt(context, workspaceContext, mode);
 
+    // Add conversation stage hint for chat mode
+    if (mode === 'chat') {
+      const messageCount = conversationHistory?.length || 0;
+      if (messageCount === 0) {
+        systemPrompt += '\n\n**Conversation Stage**: This is the start of a new conversation. The user is opening with their first message.';
+      } else if (messageCount < 4) {
+        systemPrompt += '\n\n**Conversation Stage**: Early in this conversation (few exchanges so far).';
+      }
+    }
+
     logger.info('System prompt built', {
       mode,
       promptLength: systemPrompt.length,

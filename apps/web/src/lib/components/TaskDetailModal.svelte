@@ -1,12 +1,11 @@
 <script lang="ts">
 	/* eslint-disable @typescript-eslint/no-explicit-any */
-	import type { Task, Project } from '@chatkin/types';
+	import type { Task } from '@chatkin/types';
 	import { formatRecurrencePattern, updateTask } from '$lib/db/tasks';
 	import { handleError } from '$lib/utils/error-handler';
 
 	export let show = false;
 	export let task: Task | null = null;
-	export let projects: Project[] = [];
 	export let onClose: () => void;
 	export let onEdit: () => void;
 	export let onDelete: () => void;
@@ -16,13 +15,6 @@
 	let autosaveTimeout: number | null = null;
 	let titleElement: HTMLElement;
 	let descriptionElement: HTMLElement;
-
-
-	function getProjectName(projectId: string | null) {
-		if (!projectId) return null;
-		const project = projects.find(p => p.id === projectId);
-		return project?.name;
-	}
 
 	// Inline editing functions
 	function handleTitleInput() {
@@ -170,10 +162,10 @@
 					/>
 				</div>
 
-				{#if getProjectName(task.project_id)}
+				{#if task.domain}
 					<div class="detail-section">
-						<label>Project</label>
-						<p class="detail-text">{getProjectName(task.project_id)}</p>
+						<label>Domain</label>
+						<p class="detail-text">{task.domain}</p>
 					</div>
 				{/if}
 

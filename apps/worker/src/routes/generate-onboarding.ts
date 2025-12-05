@@ -76,22 +76,23 @@ export async function handleGenerateOnboarding(
 			results.domain_scores,
 		);
 
-		// 1. Create 3-5 starter tasks (using domain directly)
-		const tasksToCreate = onboardingContent.starterTasks.map((task) => ({
-			user_id: user.userId,
+		// 1. Store draft tasks for co-creation (NOT creating real tasks yet)
+		// These will be presented to user in first chat session
+		const draftTasks = onboardingContent.starterTasks.map((task) => ({
 			domain: task.domain,
 			title: task.title,
 			description: task.description,
-			priority: task.priority,
-			status: task.status
+			priority: task.priority
 		}));
 
-		if (tasksToCreate.length > 0) {
-			const { error: tasksError } = await supabaseAdmin.from('tasks').insert(tasksToCreate);
+		// Save drafts to assessment_results
+		const { error: draftError } = await supabaseAdmin
+			.from('assessment_results')
+			.update({ draft_tasks: draftTasks })
+			.eq('user_id', user.userId);
 
-			if (tasksError) {
-				logger.error('Failed to create starter tasks', { error: tasksError });
-			}
+		if (draftError) {
+			logger.error('Failed to save draft tasks', { error: draftError });
 		}
 
 		// 2. Create 6 domain primer notes with note_blocks (using domain directly)
@@ -128,7 +129,7 @@ export async function handleGenerateOnboarding(
 
 		logger.info('Onboarding content generated successfully', {
 			userId: user.userId,
-			starterTasks: tasksToCreate.length,
+			draftTasks: draftTasks.length,
 			domainPrimers: onboardingContent.domainPrimers.length
 		});
 
@@ -136,7 +137,7 @@ export async function handleGenerateOnboarding(
 			JSON.stringify({
 				success: true,
 				created: {
-					tasks: tasksToCreate.length,
+					draft_tasks: draftTasks.length,
 					notes: onboardingContent.domainPrimers.length
 				}
 			}),

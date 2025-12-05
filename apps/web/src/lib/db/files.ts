@@ -31,13 +31,11 @@ export async function getFile(id: string) {
 	return data as FileType;
 }
 
-export async function createFile(file: Omit<FileInsert, 'user_id' | 'project_id'> & Partial<Pick<FileInsert, 'project_id'>>) {
+export async function createFile(file: Omit<FileInsert, 'user_id'>) {
 	const { data: { user } } = await supabase.auth.getUser();
 	if (!user) throw new Error('Not authenticated');
 
-	// Provide defaults for optional fields
 	const fileData = {
-		project_id: null,
 		...file,
 		user_id: user.id
 	};
@@ -205,24 +203,6 @@ export async function bulkDeleteFiles(fileIds: string[], accessToken?: string): 
 }
 
 /**
- * Update file project association
- * @deprecated Use updateFileDomain instead - files should be organized by domain, not project
- * @param fileId - The file ID to update
- * @param projectId - The project ID (legacy field)
- */
-export async function updateFileProject(
-	fileId: string,
-	projectId: string | null
-): Promise<void> {
-	const { error } = await supabase
-		.from('files')
-		.update({ project_id: projectId })
-		.eq('id', fileId);
-
-	if (error) throw error;
-}
-
-/**
  * Update file domain association
  */
 export async function updateFileDomain(
@@ -235,40 +215,4 @@ export async function updateFileDomain(
 		.eq('id', fileId);
 
 	if (error) throw error;
-}
-
-/**
- * Bulk update multiple files to add to project
- * @deprecated Files should be organized by domain, not project. Use domain-based organization instead.
- * @param fileIds - Array of file IDs to update
- * @param projectId - The project ID (legacy field)
- */
-export async function bulkAddFilesToProject(
-	fileIds: string[],
-	projectId: string | null
-): Promise<void> {
-	const { error } = await supabase
-		.from('files')
-		.update({ project_id: projectId })
-		.in('id', fileIds);
-
-	if (error) throw error;
-}
-
-/**
- * Get all files for a specific project
- * @deprecated Use getDomainFiles instead - files should be retrieved by domain, not project
- * @param projectId - The project ID (legacy field)
- * @returns Array of files for the project
- */
-export async function getProjectFiles(projectId: string): Promise<FileType[]> {
-	const { data, error } = await supabase
-		.from('files')
-		.select('*')
-		.eq('project_id', projectId)
-		.eq('is_hidden_from_library', false)
-		.order('created_at', { ascending: false });
-
-	if (error) throw error;
-	return data as FileType[];
 }

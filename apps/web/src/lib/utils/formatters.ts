@@ -2,7 +2,7 @@
  * Shared utility functions for formatting text, dates, and display values
  */
 
-import type { Project, Task } from '@chatkin/types';
+import type { Task } from '@chatkin/types';
 
 /**
  * Truncate text to a maximum length with ellipsis
@@ -72,18 +72,6 @@ export function getRelativeTime(dateString: string): string {
 			day: 'numeric'
 		});
 	}
-}
-
-/**
- * Get project name from project ID
- */
-export function getProjectName(
-	projectId: string | null,
-	projects: Project[]
-): string | null {
-	if (!projectId) return null;
-	const project = projects.find(p => p.id === projectId);
-	return project?.name || null;
 }
 
 /**
