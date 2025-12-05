@@ -68,10 +68,10 @@
 			showIntro = false;
 		}
 
-		// Check if user has completed the assessment
+		// Check if user has completed the assessment AND onboarding
 		const { data: assessmentResults } = await supabase
 			.from('assessment_results')
-			.select('user_id')
+			.select('user_id, onboarding_processed')
 			.eq('user_id', $auth.user.id)
 			.maybeSingle();
 
@@ -83,10 +83,10 @@
 
 		const hasCompletedBefore = profile?.has_completed_questionnaire === true;
 
-		// If assessment_results exists AND user hasn't explicitly started a retake,
-		// redirect to profile (results are ready)
-		if (assessmentResults !== null && hasCompletedBefore) {
-			goto('/profile');
+		// If assessment_results exists AND onboarding is processed, redirect to chat
+		// (onboarding_processed means draft tasks and notes are ready)
+		if (assessmentResults !== null && assessmentResults.onboarding_processed && hasCompletedBefore) {
+			goto('/chat');
 			return;
 		}
 
