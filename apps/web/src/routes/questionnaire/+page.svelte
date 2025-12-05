@@ -90,6 +90,17 @@
 			return;
 		}
 
+		// If assessment_results exists but onboarding isn't processed yet,
+		// AND has_completed_questionnaire is true, show processing page
+		if (assessmentResults !== null && !assessmentResults.onboarding_processed && hasCompletedBefore) {
+			// User completed questionnaire but processing isn't done yet
+			// Show processing page
+			submitting = true;
+			loading = false;
+			showIntro = false;
+			return;
+		}
+
 		// If assessment_results exists but has_completed_questionnaire is false,
 		// user is retaking - show retake warning
 		if (assessmentResults !== null && !hasCompletedBefore) {
