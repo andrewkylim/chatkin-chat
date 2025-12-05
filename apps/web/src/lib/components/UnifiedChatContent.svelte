@@ -97,8 +97,8 @@
 	async function handleOnboardingComplete() {
 		showOnboarding = false;
 		logger.info('Onboarding complete, triggering AI for draft tasks');
-		// Trigger AI to present draft tasks (use special marker that AI will recognize)
-		await sendMessage('__PRESENT_DRAFT_TASKS__', true); // true = isAutoStart flag
+		// Trigger AI to present draft tasks
+		await sendMessage('start', true); // true = isAutoStart flag
 	}
 
 	function buildConversationHistory() {
@@ -152,6 +152,14 @@
 
 		try {
 			// Send to AI using service
+			logger.info('Sending message to AI', {
+				message: userMessage,
+				isAutoStart,
+				workspaceContextLength: workspaceContextString.length,
+				workspaceContextHasFIRSTSESSION: workspaceContextString.includes('FIRST SESSION'),
+				mode: aiMode
+			});
+
 			const response = await chatOps.sendMessage({
 				message: userMessage,
 				...(filesToSend.length > 0 ? { files: filesToSend } : {}),
@@ -682,7 +690,9 @@
 			tasksCount: workspaceContext.tasks.length,
 			notesCount: workspaceContext.notes.length,
 			contextLength: workspaceContextString.length,
-			hasDraftTasks: !!workspaceContext.draftTasks && workspaceContext.draftTasks.length > 0
+			hasDraftTasks: !!workspaceContext.draftTasks && workspaceContext.draftTasks.length > 0,
+			draftTasksCount: workspaceContext.draftTasks?.length || 0,
+			contextPreview: workspaceContextString.substring(0, 500)
 		});
 
 		// Show onboarding flow if draft tasks exist and no messages yet
