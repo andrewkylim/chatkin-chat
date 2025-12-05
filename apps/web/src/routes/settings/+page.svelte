@@ -296,6 +296,35 @@
 
 			if (_notesError) throw new Error(`Failed to delete notes: ${_notesError.message}`);
 
+			// Delete all conversations and messages
+			deleteAllStatus = 'Deleting chat conversations...';
+			const { data: conversations, error: _convError } = await supabase
+				.from('conversations')
+				.select('id')
+				.eq('user_id', user.id);
+
+			if (_convError) throw new Error(`Failed to query conversations: ${_convError.message}`);
+
+			if (conversations && conversations.length > 0) {
+				const conversationIds = conversations.map(c => c.id);
+
+				// Delete all messages for these conversations
+				const { error: _msgError } = await supabase
+					.from('messages')
+					.delete()
+					.in('conversation_id', conversationIds);
+
+				if (_msgError) throw new Error(`Failed to delete messages: ${_msgError.message}`);
+
+				// Delete all conversations
+				const { error: _delConvError } = await supabase
+					.from('conversations')
+					.delete()
+					.eq('user_id', user.id);
+
+				if (_delConvError) throw new Error(`Failed to delete conversations: ${_delConvError.message}`);
+			}
+
 			// Delete assessment responses
 			deleteAllStatus = 'Deleting assessment responses...';
 			const { error: _responsesError } = await supabase
@@ -695,7 +724,7 @@
 					<div class="danger-item">
 						<h3 class="danger-item-title">Delete All Content</h3>
 						<p class="section-description">
-							Permanently delete all your content including tasks, notes, files, and images. This action cannot be undone.
+							Permanently delete all your content including chat conversations, tasks, notes, files, and images. This action cannot be undone.
 						</p>
 
 						<button
@@ -726,7 +755,7 @@
 				This will permanently delete:
 			</p>
 			<ul class="delete-list">
-				<li>All projects and their conversations</li>
+				<li>All chat conversations and messages</li>
 				<li>All tasks (completed and incomplete)</li>
 				<li>All notes and attachments</li>
 				<li>All files and uploads from storage</li>
@@ -935,24 +964,27 @@
 
 	.danger-item {
 		margin-bottom: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
 	}
 
 	.danger-item-title {
 		font-size: 1.125rem;
 		font-weight: 600;
 		color: var(--text-primary) !important;
-		margin: 0 0 8px 0;
+		margin: 0;
 	}
 
 	.danger-divider {
 		height: 1px;
 		background: var(--border-color);
-		margin: 40px 0;
+		margin: 32px 0;
 		opacity: 0.5;
 	}
 
 	.section-description {
-		margin: 0 0 16px 0;
+		margin: 0;
 		font-size: 0.875rem;
 		line-height: 1.6;
 		color: var(--text-secondary);
@@ -969,11 +1001,19 @@
 		cursor: pointer;
 		transition: all 0.2s ease;
 		min-width: 200px;
+		align-self: flex-start;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 	}
 
 	.danger-btn:hover:not(:disabled) {
 		background: rgb(220, 38, 38);
 		transform: translateY(-1px);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	}
+
+	.danger-btn:active:not(:disabled) {
+		transform: translateY(0);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 	}
 
 	.danger-btn:disabled {
@@ -983,14 +1023,15 @@
 	}
 
 	.status {
-		margin-top: 16px;
+		margin-top: 0;
 		padding: 12px 16px;
 		background: var(--bg-tertiary);
 		border: 1px solid var(--border-color);
 		border-radius: var(--radius-md);
 		color: var(--text-secondary);
-		font-size: 0.9375rem;
-		line-height: 1.6;
+		font-size: 0.875rem;
+		line-height: 1.5;
+		align-self: stretch;
 	}
 
 	.status.success {
@@ -1186,6 +1227,50 @@
 		font-weight: 500;
 		color: var(--text-primary);
 		min-width: 50px;
+	}
+
+	@media (max-width: 768px) {
+		.settings-page {
+			padding: 20px 16px;
+		}
+
+		.settings-header {
+			margin-bottom: 24px;
+		}
+
+		.settings-container h1 {
+			font-size: 1.5rem;
+		}
+
+		.settings-section {
+			padding: 20px 16px;
+			margin-bottom: 24px;
+		}
+
+		.settings-section.collapsible {
+			padding: 12px 16px;
+		}
+
+		.section-header h2 {
+			font-size: 1.125rem;
+		}
+
+		.danger-item-title {
+			font-size: 1rem;
+		}
+
+		.section-description {
+			font-size: 0.8125rem;
+		}
+
+		.danger-btn {
+			width: 100%;
+			min-width: unset;
+		}
+
+		.danger-divider {
+			margin: 24px 0;
+		}
 	}
 
 	@media (max-width: 640px) {
