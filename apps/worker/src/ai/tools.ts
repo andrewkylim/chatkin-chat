@@ -6,7 +6,7 @@ export function getTools() {
   return [
     {
       name: 'ask_questions',
-      description: 'Ask clarifying questions using a modal UI when truly ambiguous requests require user input (e.g., "Plan vacation" needs destination/dates, "Create morning routine" could span multiple domains). RARELY USED - most requests should use propose_operations with smart defaults. When you do use this, provide 2-4 options per question.',
+      description: 'Ask clarifying questions when critical - use a modal UI when truly ambiguous requests require user input (e.g., "Plan vacation" needs destination/dates, "Create morning routine" could span multiple domains). RARELY USED - most requests should use propose_operations with smart defaults. When you do use this, provide 2-4 options per question.',
       input_schema: {
         type: 'object' as const,
         properties: {
