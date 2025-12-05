@@ -128,14 +128,14 @@
 
 	.question-select:hover {
 		border-color: rgba(199, 124, 92, 0.5);
-		background: var(--bg-secondary);
+		background-color: var(--bg-secondary);
 	}
 
 	.question-select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
 		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
-		background: var(--bg-secondary);
+		background-color: var(--bg-secondary);
 	}
 
 	.other-input {
