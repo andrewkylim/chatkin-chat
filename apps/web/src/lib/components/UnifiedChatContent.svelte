@@ -5,6 +5,7 @@
 	import MessageBubble from './chat/MessageBubble.svelte';
 	import TalkModeIndicator from './chat/TalkModeIndicator.svelte';
 	import MobileChatLayout from './MobileChatLayout.svelte';
+	import OnboardingMessages from './chat/OnboardingMessages.svelte';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { useChatOperations } from '$lib/logic/useChatOperations';
 	import { talkModeService } from '$lib/services/talk-mode';
@@ -80,6 +81,8 @@
 	}> = [];
 	let uploadStatus: string = '';
 	let aiMode: 'chat' | 'action' = 'action'; // Default to action mode - AI can chat OR propose operations
+	let showOnboarding = false;
+	let onboardingDraftTasksCount = 0;
 
 	async function scrollToBottom() {
 		await tick();
@@ -89,6 +92,13 @@
 		if (mobileChatLayout) {
 			mobileChatLayout.scrollToBottom();
 		}
+	}
+
+	async function handleOnboardingComplete() {
+		showOnboarding = false;
+		logger.info('Onboarding complete, triggering AI for draft tasks');
+		// Trigger AI greeting with draft tasks
+		await sendMessage('start', true); // true = isAutoStart flag
 	}
 
 	function buildConversationHistory() {
@@ -675,16 +685,17 @@
 			hasDraftTasks: !!workspaceContext.draftTasks && workspaceContext.draftTasks.length > 0
 		});
 
-		// Auto-start conversation if draft tasks exist and no messages yet
+		// Show onboarding flow if draft tasks exist and no messages yet
 		const hasDraftTasks = workspaceContext.draftTasks && workspaceContext.draftTasks.length > 0;
 		const hasNoMessages = messages.length === 0;
 		const isGlobalScope = scope === 'global';
 
 		if (hasDraftTasks && hasNoMessages && isGlobalScope) {
-			logger.info('Auto-starting conversation with draft tasks');
-			// Trigger AI greeting with draft tasks
-			// We send a hidden "start" message that the AI will respond to with draft tasks
-			await sendMessage('start', true); // true = isAutoStart flag
+			logger.info('Showing onboarding flow with draft tasks', {
+				draftTasksCount: workspaceContext.draftTasks.length
+			});
+			showOnboarding = true;
+			onboardingDraftTasksCount = workspaceContext.draftTasks.length;
 		}
 
 		// Ready for display
@@ -733,6 +744,13 @@
 			bind:this={desktopMessagesContainer}
 			style:opacity={messagesReady ? '1' : '0'}
 		>
+			{#if showOnboarding}
+				<OnboardingMessages
+					draftTasksCount={onboardingDraftTasksCount}
+					onComplete={handleOnboardingComplete}
+				/>
+			{/if}
+
 			{#each messages as message, index (index)}
 				<MessageBubble
 					{message}
@@ -821,6 +839,9 @@
 		onListeningChange={(listening) => {
 			isListening = listening;
 		}}
+		{showOnboarding}
+		{onboardingDraftTasksCount}
+		{handleOnboardingComplete}
 	/>
 
 	<!-- Talk Mode Indicator (Mobile) -->

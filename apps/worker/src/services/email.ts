@@ -194,7 +194,7 @@ export class EmailService {
     `;
 	}
 
-	profileReadyEmail(_tasksCreated: number, _notesCreated: number, actionUrl: string): string {
+	profileReadyEmail(actionUrl: string): string {
 		return `
       <!DOCTYPE html>
       <html>
@@ -205,7 +205,16 @@ export class EmailService {
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1f2937; background: #fafafa; margin: 0; padding: 0; }
             .container { max-width: 560px; margin: 40px auto; padding: 0; background: #ffffff; text-align: center; }
             .header { padding: 48px 40px 32px; border-bottom: 1px solid #e5e7eb; }
-            .circle { width: 80px; height: 80px; margin: 0 auto 24px; background: #f59e0b; border-radius: 50%; }
+            .circle { width: 80px; height: 80px; margin: 0 auto 24px; background: #10B981; border-radius: 50%; animation: colorCycle 6s linear infinite; }
+            @keyframes colorCycle {
+              0% { background-color: #10B981; }
+              16.66% { background-color: #3B82F6; }
+              33.33% { background-color: #8B5CF6; }
+              50% { background-color: #F59E0B; }
+              66.66% { background-color: #EAB308; }
+              83.33% { background-color: #EF4444; }
+              100% { background-color: #10B981; }
+            }
             .header h1 { margin: 0; font-size: 24px; font-weight: 600; color: #111827; letter-spacing: -0.3px; }
             .content { padding: 40px; }
             .content p { font-size: 16px; margin: 0 0 32px 0; color: #4b5563; line-height: 1.5; }

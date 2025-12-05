@@ -387,7 +387,27 @@
 			if (!response.ok) {
 				const errorText = await response.text();
 				console.error('[Submit] Response error:', errorText);
-				throw new Error(`Failed to generate assessment report: ${response.status} ${errorText}`);
+
+				// Parse error and show user-friendly message
+				let userMessage = 'There was an unexpected error processing your assessment.';
+
+				try {
+					const errorData = JSON.parse(errorText);
+
+					// Check for specific error types
+					if (errorData.message?.includes('credit balance is too low')) {
+						userMessage = 'Our AI service is temporarily unavailable. Please try again in a few minutes or contact support if this persists.';
+					} else if (errorData.message?.includes('rate limit')) {
+						userMessage = 'Too many requests. Please wait a moment and try again.';
+					} else if (errorData.error) {
+						userMessage = `Unable to process your assessment: ${errorData.error}`;
+					}
+				} catch (e) {
+					// If error isn't JSON, use generic message
+					console.error('Could not parse error:', e);
+				}
+
+				throw new Error(userMessage);
 			}
 
 			// Update profile to mark questionnaire as completed

@@ -1,6 +1,6 @@
 /**
  * Generate onboarding content endpoint - Multi-call optimized version
- * Creates comprehensive life plan with projects, tasks, and notes via multiple fast AI calls
+ * Creates comprehensive life plan with draft tasks (notes generated separately)
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -11,19 +11,12 @@ import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
 import { createSupabaseAdmin } from '../utils/supabase-admin';
 
-interface OnboardingContent {
-	starterTasks: Array<{
-		domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
-		title: string;
-		description: string;
-		priority: 'low' | 'medium' | 'high';
-		status: 'todo';
-	}>;
-	domainPrimers: Array<{
-		domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
-		title: string;
-		content: string;
-	}>;
+interface StarterTask {
+	domain: 'Body' | 'Mind' | 'Purpose' | 'Connection' | 'Growth' | 'Finance';
+	title: string;
+	description: string;
+	priority: 'low' | 'medium' | 'high';
+	status: 'todo';
 }
 
 export async function handleGenerateOnboarding(
@@ -68,17 +61,23 @@ export async function handleGenerateOnboarding(
 		}
 
 
-		// Generate onboarding content (starter tasks + domain primers)
+		// Generate starter tasks only (notes will be generated separately by generate-notes endpoint)
 		const client = createAnthropicClient(env.ANTHROPIC_API_KEY);
-		const onboardingContent = await generateOnboardingContent(
+
+		const domainScoresText = Object.entries(results.domain_scores)
+			.map(([domain, score]) => `- ${domain}: ${score}/10`)
+			.join('\n');
+
+		const starterTasks = await generateStarterTasks(
 			client,
 			profile.profile_summary,
-			results.domain_scores,
+			domainScoresText,
+			results.domain_scores
 		);
 
-		// 1. Store draft tasks for co-creation (NOT creating real tasks yet)
+		// Store draft tasks for co-creation (NOT creating real tasks yet)
 		// These will be presented to user in first chat session
-		const draftTasks = onboardingContent.starterTasks.map((task) => ({
+		const draftTasks = starterTasks.map((task) => ({
 			domain: task.domain,
 			title: task.title,
 			description: task.description,
@@ -95,42 +94,9 @@ export async function handleGenerateOnboarding(
 			logger.error('Failed to save draft tasks', { error: draftError });
 		}
 
-		// 2. Create 6 domain primer notes with note_blocks (using domain directly)
-		for (const note of onboardingContent.domainPrimers) {
-			// Insert note first
-			const { data: createdNote, error: noteError } = await supabaseAdmin
-				.from('notes')
-				.insert({
-					user_id: user.userId,
-					domain: note.domain,
-					title: note.title,
-					is_system_generated: true
-				})
-				.select()
-				.single();
-
-			if (noteError) {
-				logger.error('Failed to create domain primer note', { error: noteError });
-				continue;
-			}
-
-			// Then insert note_block with content
-			const { error: blockError } = await supabaseAdmin.from('note_blocks').insert({
-				note_id: createdNote.id,
-				type: 'text',
-				content: { text: note.content },
-				position: 0
-			});
-
-			if (blockError) {
-				logger.error('Failed to create note block', { error: blockError });
-			}
-		}
-
-		logger.info('Onboarding content generated successfully', {
+		logger.info('Onboarding draft tasks generated successfully', {
 			userId: user.userId,
-			draftTasks: draftTasks.length,
-			domainPrimers: onboardingContent.domainPrimers.length
+			draftTasks: draftTasks.length
 		});
 
 		return new Response(
@@ -138,7 +104,7 @@ export async function handleGenerateOnboarding(
 				success: true,
 				created: {
 					draft_tasks: draftTasks.length,
-					notes: onboardingContent.domainPrimers.length
+					notes: 0
 				}
 			}),
 			{
@@ -150,32 +116,12 @@ export async function handleGenerateOnboarding(
 	}
 }
 
-async function generateOnboardingContent(
-	client: any,
-	profileSummary: string,
-	domainScores: any,
-): Promise<OnboardingContent> {
-	const domainScoresText = Object.entries(domainScores)
-		.map(([domain, score]) => `- ${domain}: ${score}/10`)
-		.join('\n');
-
-	// Generate starter tasks and domain primers in parallel for speed
-	logger.info('Generating onboarding content (tasks + primers)...');
-
-	const [starterTasks, domainPrimers] = await Promise.all([
-		generateStarterTasks(client, profileSummary, domainScoresText, domainScores),
-		generateDomainPrimers(client, profileSummary, domainScoresText)
-	]);
-
-	return { starterTasks, domainPrimers };
-}
-
 async function generateStarterTasks(
 	client: any,
 	profileSummary: string,
 	domainScoresText: string,
 	domainScores: any
-): Promise<OnboardingContent['starterTasks']> {
+): Promise<StarterTask[]> {
 	// Identify focus areas (lowest 3 scoring domains)
 	const focusAreas = Object.entries(domainScores)
 		.sort(([, a]: any, [, b]: any) => a - b)
@@ -229,71 +175,6 @@ CRITICAL: Use EXACT domain names. Create 20-30 tasks total. Weight toward lower-
 	if (!jsonMatch) {
 		logger.error('Failed to parse starter tasks', { responseText: responseText.substring(0, 500) });
 		throw new WorkerError('Failed to parse starter tasks', 500);
-	}
-
-	return JSON.parse(jsonMatch[0]);
-}
-
-async function generateDomainPrimers(
-	client: any,
-	profileSummary: string,
-	domainScoresText: string
-): Promise<OnboardingContent['domainPrimers']> {
-	const prompt = `You are creating 6 detailed domain analysis notes—one for each wellness domain. These are comprehensive (500-800 words) notes that serve as a personalized guide for each area of their life.
-
-PROFILE SUMMARY:
-${profileSummary.substring(0, 1200)}
-
-DOMAIN SCORES:
-${domainScoresText}
-
-Create 6 detailed domain notes (one per domain: Body, Mind, Purpose, Connection, Growth, Finance) that each contain:
-
-**Structure for each note:**
-1. **Current State** (2-3 paragraphs, ~200 words)
-   - What their assessment reveals about this domain
-   - Their score and what it actually means
-   - Specific patterns, behaviors, or struggles they mentioned
-
-2. **Key Insights** (2-3 paragraphs, ~150 words)
-   - Patterns or contradictions you noticed
-   - What's working and what's not
-   - Connections between their answers
-   - Blind spots or avoidance areas
-
-3. **What Matters Here** (1-2 paragraphs, ~100 words)
-   - Why this domain is important for their specific situation
-   - How it connects to other domains
-   - What changes here could ripple elsewhere
-
-4. **Recommendations** (2-3 paragraphs, ~150 words)
-   - Specific, actionable suggestions based on their profile
-   - Quick wins and longer-term strategies
-   - What to start, stop, or change
-   - Not generic advice—tailored to what they actually said
-
-**Tone:** Direct, honest, insightful. Not cheerleading or therapy-speak. More like a smart friend who sees the whole picture.
-
-**Length:** 500-800 words per note (substantial, not brief)
-
-Return ONLY JSON array (exactly 6 notes, one per domain):
-[
-  {"domain": "Body|Mind|Purpose|Connection|Growth|Finance", "title": "[Domain]: Your Current Reality", "content": "500-800 word detailed analysis following the structure above"}
-]
-
-CRITICAL: Use EXACT domain names. Generate exactly 6 detailed notes. Make them personal and specific using their actual assessment data.`;
-
-	const message = await client.messages.create({
-		model: 'claude-3-5-haiku-20241022',
-		max_tokens: 8000,
-		messages: [{ role: 'user', content: prompt }]
-	});
-
-	const responseText = message.content[0].text.trim();
-	const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-	if (!jsonMatch) {
-		logger.error('Failed to parse domain primers', { responseText: responseText.substring(0, 500) });
-		throw new WorkerError('Failed to parse domain primers', 500);
 	}
 
 	return JSON.parse(jsonMatch[0]);

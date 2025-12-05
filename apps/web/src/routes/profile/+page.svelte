@@ -308,8 +308,7 @@
 					<div class="retake-warning">
 						<h3>Retake Assessment</h3>
 						<p>
-							Retaking the assessment will reset your profile and delete all existing projects, tasks, notes,
-							and files. This action cannot be undone.
+							Retaking the assessment will reset your profile and delete all existing projects, tasks, notes, files, and chat conversations. This action cannot be undone.
 						</p>
 						<button onclick={() => showRetakeModal = true} class="danger-btn">
 							Retake Assessment

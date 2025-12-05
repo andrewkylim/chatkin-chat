@@ -6,7 +6,7 @@
 import type { ChatRequest } from '@chatkin/types/api';
 import type { Env, CorsHeaders } from '../types';
 import { createAnthropicClient } from '../ai/client';
-import { buildSystemPrompt } from '../ai/prompts';
+import { buildSystemPrompt, type UserPreferences } from '../ai/prompts';
 import { getToolsForMode } from '../ai/tools';
 import { handleError, WorkerError } from '../utils/error-handler';
 import { logger } from '../utils/logger';
@@ -50,8 +50,24 @@ export async function handleAIChat(
       files: files?.map(f => ({ name: f.name, type: f.type, url: f.url }))
     });
 
+    // Fetch user preferences
+    const supabaseAdmin = createSupabaseAdmin(env);
+    const { data: profile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('ai_tone, proactivity_level, communication_style')
+      .eq('user_id', user.userId)
+      .single();
+
+    const preferences: UserPreferences | undefined = profile ? {
+      ai_tone: profile.ai_tone,
+      proactivity_level: profile.proactivity_level,
+      communication_style: profile.communication_style
+    } : undefined;
+
+    logger.debug('User preferences loaded', { preferences });
+
     // Build base system prompt
-    let systemPrompt = buildSystemPrompt(context, workspaceContext, mode);
+    let systemPrompt = buildSystemPrompt(context, workspaceContext, mode, preferences);
 
     // Add conversation stage hint for chat mode
     if (mode === 'chat') {

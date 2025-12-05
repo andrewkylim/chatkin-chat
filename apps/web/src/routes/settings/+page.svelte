@@ -11,19 +11,26 @@
 	let status = '';
 	let cleaning = false;
 
-	let showDeleteAllModal = false;
-	let deleteConfirmText = '';
-	let deleteAllStatus = '';
-	let deletingAll = false;
-
 	let retaking = false;
 
 	// Collapsible sections
 	let notificationsExpanded = false;
+	let aiPreferencesExpanded = false;
 	let dangerZoneExpanded = false;
 
 	// Theme state
 	let theme: 'light' | 'dark' = 'light';
+
+	// AI Preferences state
+	interface UserAIPreferences {
+		ai_tone: 'challenging' | 'supportive' | 'balanced';
+		proactivity_level: 'high' | 'medium' | 'low';
+		communication_style: 'brief' | 'detailed' | 'conversational';
+	}
+	let aiPreferences: UserAIPreferences | null = null;
+	let loadingAIPrefs = true;
+	let savingAIPrefs = false;
+	let aiPrefsStatus = '';
 
 	// Notification preferences state
 	let notificationPrefs: UserNotificationPreferences | null = null;
@@ -33,7 +40,6 @@
 	let browserPermissionStatus: NotificationPermission = 'default';
 
 	$: userEmail = $auth.user?.email || '';
-	$: canDeleteAll = deleteConfirmText.toLowerCase() === 'delete';
 
 	onMount(async () => {
 		// Load theme preference from localStorage
@@ -41,6 +47,59 @@
 		if (savedTheme) {
 			theme = savedTheme;
 			applyTheme(savedTheme);
+		}
+
+		// Wait for auth to finish loading
+		if ($auth.loading) {
+			const unsubscribe = auth.subscribe((state) => {
+				if (!state.loading) {
+					unsubscribe();
+					if (state.user) {
+						loadPreferences();
+					} else {
+						loadingAIPrefs = false;
+						loadingPrefs = false;
+					}
+				}
+			});
+		} else if ($auth.user) {
+			await loadPreferences();
+		} else {
+			loadingAIPrefs = false;
+			loadingPrefs = false;
+		}
+	});
+
+	async function loadPreferences() {
+		// Load AI preferences
+		try {
+			if (!$auth.user) {
+				loadingAIPrefs = false;
+				return;
+			}
+
+			const { data: profileData, error: profileError } = await supabase
+				.from('user_profiles')
+				.select('ai_tone, proactivity_level, communication_style')
+				.eq('user_id', $auth.user.id)
+				.single();
+
+			if (profileError) {
+				throw profileError;
+			}
+
+			if (profileData) {
+				aiPreferences = {
+					ai_tone: profileData.ai_tone,
+					proactivity_level: profileData.proactivity_level,
+					communication_style: profileData.communication_style
+				};
+			}
+		} catch (_error) {
+			console.error('Failed to load AI preferences:', _error);
+			aiPrefsStatus = 'Failed to load AI preferences';
+		} finally {
+			loadingAIPrefs = false;
 		}
 
 		// Load notification preferences
@@ -53,7 +112,7 @@
 		} finally {
 			loadingPrefs = false;
 		}
-	});
+	}
 
 	function applyTheme(newTheme: 'light' | 'dark') {
 		if (newTheme === 'dark') {
@@ -68,6 +127,50 @@
 		theme = newTheme;
 		applyTheme(newTheme);
 		localStorage.setItem('theme', newTheme);
+	}
+
+	async function saveAIPreferences() {
+		if (!aiPreferences) return;
+
+		savingAIPrefs = true;
+		aiPrefsStatus = '';
+
+		try {
+			const { data: { session } } = await supabase.auth.getSession();
+			const accessToken = session?.access_token;
+
+			if (!accessToken) {
+				throw new Error('Not authenticated');
+			}
+
+			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : 'https://chatkin.ai';
+			const response = await fetch(`${workerUrl}/api/update-preferences`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${accessToken}`
+				},
+				body: JSON.stringify({
+					ai_tone: aiPreferences.ai_tone,
+					proactivity_level: aiPreferences.proactivity_level,
+					communication_style: aiPreferences.communication_style
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to save AI preferences');
+			}
+
+			aiPrefsStatus = 'Saved';
+			setTimeout(() => {
+				aiPrefsStatus = '';
+			}, 2000);
+		} catch (_error) {
+			console.error('Failed to save AI preferences:', _error);
+			aiPrefsStatus = 'Error saving AI preferences';
+		} finally {
+			savingAIPrefs = false;
+		}
 	}
 
 	async function toggleEmailNotification(type: 'task_due_soon' | 'ai_proposals' | 'ai_insights') {
@@ -231,141 +334,6 @@
 		}
 	}
 
-	async function handleDeleteAllContent() {
-		if (!$auth.user || !canDeleteAll) return;
-
-		deletingAll = true;
-		deleteAllStatus = 'Deleting all content...';
-
-		try {
-			const user = $auth.user;
-
-			// Get session for authentication
-			const { data: { session } } = await supabase.auth.getSession();
-			const accessToken = session?.access_token;
-
-			// First, get all files to retrieve r2_keys for deletion
-			deleteAllStatus = 'Deleting files from storage...';
-			const { data: files, error: _filesQueryError } = await supabase
-				.from('files')
-				.select('id, r2_key')
-				.eq('user_id', user.id);
-
-			if (_filesQueryError) throw new Error(`Failed to query files: ${_filesQueryError.message}`);
-
-			// Delete all files from database
-			const { error: _filesError } = await supabase
-				.from('files')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_filesError) throw new Error(`Failed to delete files: ${_filesError.message}`);
-
-			// Delete files from R2 storage in parallel
-			if (files && files.length > 0) {
-				const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : 'https://chatkin.ai';
-				await Promise.allSettled(
-					files.map((file) =>
-						fetch(`${workerUrl}/api/delete-file`, {
-							method: 'DELETE',
-							headers: {
-								'Content-Type': 'application/json',
-								...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-							},
-							body: JSON.stringify({ r2_key: file.r2_key }),
-						})
-					)
-				);
-			}
-
-			// Delete all tasks
-			deleteAllStatus = 'Deleting tasks...';
-			const { error: _tasksError } = await supabase
-				.from('tasks')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_tasksError) throw new Error(`Failed to delete tasks: ${_tasksError.message}`);
-
-			// Delete all notes (cascades to note_blocks)
-			deleteAllStatus = 'Deleting notes...';
-			const { error: _notesError } = await supabase
-				.from('notes')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_notesError) throw new Error(`Failed to delete notes: ${_notesError.message}`);
-
-			// Delete all conversations and messages
-			deleteAllStatus = 'Deleting chat conversations...';
-			const { data: conversations, error: _convError } = await supabase
-				.from('conversations')
-				.select('id')
-				.eq('user_id', user.id);
-
-			if (_convError) throw new Error(`Failed to query conversations: ${_convError.message}`);
-
-			if (conversations && conversations.length > 0) {
-				const conversationIds = conversations.map(c => c.id);
-
-				// Delete all messages for these conversations
-				const { error: _msgError } = await supabase
-					.from('messages')
-					.delete()
-					.in('conversation_id', conversationIds);
-
-				if (_msgError) throw new Error(`Failed to delete messages: ${_msgError.message}`);
-
-				// Delete all conversations
-				const { error: _delConvError } = await supabase
-					.from('conversations')
-					.delete()
-					.eq('user_id', user.id);
-
-				if (_delConvError) throw new Error(`Failed to delete conversations: ${_delConvError.message}`);
-			}
-
-			// Delete assessment responses
-			deleteAllStatus = 'Deleting assessment responses...';
-			const { error: _responsesError } = await supabase
-				.from('assessment_responses')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_responsesError) throw new Error(`Failed to delete assessment responses: ${_responsesError.message}`);
-
-			// Delete assessment results
-			deleteAllStatus = 'Deleting assessment results...';
-			const { error: _resultsError } = await supabase
-				.from('assessment_results')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_resultsError) throw new Error(`Failed to delete assessment results: ${_resultsError.message}`);
-
-			// Delete user profile
-			deleteAllStatus = 'Deleting user profile...';
-			const { error: _profileError } = await supabase
-				.from('user_profiles')
-				.delete()
-				.eq('user_id', user.id);
-
-			if (_profileError) throw new Error(`Failed to delete user profile: ${_profileError.message}`);
-
-			deleteAllStatus = '✅ Successfully deleted all content. Refreshing...';
-
-			// Refresh after 1.5 seconds
-			setTimeout(() => {
-				window.location.reload();
-			}, 1500);
-
-		} catch (_error) {
-			deleteAllStatus = `Error: ${_error instanceof Error ? _error.message : String(_error)}`;
-		} finally {
-			deletingAll = false;
-		}
-	}
-
 	async function handleRetakeAssessment() {
 		if (!$auth.user) return;
 
@@ -525,6 +493,98 @@
 						</button>
 					</div>
 				</div>
+			</div>
+
+			<div class="settings-section collapsible">
+				<button class="section-header collapsible-header" on:click={() => aiPreferencesExpanded = !aiPreferencesExpanded}>
+					<h2>AI Preferences</h2>
+					<svg
+						class="chevron"
+						class:expanded={aiPreferencesExpanded}
+						width="20"
+						height="20"
+						viewBox="0 0 20 20"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+					>
+						<path d="M6 8l4 4 4-4"/>
+					</svg>
+				</button>
+				{#if aiPreferencesExpanded}
+				<div class="section-content">
+					{#if loadingAIPrefs}
+						<p>Loading preferences...</p>
+					{:else if aiPreferences}
+						<p class="section-description" style="margin-bottom: 20px;">
+							Customize how Chatkin interacts with you. These preferences affect the AI's tone, proactivity, and communication style.
+						</p>
+
+						<div class="preference-group">
+							<label for="ai-tone-setting">How should I coach you?</label>
+							<select id="ai-tone-setting" bind:value={aiPreferences.ai_tone} on:change={saveAIPreferences} disabled={savingAIPrefs}>
+								<option value="challenging">Direct and challenging</option>
+								<option value="supportive">Supportive and encouraging</option>
+								<option value="balanced">Balanced approach</option>
+							</select>
+							<p class="preference-description">
+								{#if aiPreferences.ai_tone === 'challenging'}
+									I'll call you out when you're avoiding things and use tough love to keep you accountable.
+								{:else if aiPreferences.ai_tone === 'supportive'}
+									I'll focus on your progress and wins, and be gentle in my guidance.
+								{:else}
+									I'll adapt my approach based on the situation, balancing challenge with support.
+								{/if}
+							</p>
+						</div>
+
+						<div class="preference-group">
+							<label for="proactivity-setting">How proactive should I be?</label>
+							<select id="proactivity-setting" bind:value={aiPreferences.proactivity_level} on:change={saveAIPreferences} disabled={savingAIPrefs}>
+								<option value="high">Very proactive (suggest often)</option>
+								<option value="medium">Somewhat proactive</option>
+								<option value="low">Only when asked</option>
+							</select>
+							<p class="preference-description">
+								{#if aiPreferences.proactivity_level === 'high'}
+									I'll frequently spot patterns and suggest actions to help you stay on track.
+								{:else if aiPreferences.proactivity_level === 'low'}
+									I'll wait for you to ask before offering suggestions or insights.
+								{:else}
+									I'll balance between suggesting actions and waiting for your lead.
+								{/if}
+							</p>
+						</div>
+
+						<div class="preference-group">
+							<label for="communication-setting">Communication style?</label>
+							<select id="communication-setting" bind:value={aiPreferences.communication_style} on:change={saveAIPreferences} disabled={savingAIPrefs}>
+								<option value="brief">Keep it brief</option>
+								<option value="detailed">Give me context</option>
+								<option value="conversational">Natural conversation</option>
+							</select>
+							<p class="preference-description">
+								{#if aiPreferences.communication_style === 'brief'}
+									I'll keep my responses short and to the point.
+								{:else if aiPreferences.communication_style === 'detailed'}
+									I'll provide thorough explanations with plenty of context.
+								{:else}
+									I'll communicate naturally with back-and-forth dialogue.
+								{/if}
+							</p>
+						</div>
+
+						{#if aiPrefsStatus}
+							<div class="status" class:success={aiPrefsStatus === 'Saved'} class:error={aiPrefsStatus.includes('Error')}>
+								{aiPrefsStatus}
+							</div>
+						{/if}
+					{:else}
+						<p class="error">Failed to load AI preferences</p>
+					{/if}
+				</div>
+				{/if}
 			</div>
 
 			<div class="settings-section collapsible">
@@ -769,84 +829,11 @@
 						</button>
 					</div>
 
-					<div class="danger-divider"></div>
-
-					<div class="danger-item">
-						<h3 class="danger-item-title">Delete All Content</h3>
-						<p class="section-description">
-							Permanently delete all your content including chat conversations, tasks, notes, files, and images. This action cannot be undone.
-						</p>
-
-						<button
-							class="danger-btn"
-							on:click={() => showDeleteAllModal = true}
-							disabled={deletingAll}
-						>
-							{deletingAll ? 'Deleting...' : 'Delete All Content'}
-						</button>
-
-						{#if deleteAllStatus}
-							<div class="status" class:success={deleteAllStatus.includes('✅')} class:error={deleteAllStatus.includes('Error')}>
-								{deleteAllStatus}
-							</div>
-						{/if}
-					</div>
 				</div>
 				{/if}
 			</div>
 		</div>
 	</div>
-
-{#if showDeleteAllModal}
-	<div class="modal-overlay" on:click={() => { showDeleteAllModal = false; deleteConfirmText = ''; }}>
-		<div class="modal" on:click|stopPropagation>
-			<h2>⚠️ Delete All Content?</h2>
-			<p class="warning-text">
-				This will permanently delete:
-			</p>
-			<ul class="delete-list">
-				<li>All chat conversations and messages</li>
-				<li>All tasks (completed and incomplete)</li>
-				<li>All notes and attachments</li>
-				<li>All files and uploads from storage</li>
-			</ul>
-			<p class="warning-text">
-				<strong>This action cannot be undone.</strong>
-			</p>
-
-			<div class="form-group">
-				<label for="confirm-delete">
-					Type <strong>delete</strong> to confirm:
-				</label>
-				<input
-					type="text"
-					id="confirm-delete"
-					bind:value={deleteConfirmText}
-					placeholder="delete"
-					autocomplete="off"
-				/>
-			</div>
-
-			<div class="modal-actions">
-				<button
-					type="button"
-					class="secondary-btn"
-					on:click={() => { showDeleteAllModal = false; deleteConfirmText = ''; }}
-				>
-					Cancel
-				</button>
-				<button
-					type="button"
-					class="danger-btn"
-					on:click={handleDeleteAllContent}
-					disabled={!canDeleteAll}
-				>
-					Delete All Content
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
 
 </AppLayout>
 
@@ -1403,5 +1390,64 @@
 
 	.reminder-checkbox span {
 		user-select: none;
+	}
+
+	/* AI Preferences */
+	.preference-group {
+		margin-bottom: 24px;
+	}
+
+	.preference-group:last-of-type {
+		margin-bottom: 16px;
+	}
+
+	.preference-group label {
+		display: block;
+		font-weight: 600;
+		font-size: 0.9375rem;
+		margin-bottom: 8px;
+		color: var(--text-primary);
+	}
+
+	.preference-group select {
+		width: 100%;
+		padding: 12px 16px;
+		background: var(--bg-tertiary);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius-md);
+		color: var(--text-primary);
+		font-size: 0.9375rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 16px center;
+		padding-right: 44px;
+	}
+
+	.preference-group select:hover:not(:disabled) {
+		border-color: rgba(199, 124, 92, 0.5);
+		background-color: var(--bg-primary);
+	}
+
+	.preference-group select:focus {
+		outline: none;
+		border-color: var(--accent-primary);
+		box-shadow: 0 0 0 3px rgba(199, 124, 92, 0.1);
+		background-color: var(--bg-primary);
+	}
+
+	.preference-group select:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.preference-description {
+		margin: 8px 0 0 0;
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		font-style: italic;
+		line-height: 1.5;
 	}
 </style>

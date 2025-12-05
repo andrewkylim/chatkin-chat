@@ -5,6 +5,8 @@
 	import MobileUserMenu from './MobileUserMenu.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import VoiceInput from './VoiceInput.svelte';
+	import OnboardingMessages from './chat/OnboardingMessages.svelte';
+	import QuestionsForm from './chat/QuestionsForm.svelte';
 
 	interface AIQuestion {
 		question: string;
@@ -55,7 +57,10 @@
 		toggleTalkMode = undefined,
 		aiMode = 'chat',
 		toggleAiMode = undefined,
-		onListeningChange = undefined
+		onListeningChange = undefined,
+		showOnboarding = false,
+		onboardingDraftTasksCount = 0,
+		handleOnboardingComplete = undefined
 	}: {
 		messages: Message[];
 		inputMessage: string;
@@ -81,6 +86,9 @@
 		aiMode?: 'chat' | 'action';
 		toggleAiMode?: () => void;
 		onListeningChange?: (listening: boolean) => void;
+		showOnboarding?: boolean;
+		onboardingDraftTasksCount?: number;
+		handleOnboardingComplete?: () => void;
 	} = $props();
 
 	let messagesContainer: HTMLDivElement;
@@ -214,6 +222,12 @@
 				<p>Loading conversation...</p>
 			</div>
 		{:else}
+			{#if showOnboarding && handleOnboardingComplete}
+				<OnboardingMessages
+					draftTasksCount={onboardingDraftTasksCount}
+					onComplete={handleOnboardingComplete}
+				/>
+			{/if}
 			{#each messages as message, index (index)}
 				<div class="message {message.role}">
 					{#if message.isTyping}
@@ -313,78 +327,16 @@
 
 							{#if message.questions && message.awaitingResponse}
 								<!-- Inline Questions Form -->
-								<div class="inline-questions">
-									{#each message.questions as question, qIndex}
-										{@const questionId = `q${index}_${qIndex}`}
-										<div class="question-block">
-											<label class="question-label">{question.question}</label>
-											<div class="question-options">
-												{#each question.options.filter(opt => opt.toLowerCase() !== 'other') as option, optIndex}
-													<label class="option-label">
-														<input
-															type="radio"
-															name={questionId}
-															value={option}
-															id={`${questionId}_${optIndex}`}
-														/>
-														<span>{option}</span>
-													</label>
-												{/each}
-												<label class="option-label other-option">
-													<input
-														type="radio"
-														name={questionId}
-														value="__other__"
-														id={`${questionId}_other`}
-													/>
-													<span>Other:</span>
-													<input
-														type="text"
-														class="other-input"
-														placeholder="Enter your answer"
-														id={`${questionId}_other_text`}
-														onfocus={(e) => {
-															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
-															if (radio) radio.checked = true;
-														}}
-														onclick={(e) => {
-															const radio = e.currentTarget.parentElement?.querySelector('input[type="radio"]') as HTMLInputElement;
-															if (radio) radio.checked = true;
-														}}
-													/>
-												</label>
-											</div>
-										</div>
-									{/each}
-								</div>
-
-								<!-- Submit/Cancel Buttons -->
-								<div class="confirmation-buttons">
-									<button class="confirm-btn" type="button" onclick={() => {
-										if (!onQuestionSubmit) return;
-										const answers: Record<string, string> = {};
-										message.questions?.forEach((q, qIdx) => {
-											const questionId = `q${index}_${qIdx}`;
-											const selected = document.querySelector(`input[name="${questionId}"]:checked`) as HTMLInputElement;
-											if (selected) {
-												if (selected.value === '__other__') {
-													const otherInput = document.getElementById(`${questionId}_other_text`) as HTMLInputElement;
-													answers[q.question] = otherInput?.value || '';
-												} else {
-													answers[q.question] = selected.value;
-												}
-											}
-										});
-										if (Object.keys(answers).length === 0) {
-											alert('Please select an answer for each question');
-											return;
-										}
-										onQuestionSubmit(index, answers);
-									}}>Submit</button>
-									<button class="cancel-btn" type="button" onclick={() => {
+								<QuestionsForm
+									questions={message.questions}
+									messageIndex={index}
+									onSubmit={(answers) => {
+										if (onQuestionSubmit) onQuestionSubmit(index, answers);
+									}}
+									onCancel={() => {
 										if (onQuestionCancel) onQuestionCancel(index);
-									}}>Cancel</button>
-								</div>
+									}}
+								/>
 							{/if}
 
 							{#if message.operations && message.awaitingResponse}
@@ -606,6 +558,10 @@
 	<nav class="bottom-nav">
 		<a href="/chat" class="nav-item" class:active={currentPath === '/chat'}>
 			<span>Chat</span>
+		</a>
+
+		<a href="/projects" class="nav-item" class:active={currentPath === '/projects'}>
+			<span>Projects</span>
 		</a>
 
 		<a href="/tasks" class="nav-item" class:active={currentPath === '/tasks'}>
@@ -1109,8 +1065,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 40px;
-		height: 40px;
+		width: 32px;
+		height: 32px;
 		border-radius: 50%;
 		border: 1px solid transparent;
 		background: transparent;
@@ -1383,80 +1339,7 @@
 		}
 	}
 
-	/* Inline Questions Styles */
-	.inline-questions {
-		margin-top: 12px;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	.question-block {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.question-label {
-		font-weight: 600;
-		color: var(--text-primary);
-		font-size: 0.9375rem;
-	}
-
-	.question-options {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.option-label {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 8px;
-		padding: 10px;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-md);
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.option-label:hover {
-		background: var(--bg-secondary);
-		border-color: var(--accent-primary);
-	}
-
-	.option-label input[type="radio"] {
-		flex-shrink: 0;
-		width: auto;
-		margin: 0;
-		cursor: pointer;
-	}
-
-	.option-label span {
-		flex: 1;
-	}
-
-	.other-option {
-		align-items: center;
-	}
-
-	.other-option span {
-		flex: 0 0 auto;
-	}
-
-	.other-input {
-		flex: 1;
-		padding: 8px 12px;
-		border: 1px solid var(--border-color);
-		border-radius: var(--radius-sm);
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		font-size: 0.9375rem;
-		width: auto;
-	}
-
+	/* Confirmation buttons (used by QuestionsForm and operations) */
 	.confirmation-buttons {
 		display: flex;
 		gap: 8px;
@@ -1575,7 +1458,7 @@
 		}
 
 		/* Wider bubbles for inline content on mobile */
-		.message.ai .message-bubble:has(.inline-questions) {
+		.message.ai .message-bubble:has(:global(.inline-questions)) {
 			max-width: 100%;
 		}
 	}

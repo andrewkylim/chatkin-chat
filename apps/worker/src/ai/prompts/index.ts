@@ -6,10 +6,17 @@ import type { ChatRequest } from '@chatkin/types/api';
 import { getChatModePrompt, getActionModePrompt } from './base';
 import { getGlobalPrompt } from './global';
 
+interface UserPreferences {
+  ai_tone?: 'challenging' | 'supportive' | 'balanced';
+  proactivity_level?: 'high' | 'medium' | 'low';
+  communication_style?: 'brief' | 'detailed' | 'conversational';
+}
+
 export function buildSystemPrompt(
   context: ChatRequest['context'],
   workspaceContext?: string,
-  mode: 'chat' | 'action' = 'action'
+  mode: 'chat' | 'action' = 'action',
+  preferences?: UserPreferences
 ): string {
   const scope = context?.scope || 'global';
   const domain = context?.domain;
@@ -34,8 +41,10 @@ export function buildSystemPrompt(
   // Add mode-specific prompt
   systemPrompt += '\n\n';
   systemPrompt += mode === 'chat'
-    ? getChatModePrompt(workspaceContext)
-    : getActionModePrompt(workspaceContext);
+    ? getChatModePrompt(workspaceContext, preferences)
+    : getActionModePrompt(workspaceContext, preferences);
 
   return systemPrompt;
 }
+
+export type { UserPreferences };

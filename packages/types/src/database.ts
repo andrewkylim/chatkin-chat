@@ -101,6 +101,22 @@ export interface User {
   created_at: string;
 }
 
+export type AITone = 'challenging' | 'supportive' | 'balanced';
+export type ProactivityLevel = 'high' | 'medium' | 'low';
+export type CommunicationStyle = 'brief' | 'detailed' | 'conversational';
+
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  profile_summary: string | null;
+  focus_areas: string[] | null;
+  ai_tone: AITone;
+  proactivity_level: ProactivityLevel;
+  communication_style: CommunicationStyle;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UserNotificationPreferences {
   id: string;
   user_id: string;

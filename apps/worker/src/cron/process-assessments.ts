@@ -116,7 +116,7 @@ export async function processSingleAssessment(userId: string, env: Env): Promise
 					try {
 						const emailService = new EmailService(env);
 						const profileUrl = `${env.PUBLIC_WORKER_URL}/chat`; // Changed to /chat for co-creation
-						const emailHtml = emailService.profileReadyEmail(tasksCreated, notesCreated, profileUrl);
+						const emailHtml = emailService.profileReadyEmail(profileUrl);
 
 						await emailService.sendEmail({
 							to: userEmail,

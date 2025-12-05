@@ -19,6 +19,7 @@ import { handleGenerateAssessmentReport } from './routes/generate-assessment-rep
 import { handleGenerateOnboarding } from './routes/generate-onboarding';
 import { handleGenerateNotes } from './routes/generate-notes';
 import { handleSummarizeConversation } from './routes/summarize-conversation';
+import { handleUpdatePreferences } from './routes/update-preferences';
 import { checkTaskReminders } from './cron/task-reminders';
 import { analyzePatterns } from './cron/analyze-patterns';
 import { processUnprocessedAssessments } from './cron/process-assessments';
@@ -80,6 +81,10 @@ const handler = {
 
     if (url.pathname === '/api/summarize-conversation') {
       return handleSummarizeConversation(request, env, corsHeaders);
+    }
+
+    if (url.pathname === '/api/update-preferences') {
+      return handleUpdatePreferences(request, env, corsHeaders);
     }
 
     if (url.pathname.startsWith('/api/temp-files/')) {
