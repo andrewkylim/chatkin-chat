@@ -85,26 +85,27 @@
 
 		// If assessment_results exists AND onboarding is processed, redirect to chat
 		// (onboarding_processed means draft tasks and notes are ready)
-		if (assessmentResults !== null && assessmentResults.onboarding_processed && hasCompletedBefore) {
+		if (assessmentResults !== null && assessmentResults.onboarding_processed === true) {
 			goto('/chat');
 			return;
 		}
 
-		// If assessment_results exists but onboarding isn't processed yet,
-		// AND has_completed_questionnaire is true, show processing page
-		// Check for both false and null since onboarding_processed might not be set yet
-		if (assessmentResults !== null && assessmentResults.onboarding_processed !== true && hasCompletedBefore) {
-			// User completed questionnaire but processing isn't done yet
-			// Show processing page
+		// If assessment_results exists but onboarding isn't processed yet (false or null),
+		// show processing page - this means assessment report was generated but
+		// draft tasks/notes aren't ready yet
+		if (assessmentResults !== null && assessmentResults.onboarding_processed !== true) {
+			// User is in processing state
+			// Show processing page regardless of has_completed_questionnaire
+			// (has_completed_questionnaire might not be set yet if they refresh quickly)
 			submitting = true;
 			loading = false;
 			showIntro = false;
 			return;
 		}
 
-		// If assessment_results exists but has_completed_questionnaire is false,
-		// user is retaking - show retake warning
-		if (assessmentResults !== null && !hasCompletedBefore) {
+		// If no assessment_results but has_completed_questionnaire is true,
+		// something is wrong - show retake warning
+		if (assessmentResults === null && hasCompletedBefore) {
 			_canExit = true;
 			showRetakeWarning = true;
 			return;
