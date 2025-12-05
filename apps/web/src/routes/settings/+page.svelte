@@ -434,10 +434,12 @@
 			await supabase.from('assessment_responses').delete().eq('user_id', user.id);
 
 			// Delete assessment results (CRITICAL: must complete before redirect)
-			const { error: deleteAssessmentError } = await supabase
+			const { error: deleteAssessmentError, data: deletedData } = await supabase
 				.from('assessment_results')
 				.delete()
 				.eq('user_id', user.id);
+
+			console.log('[Retake] Deleted assessment_results:', deletedData, 'Error:', deleteAssessmentError);
 
 			if (deleteAssessmentError) {
 				console.error('Failed to delete assessment results:', deleteAssessmentError);
@@ -445,6 +447,15 @@
 				retaking = false;
 				return;
 			}
+
+			// Verify deletion worked
+			const { data: checkResults } = await supabase
+				.from('assessment_results')
+				.select('*')
+				.eq('user_id', user.id)
+				.maybeSingle();
+
+			console.log('[Retake] Verification - assessment_results after delete:', checkResults);
 
 			// Update the profile to mark questionnaire as incomplete
 			const { error: _updateError } = await supabase
@@ -455,6 +466,8 @@
 				})
 				.eq('user_id', user.id);
 
+			console.log('[Retake] Updated profile, error:', _updateError);
+
 			if (_updateError) {
 				console.error('Failed to update profile:', _updateError);
 				alert('Failed to reset profile. Please try again.');
@@ -463,6 +476,7 @@
 			}
 
 			// Redirect to questionnaire
+			console.log('[Retake] Redirecting to /questionnaire');
 			goto('/questionnaire');
 		} catch (_err) {
 			console.error('Error retaking questionnaire:', _err);

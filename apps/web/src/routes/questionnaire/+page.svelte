@@ -62,6 +62,8 @@
 	async function loadQuestionnaire() {
 		if (!$auth.user) return;
 
+		console.log('[Load] Loading questionnaire for user:', $auth.user.id);
+
 		// Check if user wants to skip intro
 		const skipIntro = localStorage.getItem('skip_questionnaire_intro');
 		if (skipIntro === 'true') {
@@ -83,9 +85,16 @@
 
 		const hasCompletedBefore = profile?.has_completed_questionnaire === true;
 
+		console.log('[Load] State check:', {
+			assessmentResults: assessmentResults ? 'exists' : 'null',
+			onboarding_processed: assessmentResults?.onboarding_processed,
+			hasCompletedBefore
+		});
+
 		// If assessment_results exists AND onboarding is processed, redirect to chat
 		// (onboarding_processed means draft tasks and notes are ready)
 		if (assessmentResults !== null && assessmentResults.onboarding_processed === true) {
+			console.log('[Load] Onboarding complete, redirecting to chat');
 			goto('/chat');
 			return;
 		}
@@ -94,6 +103,7 @@
 		// show processing page - this means assessment report was generated but
 		// draft tasks/notes aren't ready yet
 		if (assessmentResults !== null && assessmentResults.onboarding_processed !== true) {
+			console.log('[Load] Processing state detected, showing processing page');
 			// User is in processing state
 			// Show processing page regardless of has_completed_questionnaire
 			// (has_completed_questionnaire might not be set yet if they refresh quickly)
@@ -108,11 +118,13 @@
 		// If no assessment_results but has_completed_questionnaire is true,
 		// something is wrong - show retake warning
 		if (assessmentResults === null && hasCompletedBefore) {
+			console.log('[Load] Inconsistent state - showing retake warning');
 			_canExit = true;
 			showRetakeWarning = true;
 			return;
 		}
 
+		console.log('[Load] Loading questions and responses...');
 		// Load questions and check for partial progress
 		await loadQuestions();
 		await loadExistingResponses();
@@ -127,12 +139,22 @@
 		const firstUnansweredIndex = questions.findIndex(q => !responses.has(q.id));
 		const allQuestionsAnswered = firstUnansweredIndex === -1 && questions.length > 0;
 
+		console.log('[Load] Progress check:', {
+			totalQuestions: questions.length,
+			responseCount: responses.size,
+			allQuestionsAnswered,
+			firstUnansweredIndex
+		});
+
 		if (allQuestionsAnswered) {
-			// User finished all questions but processing isn't complete yet
-			// Show processing page
-			submitting = true;
+			console.log('[Load] All questions answered, submitting questionnaire');
+			// User finished all questions but hasn't submitted yet
+			// This can happen if they refresh after answering all questions
+			// or if the submit failed previously
 			loading = false;
 			showIntro = false;
+			// Submit the questionnaire now
+			await submitQuestionnaire();
 			return;
 		}
 
@@ -346,9 +368,12 @@
 
 		try {
 			submitting = true;
+			console.log('[Submit] Starting questionnaire submission...');
 
 			// Generate assessment report
 			const workerUrl = import.meta.env.DEV ? 'http://localhost:8787' : PUBLIC_WORKER_URL;
+			console.log('[Submit] Fetching:', `${workerUrl}/api/generate-assessment-report`);
+
 			const response = await fetch(`${workerUrl}/api/generate-assessment-report`, {
 				method: 'POST',
 				headers: {
@@ -357,8 +382,12 @@
 				}
 			});
 
+			console.log('[Submit] Response status:', response.status, response.statusText);
+
 			if (!response.ok) {
-				throw new Error('Failed to generate assessment report');
+				const errorText = await response.text();
+				console.error('[Submit] Response error:', errorText);
+				throw new Error(`Failed to generate assessment report: ${response.status} ${errorText}`);
 			}
 
 			// Update profile to mark questionnaire as completed
@@ -372,11 +401,17 @@
 
 			if (updateError) throw updateError;
 
+			console.log('[Submit] Successfully submitted, starting polling...');
 			// Poll until onboarding is complete
 			await pollForOnboardingComplete();
 		} catch (err) {
-			console.error('Error submitting questionnaire:', err);
-			error = 'Failed to submit questionnaire. Please try again.';
+			console.error('[Submit] Error submitting questionnaire:', err);
+			// Provide more specific error message if it's a network error
+			if (err instanceof TypeError && err.message.includes('Load failed')) {
+				error = 'Network error: Unable to connect to server. Please check your internet connection and try again.';
+			} else {
+				error = `Failed to submit questionnaire: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`;
+			}
 			submitting = false;
 		}
 	}
