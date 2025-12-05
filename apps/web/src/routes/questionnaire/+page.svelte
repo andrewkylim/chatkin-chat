@@ -100,6 +100,8 @@
 			submitting = true;
 			loading = false;
 			showIntro = false;
+			// Start polling for completion (in case user refreshed during processing)
+			pollForOnboardingComplete();
 			return;
 		}
 
