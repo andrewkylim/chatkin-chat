@@ -67,11 +67,18 @@ export async function handleAIChat(
     logger.debug('User preferences loaded', { preferences });
 
     // Build base system prompt
-    let systemPrompt = buildSystemPrompt(context, workspaceContext, mode, preferences);
+    // If not the first message, remove FIRST SESSION marker from workspace context
+    let filteredWorkspaceContext = workspaceContext;
+    const messageCount = conversationHistory?.length || 0;
+    if (messageCount > 0 && workspaceContext) {
+      // Remove the FIRST SESSION section after the first message
+      filteredWorkspaceContext = workspaceContext.replace(/### 🎯 FIRST SESSION - Draft Tasks for Co-Creation[\s\S]*?(?=###|$)/, '').trim();
+    }
+
+    let systemPrompt = buildSystemPrompt(context, filteredWorkspaceContext, mode, preferences);
 
     // Add conversation stage hint for chat mode
     if (mode === 'chat') {
-      const messageCount = conversationHistory?.length || 0;
       if (messageCount === 0) {
         systemPrompt += '\n\n**Conversation Stage**: This is the start of a new conversation. The user is opening with their first message.';
       } else if (messageCount < 4) {

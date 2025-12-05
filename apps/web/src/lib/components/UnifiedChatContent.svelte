@@ -97,8 +97,8 @@
 	async function handleOnboardingComplete() {
 		showOnboarding = false;
 		logger.info('Onboarding complete, triggering AI for draft tasks');
-		// Trigger AI greeting with draft tasks
-		await sendMessage('start', true); // true = isAutoStart flag
+		// Trigger AI to present draft tasks (use special marker that AI will recognize)
+		await sendMessage('__PRESENT_DRAFT_TASKS__', true); // true = isAutoStart flag
 	}
 
 	function buildConversationHistory() {
