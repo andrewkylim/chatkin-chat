@@ -131,8 +131,8 @@ async function generateAllNotes(
 		.map(([domain, score]) => `- ${domain}: ${score}/10`)
 		.join('\n');
 
-	const notesPerDomain = 2;
-	const expectedNotes = 6 * notesPerDomain; // 12 notes total
+	const notesPerDomain = 1;
+	const expectedNotes = 6 * notesPerDomain; // 6 notes total
 
 	const prompt = `Generate ${expectedNotes} strategic, actionable reference notes across the 6 wellness domains (${notesPerDomain} notes per domain):
 
@@ -187,7 +187,7 @@ CRITICAL REQUIREMENTS:
 
 	const message = await client.messages.create({
 		model: 'claude-3-5-haiku-20241022',
-		max_tokens: 16000, // Higher limit for 12 detailed notes (200-400 words each)
+		max_tokens: 8000, // Haiku's max output tokens
 		messages: [{ role: 'user', content: prompt }]
 	});
 
