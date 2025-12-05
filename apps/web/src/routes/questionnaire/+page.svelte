@@ -92,7 +92,8 @@
 
 		// If assessment_results exists but onboarding isn't processed yet,
 		// AND has_completed_questionnaire is true, show processing page
-		if (assessmentResults !== null && !assessmentResults.onboarding_processed && hasCompletedBefore) {
+		// Check for both false and null since onboarding_processed might not be set yet
+		if (assessmentResults !== null && assessmentResults.onboarding_processed !== true && hasCompletedBefore) {
 			// User completed questionnaire but processing isn't done yet
 			// Show processing page
 			submitting = true;
