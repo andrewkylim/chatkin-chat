@@ -1,11 +1,26 @@
 <script lang="ts">
 	import type { Operation } from '$lib/types/chat';
+	import EditOperationModal from './EditOperationModal.svelte';
 
-	export let operations: Operation[];
-	export let selectedOperations: Operation[];
-	export let onToggle: (opIndex: number) => void;
-	export let onConfirm: () => void;
-	export let onCancel: () => void;
+	let {
+		operations = $bindable([]),
+		selectedOperations = $bindable([]),
+		onToggle,
+		onConfirm,
+		onCancel
+	}: {
+		operations: Operation[];
+		selectedOperations: Operation[];
+		onToggle: (opIndex: number) => void;
+		onConfirm: () => void;
+		onCancel: () => void;
+	} = $props();
+
+	// Modal state
+	let showEditModal = $state(false);
+	let editingOperation: Operation | null = $state(null);
+	let editingOperationIndex = $state(-1);
+	let modalKey = $state(0); // Key to force modal remount
 
 	function isSelected(operation: Operation): boolean {
 		return selectedOperations.some(
@@ -15,6 +30,44 @@
 				op.id === operation.id &&
 				JSON.stringify(op.data) === JSON.stringify(operation.data)
 		);
+	}
+
+	// Open edit modal for an operation
+	function openEditModal(opIndex: number) {
+		// Create a deep copy to avoid modifying the original
+		editingOperation = JSON.parse(JSON.stringify(operations[opIndex]));
+		editingOperationIndex = opIndex;
+		modalKey++; // Increment key to force remount
+		showEditModal = true;
+	}
+
+	// Close edit modal
+	function closeEditModal() {
+		showEditModal = false;
+		editingOperation = null;
+		editingOperationIndex = -1;
+	}
+
+	// Save edited operation data
+	function saveEditedOperation(newData: Record<string, unknown>) {
+		if (editingOperationIndex === -1) return;
+
+		// Update the operation data
+		operations[editingOperationIndex].data = newData;
+
+		// Also update in selectedOperations if it exists
+		const selectedIndex = selectedOperations.findIndex(
+			(op) =>
+				op.operation === operations[editingOperationIndex].operation &&
+				op.type === operations[editingOperationIndex].type
+		);
+		if (selectedIndex !== -1) {
+			selectedOperations[selectedIndex].data = newData;
+		}
+
+		// Trigger reactivity
+		operations = [...operations];
+		selectedOperations = [...selectedOperations];
 	}
 </script>
 
@@ -28,13 +81,28 @@
 			/>
 			<div class="operation-content">
 				<div class="operation-header">
-					{#if operation.operation === 'create'}
-						<strong>Create {operation.type}</strong>
-					{:else if operation.operation === 'update'}
-						<strong>Update {operation.type}</strong>
-					{:else if operation.operation === 'delete'}
-						<strong>Delete {operation.type}</strong>
-					{/if}
+					<div class="operation-title-row">
+						{#if operation.operation === 'create'}
+							<strong>Create {operation.type}</strong>
+						{:else if operation.operation === 'update'}
+							<strong>Update {operation.type}</strong>
+						{:else if operation.operation === 'delete'}
+							<strong>Delete {operation.type}</strong>
+						{/if}
+					</div>
+					<button
+						class="edit-operation-btn"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							openEditModal(opIndex);
+						}}
+						aria-label="Edit operation"
+					>
+						<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M11 5L6 10v4h4l5-5M11 5l3-3 4 4-3 3M11 5l4 4"/>
+						</svg>
+					</button>
 				</div>
 				{#if operation.data}
 					<div class="operation-details">
@@ -66,6 +134,18 @@
 		Cancel
 	</button>
 </div>
+
+<!-- Edit Operation Modal -->
+{#if showEditModal && editingOperation}
+	{#key modalKey}
+		<EditOperationModal
+			show={showEditModal}
+			operation={editingOperation}
+			onSave={saveEditedOperation}
+			onClose={closeEditModal}
+		/>
+	{/key}
+{/if}
 
 <style>
 	.inline-operations {
@@ -124,6 +204,36 @@
 	.operation-header {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+
+	.operation-title-row {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.edit-operation-btn {
+		background: none;
+		border: none;
+		padding: 4px;
+		color: var(--text-secondary);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+		transition: all 0.2s;
+		flex-shrink: 0;
+	}
+
+	.edit-operation-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	.edit-operation-btn:active {
+		transform: scale(0.95);
 	}
 
 	.operation-details {

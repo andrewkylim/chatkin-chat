@@ -7,6 +7,7 @@
 	import VoiceInput from './VoiceInput.svelte';
 	import OnboardingMessages from './chat/OnboardingMessages.svelte';
 	import QuestionsForm from './chat/QuestionsForm.svelte';
+	import EditOperationModal from './chat/EditOperationModal.svelte';
 
 	interface AIQuestion {
 		question: string;
@@ -99,6 +100,13 @@
 	let uploadStatus = $state('');
 	const currentPath = $derived($page.url.pathname);
 
+	// Edit operation modal state
+	let showEditModal = $state(false);
+	let editingOperation: Operation | null = $state(null);
+	let editingMessageIndex = $state(-1);
+	let editingOperationIndex = $state(-1);
+	let modalKey = $state(0); // Key to force modal remount
+
 	// Map current route to section color
 	const sectionColorMap: Record<string, string> = {
 		'/chat': '#3b82f6',      // Blue
@@ -168,6 +176,90 @@
 			scrollToBottom();
 		}
 	});
+
+	// Toggle operation selection (for checkboxes)
+	function toggleOperationSelection(messageIndex: number, opIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.operations) return;
+
+		// Initialize selectedOperations if it doesn't exist
+		if (!message.selectedOperations) {
+			message.selectedOperations = [];
+		}
+
+		const operation = message.operations[opIndex];
+		const isSelected = message.selectedOperations.some(
+			(op) =>
+				op.operation === operation.operation &&
+				op.type === operation.type &&
+				JSON.stringify(op.data) === JSON.stringify(operation.data)
+		);
+
+		if (isSelected) {
+			// Remove from selection
+			message.selectedOperations = message.selectedOperations.filter(
+				(op) =>
+					!(
+						op.operation === operation.operation &&
+						op.type === operation.type &&
+						JSON.stringify(op.data) === JSON.stringify(operation.data)
+					)
+			);
+		} else {
+			// Add to selection
+			message.selectedOperations = [...message.selectedOperations, operation];
+		}
+
+		// Trigger reactivity
+		messages = [...messages];
+	}
+
+	// Open edit modal for an operation
+	function openEditModal(messageIndex: number, opIndex: number) {
+		const message = messages[messageIndex];
+		if (!message.operations) return;
+
+		// Create a deep copy to avoid modifying the original
+		editingOperation = JSON.parse(JSON.stringify(message.operations[opIndex]));
+		editingMessageIndex = messageIndex;
+		editingOperationIndex = opIndex;
+		modalKey++; // Increment key to force remount
+		showEditModal = true;
+	}
+
+	// Close edit modal
+	function closeEditModal() {
+		showEditModal = false;
+		editingOperation = null;
+		editingMessageIndex = -1;
+		editingOperationIndex = -1;
+	}
+
+	// Save edited operation data
+	function saveEditedOperation(newData: Record<string, unknown>) {
+		if (editingMessageIndex === -1 || editingOperationIndex === -1) return;
+
+		const message = messages[editingMessageIndex];
+		if (!message.operations) return;
+
+		// Update the operation data
+		message.operations[editingOperationIndex].data = newData;
+
+		// Also update in selectedOperations if it exists
+		if (message.selectedOperations) {
+			const selectedIndex = message.selectedOperations.findIndex(
+				(op) =>
+					op.operation === message.operations![editingOperationIndex].operation &&
+					op.type === message.operations![editingOperationIndex].type
+			);
+			if (selectedIndex !== -1) {
+				message.selectedOperations[selectedIndex].data = newData;
+			}
+		}
+
+		// Trigger reactivity
+		messages = [...messages];
+	}
 </script>
 
 <!-- Full-screen flex container following DESIGN-SPEC pattern -->
@@ -342,25 +434,37 @@
 							{#if message.operations && message.awaitingResponse}
 								<!-- Inline Operations Preview -->
 								<div class="inline-operations">
-									{#each message.operations as operation, _opIndex}
+									{#each message.operations as operation, opIndex}
 										<div class="operation-item {operation.operation}">
 											<input
 												type="checkbox"
-												checked={true}
-												disabled
+												checked={message.selectedOperations?.some(
+													op => op.operation === operation.operation &&
+													op.type === operation.type &&
+													JSON.stringify(op.data) === JSON.stringify(operation.data)
+												) ?? false}
+												onchange={() => toggleOperationSelection(index, opIndex)}
 											/>
 											<div class="operation-content">
 												<div class="operation-header">
-													{#if operation.operation === 'create'}
-														<span class="operation-icon create">✓</span>
-														<strong>Create {operation.type}</strong>
-													{:else if operation.operation === 'update'}
-														<span class="operation-icon update">✎</span>
-														<strong>Update {operation.type}</strong>
-													{:else if operation.operation === 'delete'}
-														<span class="operation-icon delete">✕</span>
-														<strong>Delete {operation.type}</strong>
-													{/if}
+													<div class="operation-title-row">
+														{#if operation.operation === 'create'}
+															<strong>Create {operation.type}</strong>
+														{:else if operation.operation === 'update'}
+															<strong>Update {operation.type}</strong>
+														{:else if operation.operation === 'delete'}
+															<strong>Delete {operation.type}</strong>
+														{/if}
+													</div>
+													<button
+														class="edit-operation-btn"
+														onclick={() => openEditModal(index, opIndex)}
+														aria-label="Edit operation"
+													>
+														<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+															<path d="M11 5L6 10v4h4l5-5M11 5l3-3 4 4-3 3M11 5l4 4"/>
+														</svg>
+													</button>
 												</div>
 												{#if operation.data}
 													{#if operation.data.title}
@@ -583,6 +687,18 @@
 		</a>
 	</nav>
 </div>
+
+<!-- Edit Operation Modal -->
+{#if showEditModal && editingOperation}
+	{#key modalKey}
+		<EditOperationModal
+			show={showEditModal}
+			operation={editingOperation}
+			onSave={saveEditedOperation}
+			onClose={closeEditModal}
+		/>
+	{/key}
+{/if}
 
 <style>
 	/* Full-screen container - DESIGN-SPEC WhatsApp pattern */
@@ -1410,8 +1526,37 @@
 	.operation-header {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		justify-content: space-between;
+		gap: 8px;
 		margin-bottom: 4px;
+	}
+
+	.operation-title-row {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.edit-operation-btn {
+		background: none;
+		border: none;
+		padding: 4px;
+		color: var(--text-secondary);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+		transition: all 0.2s;
+		flex-shrink: 0;
+	}
+
+	.edit-operation-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	.edit-operation-btn:active {
+		transform: scale(0.95);
 	}
 
 	.operation-icon {
