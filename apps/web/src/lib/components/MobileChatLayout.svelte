@@ -102,7 +102,7 @@
 	};
 
 	// Domain colors for domain-specific pages
-	const domainColors: Record<string, string> = {
+	const _domainColors: Record<string, string> = {
 		Body: '#10B981',      // Green
 		Mind: '#3B82F6',      // Blue
 		Purpose: '#8B5CF6',   // Purple
